@@ -1,0 +1,113 @@
+import { useState } from "react";
+import { ChevronDown, Lock, Pencil, Circle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type StepStatus = "not_started" | "editing" | "locked";
+
+interface StepContainerProps {
+  stepNumber?: number;
+  title: string;
+  status: StepStatus;
+  isSpecial?: boolean; // for "Database Check" — no step number
+  summaryLine?: string;
+}
+
+const statusConfig: Record<StepStatus, { label: string; icon: typeof Circle; colorClass: string }> = {
+  not_started: { label: "Not started", icon: Circle, colorClass: "text-foreground-muted" },
+  editing: { label: "Editing", icon: Pencil, colorClass: "text-accent-teal" },
+  locked: { label: "Locked", icon: Lock, colorClass: "text-foreground-muted" },
+};
+
+const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine }: StepContainerProps) => {
+  const isLocked = status === "locked";
+  const isEditing = status === "editing";
+  const [isOpen, setIsOpen] = useState(!isLocked);
+
+  const { label, icon: StatusIcon, colorClass } = statusConfig[status];
+
+  return (
+    <div
+      className={cn(
+        "bg-surface border rounded-card transition-all duration-200",
+        isEditing ? "border-border-accent shadow-glow" : "border-border",
+        isLocked && "opacity-80"
+      )}
+    >
+      {/* Header */}
+      <button
+        onClick={() => !isLocked && setIsOpen(!isOpen)}
+        className={cn(
+          "w-full flex items-center justify-between px-6 py-4 text-left transition-colors",
+          !isLocked && "hover:bg-elevated/50 cursor-pointer",
+          isLocked && "cursor-default"
+        )}
+      >
+        <div className="flex items-center gap-4">
+          {/* Step indicator */}
+          <div
+            className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-mono-xs font-mono shrink-0 border transition-colors",
+              isEditing
+                ? "bg-gradient-accent-subtle border-border-accent text-accent-teal"
+                : "bg-elevated border-border text-foreground-muted"
+            )}
+          >
+            {isSpecial ? "·" : stepNumber}
+          </div>
+
+          <div className="flex flex-col gap-0.5">
+            <span
+              className={cn(
+                "text-body-sm font-medium",
+                isEditing ? "text-foreground" : "text-foreground-secondary"
+              )}
+            >
+              {!isSpecial && stepNumber && (
+                <span className="text-foreground-muted mr-2 text-caption">Step {stepNumber}</span>
+              )}
+              {title}
+            </span>
+
+            {/* Summary line when locked */}
+            {isLocked && summaryLine && (
+              <span className="text-caption text-foreground-muted">{summaryLine}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Status badge */}
+          <div className={cn("flex items-center gap-1.5", colorClass)}>
+            <StatusIcon className="w-3 h-3" />
+            <span className="text-mono-xs font-mono uppercase tracking-wider">{label}</span>
+          </div>
+
+          {/* Chevron — only for non-locked */}
+          {!isLocked && (
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 text-foreground-muted transition-transform duration-200",
+                isOpen && "rotate-180"
+              )}
+            />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded content area */}
+      {isOpen && !isLocked && (
+        <div className="px-6 pb-6">
+          <div className="border-t border-border-subtle pt-6">
+            <div className="min-h-[120px] rounded bg-elevated/30 border border-dashed border-border flex items-center justify-center">
+              <span className="text-caption text-foreground-muted select-none">
+                {/* Empty content area */}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default StepContainer;
