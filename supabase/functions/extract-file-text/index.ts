@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { extractText } from "npm:unpdf@0.12.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,9 +29,19 @@ serve(async (req) => {
     if (filename.endsWith(".txt")) {
       text = await file.text();
     } else if (filename.endsWith(".pdf")) {
-      // Use pdf-parse via a simple approach: read raw text from PDF
       const buffer = await file.arrayBuffer();
-      text = extractTextFromPdfRaw(new Uint8Array(buffer));
+      const uint8 = new Uint8Array(buffer);
+
+      if (uint8.byteLength > 15 * 1024 * 1024) {
+        return new Response(
+          JSON.stringify({ error: "PDF too large. Maximum size is 15MB." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const result = await extractText(uint8, { mergePages: true });
+      text = result.text || "";
+
       if (!text.trim()) {
         text = "[PDF text extraction returned empty content. The PDF may contain only images or scanned content.]";
       }
@@ -58,58 +69,10 @@ serve(async (req) => {
 });
 
 /**
- * Basic PDF text extraction — reads text objects from PDF stream.
- * For production, a full library would be better, but this handles most text-based PDFs.
- */
-function extractTextFromPdfRaw(data: Uint8Array): string {
-  const str = new TextDecoder("latin1").decode(data);
-  const textParts: string[] = [];
-
-  // Extract text between BT...ET blocks (PDF text objects)
-  const btEtRegex = /BT\s([\s\S]*?)ET/g;
-  let match;
-  while ((match = btEtRegex.exec(str)) !== null) {
-    const block = match[1];
-    // Extract strings from Tj and TJ operators
-    const tjRegex = /\(([^)]*)\)\s*Tj/g;
-    let tjMatch;
-    while ((tjMatch = tjRegex.exec(block)) !== null) {
-      textParts.push(decodePdfString(tjMatch[1]));
-    }
-    // TJ arrays
-    const tjArrayRegex = /\[(.*?)\]\s*TJ/g;
-    let tjArrMatch;
-    while ((tjArrMatch = tjArrayRegex.exec(block)) !== null) {
-      const arr = tjArrMatch[1];
-      const strParts = /\(([^)]*)\)/g;
-      let sp;
-      while ((sp = strParts.exec(arr)) !== null) {
-        textParts.push(decodePdfString(sp[1]));
-      }
-    }
-  }
-
-  // Also try to extract from stream-decoded content
-  return textParts.join(" ").replace(/\s+/g, " ");
-}
-
-function decodePdfString(s: string): string {
-  return s
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\r")
-    .replace(/\\t/g, "\t")
-    .replace(/\\\(/g, "(")
-    .replace(/\\\)/g, ")")
-    .replace(/\\\\/g, "\\");
-}
-
-/**
  * Extract text from DOCX (which is a ZIP of XML files).
  * Reads word/document.xml and strips XML tags.
  */
 async function extractTextFromDocx(data: Uint8Array): Promise<string> {
-  // DOCX is a ZIP file. We need to find word/document.xml inside it.
-  // Use a minimal ZIP reader approach
   const zipEntries = parseZipEntries(data);
   const docEntry = zipEntries.find(
     (e) => e.filename === "word/document.xml"
@@ -121,10 +84,8 @@ async function extractTextFromDocx(data: Uint8Array): Promise<string> {
 
   let xmlContent: string;
   if (docEntry.compressionMethod === 0) {
-    // Stored (not compressed)
     xmlContent = new TextDecoder().decode(docEntry.data);
   } else {
-    // Deflated
     const ds = new DecompressionStream("deflate-raw");
     const writer = ds.writable.getWriter();
     const reader = ds.readable.getReader();
@@ -146,7 +107,6 @@ async function extractTextFromDocx(data: Uint8Array): Promise<string> {
     xmlContent = new TextDecoder().decode(result);
   }
 
-  // Extract text from XML: get content of <w:t> tags, add newlines for <w:p>
   const paragraphs: string[] = [];
   const pRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
   let pMatch;
@@ -178,7 +138,7 @@ function parseZipEntries(data: Uint8Array): ZipEntry[] {
 
   while (offset < data.length - 4) {
     const sig = view.getUint32(offset, true);
-    if (sig !== 0x04034b50) break; // Not a local file header
+    if (sig !== 0x04034b50) break;
 
     const compressionMethod = view.getUint16(offset + 8, true);
     const compressedSize = view.getUint32(offset + 18, true);
