@@ -75,7 +75,8 @@ const NeedInput = ({
       });
 
       if (fnError || data?.error) {
-        throw new Error(data?.error || fnError?.message || "File extraction failed");
+        const message = data?.error || fnError?.message || "Failed to extract text from file.";
+        throw new Error(message);
       }
 
       onTextChange(data.text);
@@ -101,7 +102,8 @@ const NeedInput = ({
       });
 
       if (fnError || data?.error) {
-        throw new Error(data?.error || fnError?.message || "URL extraction failed");
+        const message = data?.error || fnError?.message || "Failed to extract content from URL.";
+        throw new Error(message);
       }
 
       onTextChange(data.text);
