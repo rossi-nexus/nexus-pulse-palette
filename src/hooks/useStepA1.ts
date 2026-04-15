@@ -107,6 +107,7 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
         locked_output: needDescription as any,
         locked_at: now,
       }]);
+    }
 
     setState((s) => ({ ...s, status: "locked" }));
   }, [sessionId, state.text, state.sourceType, state.sourceReference]);
