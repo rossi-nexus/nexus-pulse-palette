@@ -73,12 +73,14 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
   const lock = useCallback(async () => {
     if (!sessionId || !state.text.trim()) return;
 
-    const needDescription: Record<string, unknown> = {
+    const needDescription = {
       text: state.text.trim(),
       source_type: state.sourceType,
       source_reference: state.sourceReference || null,
       locked_at: new Date().toISOString(),
-    };
+    } as unknown as Record<string, string | null>;
+
+    const now = new Date().toISOString();
 
     // Upsert the step state
     const { data: existing } = await supabase
@@ -92,20 +94,19 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
       await supabase
         .from("session_step_states")
         .update({
-          status: "locked",
-          locked_output: needDescription,
-          locked_at: new Date().toISOString(),
+          status: "locked" as string,
+          locked_output: needDescription as any,
+          locked_at: now,
         })
         .eq("id", existing.id);
     } else {
-      await supabase.from("session_step_states").insert({
+      await supabase.from("session_step_states").insert([{
         session_id: sessionId,
-        step: "A1",
-        status: "locked",
-        locked_output: needDescription,
-        locked_at: new Date().toISOString(),
-      });
-    }
+        step: "A1" as string,
+        status: "locked" as string,
+        locked_output: needDescription as any,
+        locked_at: now,
+      }]);
 
     setState((s) => ({ ...s, status: "locked" }));
   }, [sessionId, state.text, state.sourceType, state.sourceReference]);
