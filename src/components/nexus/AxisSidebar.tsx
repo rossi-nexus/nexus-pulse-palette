@@ -16,8 +16,12 @@ const AxisSidebar = () => (
 
     {/* Chat area */}
     <div className="flex-1 overflow-y-auto px-5 py-6">
-      <div className="flex items-center justify-center h-full">
-        <span className="text-caption text-foreground-muted select-none" />
+      <div className="flex flex-col items-start gap-3">
+        <div className="bg-surface border border-border rounded-card px-4 py-3 max-w-[90%]">
+          <p className="text-body-sm text-foreground-secondary">
+            Describe or paste your need. I'll help you structure it for search.
+          </p>
+        </div>
       </div>
     </div>
 

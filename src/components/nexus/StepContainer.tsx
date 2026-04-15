@@ -8,46 +8,51 @@ interface StepContainerProps {
   stepNumber?: number;
   title: string;
   status: StepStatus;
-  isSpecial?: boolean; // for "Database Check" — no step number
+  isSpecial?: boolean;
   summaryLine?: string;
+  children?: React.ReactNode;
 }
 
 const statusConfig: Record<StepStatus, { label: string; icon: typeof Circle; colorClass: string }> = {
   not_started: { label: "Not started", icon: Circle, colorClass: "text-foreground-muted" },
   editing: { label: "Editing", icon: Pencil, colorClass: "text-accent-teal" },
-  locked: { label: "Locked", icon: Lock, colorClass: "text-foreground-muted" },
+  locked: { label: "Locked", icon: Lock, colorClass: "text-accent-teal" },
 };
 
-const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine }: StepContainerProps) => {
+const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine, children }: StepContainerProps) => {
   const isLocked = status === "locked";
   const isEditing = status === "editing";
-  const [isOpen, setIsOpen] = useState(!isLocked);
+  const [isOpen, setIsOpen] = useState(!isLocked || !!children);
 
   const { label, icon: StatusIcon, colorClass } = statusConfig[status];
+
+  // If children are provided, always show them (controlled externally)
+  const hasContent = !!children;
 
   return (
     <div
       className={cn(
         "bg-surface border rounded-card transition-all duration-200",
-        isEditing ? "border-border-accent shadow-glow" : "border-border",
-        isLocked && "opacity-80"
+        isEditing ? "border-border-accent shadow-glow" : isLocked ? "border-border-accent/40" : "border-border",
       )}
     >
       {/* Header */}
       <button
-        onClick={() => !isLocked && setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!hasContent && !isLocked) setIsOpen(!isOpen);
+          if (hasContent && !isLocked) setIsOpen(!isOpen);
+        }}
         className={cn(
           "w-full flex items-center justify-between px-6 py-4 text-left transition-colors",
           !isLocked && "hover:bg-elevated/50 cursor-pointer",
-          isLocked && "cursor-default"
+          isLocked && !hasContent && "cursor-default"
         )}
       >
         <div className="flex items-center gap-4">
-          {/* Step indicator */}
           <div
             className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center text-mono-xs font-mono shrink-0 border transition-colors",
-              isEditing
+              isEditing || isLocked
                 ? "bg-gradient-accent-subtle border-border-accent text-accent-teal"
                 : "bg-elevated border-border text-foreground-muted"
             )}
@@ -59,7 +64,7 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine }: St
             <span
               className={cn(
                 "text-body-sm font-medium",
-                isEditing ? "text-foreground" : "text-foreground-secondary"
+                isEditing || isLocked ? "text-foreground" : "text-foreground-secondary"
               )}
             >
               {!isSpecial && stepNumber && (
@@ -68,22 +73,19 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine }: St
               {title}
             </span>
 
-            {/* Summary line when locked */}
-            {isLocked && summaryLine && (
+            {isLocked && summaryLine && !hasContent && (
               <span className="text-caption text-foreground-muted">{summaryLine}</span>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Status badge */}
           <div className={cn("flex items-center gap-1.5", colorClass)}>
             <StatusIcon className="w-3 h-3" />
             <span className="text-mono-xs font-mono uppercase tracking-wider">{label}</span>
           </div>
 
-          {/* Chevron — only for non-locked */}
-          {!isLocked && (
+          {(!isLocked || hasContent) && (
             <ChevronDown
               className={cn(
                 "w-4 h-4 text-foreground-muted transition-transform duration-200",
@@ -94,15 +96,17 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine }: St
         </div>
       </button>
 
-      {/* Expanded content area */}
-      {isOpen && !isLocked && (
+      {/* Content area */}
+      {isOpen && (
         <div className="px-6 pb-6">
           <div className="border-t border-border-subtle pt-6">
-            <div className="min-h-[120px] rounded bg-elevated/30 border border-dashed border-border flex items-center justify-center">
-              <span className="text-caption text-foreground-muted select-none">
-                {/* Empty content area */}
-              </span>
-            </div>
+            {hasContent ? (
+              children
+            ) : (
+              <div className="min-h-[120px] rounded bg-elevated/30 border border-dashed border-border flex items-center justify-center">
+                <span className="text-caption text-foreground-muted select-none" />
+              </div>
+            )}
           </div>
         </div>
       )}
