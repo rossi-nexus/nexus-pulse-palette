@@ -2,95 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* æXs NEXUS Design System
+   ========================
+   Dark command-center aesthetic. Logo gradient: blue (#4A7AB5) → teal (#4FADA0) → green (#4DAF6F).
+   All colors HSL. Spacing and typography defined as tokens.
 */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* === Background layers === */
+    --background: 240 20% 4%;           /* #0A0A0F — base */
+    --surface: 240 14% 8%;              /* #121218 — surface */
+    --elevated: 240 11% 12%;            /* #1B1B24 — elevated */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* === Foreground / text === */
+    --foreground: 220 20% 93%;          /* #E8EBF0 — primary text */
+    --foreground-secondary: 220 12% 66%; /* #9CA3B0 — secondary text */
+    --foreground-muted: 220 8% 42%;     /* #636871 — muted text */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* === Logo gradient anchors === */
+    --accent-blue: 214 38% 50%;         /* #4A7AB5 */
+    --accent-teal: 168 38% 50%;         /* #4FADA0 */
+    --accent-green: 148 40% 49%;        /* #4DAF6F */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* === Primary (teal — centre of gradient) === */
+    --primary: 168 38% 50%;
+    --primary-foreground: 240 20% 4%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* === Secondary === */
+    --secondary: 240 11% 12%;
+    --secondary-foreground: 220 20% 93%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* === Accent === */
+    --accent: 214 38% 50%;
+    --accent-foreground: 220 20% 93%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* === Muted === */
+    --muted: 240 11% 12%;
+    --muted-foreground: 220 8% 42%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* === Semantic states === */
+    --success: 152 52% 48%;             /* green */
+    --success-foreground: 240 20% 4%;
+    --warning: 38 92% 56%;              /* amber */
+    --warning-foreground: 240 20% 4%;
+    --destructive: 0 68% 56%;           /* red */
+    --destructive-foreground: 220 20% 93%;
+    --info: 214 38% 50%;               /* blue */
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* === Borders === */
+    --border: 240 8% 16%;
+    --border-subtle: 240 6% 12%;
+    --border-accent: 168 38% 50%;
+    --input: 240 8% 16%;
+    --ring: 168 38% 50%;
 
-    --radius: 0.5rem;
+    /* === Radius === */
+    --radius: 0.375rem;
+    --radius-sharp: 0.125rem;
+    --radius-card: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* === Card / popover inherit === */
+    --card: 240 14% 8%;
+    --card-foreground: 220 20% 93%;
+    --popover: 240 14% 8%;
+    --popover-foreground: 220 20% 93%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* === Sidebar === */
+    --sidebar-background: 240 20% 4%;
+    --sidebar-foreground: 220 12% 66%;
+    --sidebar-primary: 168 38% 50%;
+    --sidebar-primary-foreground: 240 20% 4%;
+    --sidebar-accent: 240 11% 12%;
+    --sidebar-accent-foreground: 220 20% 93%;
+    --sidebar-border: 240 8% 16%;
+    --sidebar-ring: 168 38% 50%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* === Gradients === */
+    --gradient-accent: linear-gradient(135deg, hsl(214 38% 50%), hsl(168 38% 50%), hsl(148 40% 49%));
+    --gradient-accent-hover: linear-gradient(135deg, hsl(214 38% 55%), hsl(168 38% 55%), hsl(148 40% 54%));
+    --gradient-accent-subtle: linear-gradient(135deg, hsla(214,38%,50%,0.15), hsla(168,38%,50%,0.15), hsla(148,40%,49%,0.15));
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* === Shadows === */
+    --shadow-sm: 0 1px 2px hsla(0,0%,0%,0.4);
+    --shadow-md: 0 4px 12px hsla(0,0%,0%,0.5);
+    --shadow-lg: 0 8px 24px hsla(0,0%,0%,0.6);
+    --shadow-glow: 0 0 20px hsla(168,38%,50%,0.15);
   }
 }
 
@@ -100,6 +99,46 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Inter', system-ui, sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+}
+
+/* Utility classes for the gradient */
+@layer utilities {
+  .text-gradient-accent {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .bg-gradient-accent-hover {
+    background: var(--gradient-accent-hover);
+  }
+
+  .bg-gradient-accent-subtle {
+    background: var(--gradient-accent-subtle);
+  }
+
+  .border-gradient-accent {
+    border-image: var(--gradient-accent) 1;
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
   }
 }
