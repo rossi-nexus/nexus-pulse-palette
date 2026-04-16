@@ -356,66 +356,89 @@ serve(async (req) => {
 
     const userMessage = `${combinedInput}\n\n---\n\nONTOLOGY:\n${ontologyText}`;
 
-    // Step D — Call AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    // Step D — Call AI (try tool calling first, fall back to JSON mode)
+    async function callAI(useToolCalling: boolean) {
+      const body: any = {
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: SYSTEM_PROMPT + (useToolCalling ? "" : "\n\nReturn ONLY valid JSON matching the described output format. No markdown fences, no explanation.") },
           { role: "user", content: userMessage },
         ],
-        tools: [TOOL_SCHEMA],
-        tool_choice: { type: "function", function: { name: "submit_interpretation" } },
-        max_tokens: 4096,
+        max_tokens: 8192,
         reasoning: { effort: "high" },
-      }),
-    });
+      };
+      if (useToolCalling) {
+        body.tools = [TOOL_SCHEMA];
+        body.tool_choice = { type: "function", function: { name: "submit_interpretation" } };
+      }
+      return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      if (aiResponse.status === 429) {
+    let parsed: any = null;
+
+    // Attempt 1: tool calling
+    const aiResponse1 = await callAI(true);
+    if (!aiResponse1.ok) {
+      const errText = await aiResponse1.text();
+      console.error("AI gateway error:", aiResponse1.status, errText);
+      if (aiResponse1.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (aiResponse.status === 402) {
+      if (aiResponse1.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       return new Response(JSON.stringify({ error: "AI processing failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiResult = await aiResponse.json();
-    const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      console.error("No tool call in AI response:", JSON.stringify(aiResult));
-      return new Response(JSON.stringify({ error: "AI returned unexpected format" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const aiResult1 = await aiResponse1.json();
+    const toolCall = aiResult1.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      try {
+        parsed = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.error("Failed to parse tool call arguments, will retry with JSON mode");
+      }
     }
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(toolCall.function.arguments);
-    } catch (e) {
-      console.error("Failed to parse AI arguments:", toolCall.function.arguments);
-      return new Response(JSON.stringify({ error: "AI returned invalid JSON" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Check for MALFORMED_FUNCTION_CALL or missing tool call — retry with JSON mode
+    if (!parsed) {
+      const finishReason = aiResult1.choices?.[0]?.finish_reason;
+      console.log("Tool calling failed (finish_reason:", finishReason, "), retrying with JSON mode...");
+
+      const aiResponse2 = await callAI(false);
+      if (!aiResponse2.ok) {
+        const errText = await aiResponse2.text();
+        console.error("AI JSON mode error:", aiResponse2.status, errText);
+        return new Response(JSON.stringify({ error: "AI processing failed on retry" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const aiResult2 = await aiResponse2.json();
+      let content = aiResult2.choices?.[0]?.message?.content || "";
+      // Strip markdown fences if present
+      content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch (e) {
+        console.error("Failed to parse JSON from AI content:", content.slice(0, 500));
+        return new Response(JSON.stringify({ error: "AI returned unparseable response after retry" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Step E — Transform response
