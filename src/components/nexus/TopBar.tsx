@@ -1,37 +1,6 @@
+import logo from "@/assets/logo_aexs.png";
 import { useAuth } from "@/hooks/useAuth";
 import { LogOut } from "lucide-react";
-
-const LogoMark = () => (
-  <svg viewBox="0 0 64 28" className="h-6" aria-label="æXs">
-    <defs>
-      <linearGradient id="ae-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="hsl(214 38% 50%)" />
-        <stop offset="50%" stopColor="hsl(168 38% 50%)" />
-        <stop offset="100%" stopColor="hsl(148 40% 49%)" />
-      </linearGradient>
-    </defs>
-    <text
-      x="0"
-      y="22"
-      fontFamily="Inter, system-ui, sans-serif"
-      fontSize="24"
-      fontWeight="600"
-      fill="url(#ae-grad)"
-    >
-      æ
-    </text>
-    <text
-      x="20"
-      y="22"
-      fontFamily="Inter, system-ui, sans-serif"
-      fontSize="24"
-      fontWeight="600"
-      className="fill-foreground-secondary"
-    >
-      Xs
-    </text>
-  </svg>
-);
 
 const TopBar = () => {
   const { user, signOut } = useAuth();
@@ -40,7 +9,7 @@ const TopBar = () => {
   return (
     <header className="h-16 border-b border-border bg-elevated flex items-center justify-between px-6 shrink-0">
       <div className="flex items-center gap-3">
-        <LogoMark />
+        <img src={logo} alt="æXs" className="h-6" />
         <div className="h-5 w-px bg-border" />
         <span className="text-label uppercase tracking-[0.18em] text-foreground-muted select-none">
           NEXUS
