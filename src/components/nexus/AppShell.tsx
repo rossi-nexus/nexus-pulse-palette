@@ -6,10 +6,12 @@ import NeedInput from "./NeedInput";
 import ExampleSearchCard from "./ExampleSearchCard";
 import CompactStepIndicator from "./CompactStepIndicator";
 import InterpretationStep from "./InterpretationStep";
+import SearchStep from "./SearchStep";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSession } from "@/hooks/useSession";
 import { useStepA1 } from "@/hooks/useStepA1";
 import { useInterpretation } from "@/hooks/useInterpretation";
+import { useSearch } from "@/hooks/useSearch";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect } from "react";
 
@@ -17,6 +19,7 @@ const AppShell = () => {
   const { sessionId } = useSession();
   const stepA1 = useStepA1({ sessionId });
   const stepA2 = useInterpretation();
+  const stepA3 = useSearch();
   const [showExamples, setShowExamples] = useState(false);
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
@@ -28,6 +31,8 @@ const AppShell = () => {
 
   const isStep1Active = stepA1.status === "editing";
   const isStep2Compact = stepA2.status === "not_started" && !stepA2.error;
+  const isStep2Locked = stepA2.status === "locked";
+  const isStep3Compact = stepA3.status === "not_started" && !isStep2Locked && !stepA3.error;
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -108,8 +113,18 @@ const AppShell = () => {
                   <InterpretationStep hook={stepA2} />
                 )}
 
-                {/* Steps 3–4: compact indicators */}
-                <CompactStepIndicator stepNumber={3} title="Search" status="not_started" />
+                {/* Step 3 — search */}
+                {isStep3Compact ? (
+                  <CompactStepIndicator stepNumber={3} title="Search" status="not_started" />
+                ) : (
+                  <SearchStep
+                    hook={stepA3}
+                    interpretation={stepA2.interpretation}
+                    step2Locked={isStep2Locked}
+                  />
+                )}
+
+                {/* Step 4: compact indicator */}
                 <CompactStepIndicator stepNumber={4} title="Deep Analysis" status="not_started" />
 
                 {/* Database Check — compact indicator */}
@@ -117,7 +132,11 @@ const AppShell = () => {
               </div>
             </div>
 
-            <StatusBar />
+            <StatusBar
+              found={stepA3.totalFound}
+              included={stepA3.totalIncluded}
+              savedForLater={stepA3.totalSavedForLater}
+            />
           </main>
         </ResizablePanel>
 
