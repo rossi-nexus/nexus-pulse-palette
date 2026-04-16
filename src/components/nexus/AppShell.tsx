@@ -5,15 +5,18 @@ import StatusBar from "./StatusBar";
 import NeedInput from "./NeedInput";
 import ExampleSearchCard from "./ExampleSearchCard";
 import CompactStepIndicator from "./CompactStepIndicator";
+import InterpretationStep from "./InterpretationStep";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSession } from "@/hooks/useSession";
 import { useStepA1 } from "@/hooks/useStepA1";
+import { useInterpretation } from "@/hooks/useInterpretation";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect } from "react";
 
 const AppShell = () => {
   const { sessionId } = useSession();
   const stepA1 = useStepA1({ sessionId });
+  const stepA2 = useInterpretation();
   const [showExamples, setShowExamples] = useState(false);
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
@@ -24,6 +27,7 @@ const AppShell = () => {
   }, [hasContent]);
 
   const isStep1Active = stepA1.status === "editing";
+  const isStep2Compact = stepA2.status === "not_started" && !stepA2.error;
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -97,8 +101,14 @@ const AppShell = () => {
                   )}
                 </StepContainer>
 
-                {/* Steps 2–4: compact indicators */}
-                <CompactStepIndicator stepNumber={2} title="Interpretation & Targets" status="not_started" />
+                {/* Step 2 — interpretation */}
+                {isStep2Compact ? (
+                  <CompactStepIndicator stepNumber={2} title="Interpretation & Targets" status="not_started" />
+                ) : (
+                  <InterpretationStep hook={stepA2} />
+                )}
+
+                {/* Steps 3–4: compact indicators */}
                 <CompactStepIndicator stepNumber={3} title="Search" status="not_started" />
                 <CompactStepIndicator stepNumber={4} title="Deep Analysis" status="not_started" />
 
@@ -116,7 +126,7 @@ const AppShell = () => {
 
         {/* Axis sidebar */}
         <ResizablePanel defaultSize={25} minSize={15} maxSize={50}>
-          <AxisSidebar />
+          <AxisSidebar clarificationPoints={stepA2.clarificationPoints} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

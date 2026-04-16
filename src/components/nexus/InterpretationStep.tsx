@@ -1,0 +1,174 @@
+import { Loader2, Lock, CheckCheck, Unlock, FlaskConical } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import StepContainer from "./StepContainer";
+import SummarySection from "./SummarySection";
+import RolesSection from "./RolesSection";
+import ConstraintsSection from "./ConstraintsSection";
+import type { NeedDescription } from "@/types/need-description";
+import type { useInterpretation } from "@/hooks/useInterpretation";
+
+const MOCK_NEED: NeedDescription = {
+  id: "mock-need-001",
+  session_id: "mock-session-001",
+  context_text:
+    "Establish comprehensive surveillance capacity in the Narvik area related to allied reception and evacuation from Sweden and Finland. The solution should cover land, sea, and air, and be operational within 12 months with a duration of at least 3 years. Both complete systems and actors with expertise in integration, system management, and operational operation are sought. The solution must be able to handle security levels up to CONFIDENTIAL.",
+  attachments: [],
+  locked_at: new Date().toISOString(),
+};
+
+interface InterpretationStepProps {
+  hook: ReturnType<typeof useInterpretation>;
+}
+
+const InterpretationStep = ({ hook }: InterpretationStepProps) => {
+  const {
+    interpretation,
+    status,
+    error,
+    processingMessage,
+    pendingCount,
+    canLock,
+    runInterpretation,
+    acceptSummaryPoint,
+    rejectSummaryPoint,
+    addSummaryPoint,
+    acceptRole,
+    rejectRole,
+    addRole,
+    toggleSelection,
+    reorderRoles,
+    updateConstraint,
+    acceptAllPending,
+    lock,
+    unlock,
+  } = hook;
+
+  // Not started
+  if (status === "not_started") {
+    return (
+      <StepContainer stepNumber={2} title="Interpretation & Targets" status="not_started" isActive={false}>
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          {error && (
+            <div className="px-3 py-2 rounded border border-destructive/50 bg-destructive/10 text-caption text-destructive mb-2 max-w-md text-center">
+              {error}
+            </div>
+          )}
+          <Button
+            onClick={() => runInterpretation(MOCK_NEED)}
+            variant="outline"
+            className="gap-2 text-foreground-muted border-border hover:text-foreground"
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            DEV: Run with test data
+          </Button>
+        </div>
+      </StepContainer>
+    );
+  }
+
+  // Processing
+  if (status === "processing") {
+    return (
+      <StepContainer stepNumber={2} title="Interpretation & Targets" status="editing" isActive>
+        <div className="flex flex-col items-center justify-center py-12 gap-4">
+          <Loader2 className="w-6 h-6 text-accent-teal animate-spin" />
+          <p className="text-body-sm text-foreground-secondary">{processingMessage}</p>
+        </div>
+      </StepContainer>
+    );
+  }
+
+  // Locked
+  if (status === "locked" && interpretation) {
+    const acceptedSummary = interpretation.summary.filter(s => s.status === "accepted");
+    const acceptedRoles = interpretation.roles.filter(r => r.status === "accepted");
+
+    return (
+      <StepContainer stepNumber={2} title="Interpretation & Targets" status="locked">
+        <div className="space-y-3">
+          <div>
+            <span className="text-caption text-foreground-muted">Summary:</span>
+            <ul className="list-disc list-inside text-body-sm text-foreground-secondary mt-1">
+              {acceptedSummary.map(s => <li key={s.id}>{s.text}</li>)}
+            </ul>
+          </div>
+          <p className="text-body-sm text-foreground-secondary">
+            {acceptedRoles.length} roles defined
+          </p>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={unlock} className="gap-2 text-foreground-muted hover:text-foreground">
+              <Unlock className="w-3.5 h-3.5" />
+              Unlock
+            </Button>
+          </div>
+        </div>
+      </StepContainer>
+    );
+  }
+
+  // Editing
+  if (status === "editing" && interpretation) {
+    return (
+      <StepContainer stepNumber={2} title="Interpretation & Targets" status="editing" isActive>
+        <div className="space-y-8">
+          <SummarySection
+            points={interpretation.summary}
+            onAccept={acceptSummaryPoint}
+            onReject={rejectSummaryPoint}
+            onAdd={addSummaryPoint}
+          />
+
+          <RolesSection
+            roles={interpretation.roles}
+            onAccept={acceptRole}
+            onReject={rejectRole}
+            onAdd={addRole}
+            onToggleSelection={toggleSelection}
+            onReorder={reorderRoles}
+          />
+
+          <ConstraintsSection
+            constraints={interpretation.constraints}
+            onUpdate={updateConstraint}
+          />
+
+          {/* Action row */}
+          <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+            <div>
+              {pendingCount > 0 && (
+                <span className="text-body-sm text-foreground-muted">
+                  {pendingCount} item{pendingCount !== 1 ? "s" : ""} pending review
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {pendingCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={acceptAllPending}
+                  className="gap-2 text-foreground-muted hover:text-foreground"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Accept all remaining
+                </Button>
+              )}
+              <Button
+                onClick={lock}
+                disabled={!canLock}
+                className="gap-2"
+                title={!canLock ? "Review all proposed items first" : undefined}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Lock interpretation
+              </Button>
+            </div>
+          </div>
+        </div>
+      </StepContainer>
+    );
+  }
+
+  return null;
+};
+
+export default InterpretationStep;

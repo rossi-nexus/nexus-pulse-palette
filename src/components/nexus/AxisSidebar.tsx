@@ -1,6 +1,11 @@
 import { Bot, Send } from "lucide-react";
+import type { ClarificationPoint } from "@/types/interpretation";
 
-const AxisSidebar = () => (
+interface AxisSidebarProps {
+  clarificationPoints?: ClarificationPoint[];
+}
+
+const AxisSidebar = ({ clarificationPoints = [] }: AxisSidebarProps) => (
   <aside className="w-full h-full bg-elevated border-l border-border flex flex-col">
     {/* Header */}
     <div className="px-5 py-4 border-b border-border flex items-center gap-3 shrink-0">
@@ -22,6 +27,14 @@ const AxisSidebar = () => (
             Describe your need or attach files and URLs. I'll analyze everything in the next step.
           </p>
         </div>
+
+        {/* Clarification points from Step 2 */}
+        {clarificationPoints.map((cp, i) => (
+          <div key={i} className="bg-surface border border-border rounded-card px-4 py-3 max-w-[90%]">
+            <p className="text-body-sm text-foreground">{cp.question}</p>
+            <p className="text-caption text-foreground-secondary mt-1">{cp.context}</p>
+          </div>
+        ))}
       </div>
     </div>
 
