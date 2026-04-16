@@ -35,6 +35,7 @@ const OntologyCategory = ({
 }) => {
   const selected = selections.filter(s => s.selected);
   const [expanded, setExpanded] = useState(selected.length > 0);
+  const [showMore, setShowMore] = useState(false);
 
   if (selections.length === 0) return null;
 
@@ -46,7 +47,6 @@ const OntologyCategory = ({
   });
 
   const showAll = selections.length <= 15;
-  const [showMore, setShowMore] = useState(false);
   const displayed = showAll || showMore ? sorted : sorted.slice(0, 10);
 
   return (
