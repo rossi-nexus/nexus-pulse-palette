@@ -67,9 +67,6 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, isActive, summary
                 isActive || isLocked ? "text-foreground" : "text-foreground-secondary"
               )}
             >
-              {!isSpecial && stepNumber && (
-                <span className="text-foreground-muted mr-2 text-caption">Step {stepNumber}</span>
-              )}
               {title}
             </span>
 
