@@ -33,7 +33,7 @@ You receive:
 ### Ontology selection
 - You MUST select entries using the exact IDs provided in the ontology lists.
 - For each role, select relevant entries from the 5 categories. A role does not need selections in all 5 — only select where genuinely relevant.
-- If the need requires a concept NOT in the provided ontology, add it to the role's "proposed_new" array. Keep proposals minimal — only when the ontology genuinely lacks a needed concept.
+- If the need requires a concept NOT in the provided ontology, or if existing entries are too generic for the specific need, add more precise terms to the role's "proposed_new" array. The ontology grows through use — proposals are how it learns. Do not force-fit a search into existing categories when a more specific or accurate term would serve the search better. You may BOTH select an existing broad entry AND propose a more specific one (e.g., select "Radar" from the ontology AND propose "Ground Penetrating Radar" if the search specifically needs it).
 - Never invent IDs. Use only IDs from the provided lists or the proposal mechanism.
 
 ### Constraints
