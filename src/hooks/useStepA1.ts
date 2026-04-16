@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { NeedDescription } from "@/types/need-description";
+import type { NeedAttachment } from "@/types/need-description";
 import type { StepStatus } from "@/types/session";
 
 interface UseStepA1Props {
@@ -8,9 +8,8 @@ interface UseStepA1Props {
 }
 
 interface StepA1State {
-  text: string;
-  sourceType: "freeform" | "file" | "url";
-  sourceReference?: string;
+  contextText: string;
+  attachments: NeedAttachment[];
   status: StepStatus;
   loading: boolean;
   error: string | null;
@@ -18,9 +17,8 @@ interface StepA1State {
 
 export function useStepA1({ sessionId }: UseStepA1Props) {
   const [state, setState] = useState<StepA1State>({
-    text: "",
-    sourceType: "freeform",
-    sourceReference: undefined,
+    contextText: "",
+    attachments: [],
     status: "editing",
     loading: true,
     error: null,
@@ -44,9 +42,8 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
       if (data) {
         const output = data.locked_output as Record<string, unknown> | null;
         setState({
-          text: (output?.text as string) || "",
-          sourceType: (output?.source_type as "freeform" | "file" | "url") || "freeform",
-          sourceReference: (output?.source_reference as string) || undefined,
+          contextText: (output?.context_text as string) || "",
+          attachments: (output?.attachments as NeedAttachment[]) || [],
           status: data.status as StepStatus,
           loading: false,
           error: null,
@@ -58,31 +55,57 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
     load();
   }, [sessionId]);
 
-  const setText = useCallback((text: string) => {
-    setState((s) => ({ ...s, text, error: null }));
+  const setContextText = useCallback((contextText: string) => {
+    setState((s) => ({ ...s, contextText, error: null }));
   }, []);
 
-  const setSource = useCallback((sourceType: "freeform" | "file" | "url", sourceReference?: string) => {
-    setState((s) => ({ ...s, sourceType, sourceReference }));
+  const setAttachments = useCallback((attachments: NeedAttachment[]) => {
+    setState((s) => ({ ...s, attachments }));
   }, []);
+
+  const addAttachment = useCallback((attachment: NeedAttachment) => {
+    setState((s) => ({ ...s, attachments: [...s.attachments, attachment] }));
+  }, []);
+
+  const removeAttachment = useCallback(
+    async (index: number) => {
+      const att = state.attachments[index];
+      // If it's a file, also remove from storage
+      if (att?.type === "file" && att.storage_path) {
+        await supabase.storage
+          .from("need-attachments")
+          .remove([att.storage_path]);
+      }
+      setState((s) => ({
+        ...s,
+        attachments: s.attachments.filter((_, i) => i !== index),
+      }));
+    },
+    [state.attachments]
+  );
 
   const setError = useCallback((error: string | null) => {
     setState((s) => ({ ...s, error }));
   }, []);
 
-  const lock = useCallback(async () => {
-    if (!sessionId || !state.text.trim()) return;
+  const canLock = state.contextText.trim().length > 0 || state.attachments.length > 0;
 
-    const needDescription = {
-      text: state.text.trim(),
-      source_type: state.sourceType,
-      source_reference: state.sourceReference || null,
+  const lock = useCallback(async () => {
+    if (!sessionId || !canLock) return;
+
+    const needDescription: Record<string, unknown> = {
+      id: crypto.randomUUID(),
+      session_id: sessionId,
+      attachments: state.attachments,
       locked_at: new Date().toISOString(),
-    } as unknown as Record<string, string | null>;
+    };
+
+    if (state.contextText.trim()) {
+      needDescription.context_text = state.contextText.trim();
+    }
 
     const now = new Date().toISOString();
 
-    // Upsert the step state
     const { data: existing } = await supabase
       .from("session_step_states")
       .select("id")
@@ -110,7 +133,7 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
     }
 
     setState((s) => ({ ...s, status: "locked" }));
-  }, [sessionId, state.text, state.sourceType, state.sourceReference]);
+  }, [sessionId, state.contextText, state.attachments, canLock]);
 
   const unlock = useCallback(async () => {
     if (!sessionId) return;
@@ -125,9 +148,16 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
   }, [sessionId]);
 
   return {
-    ...state,
-    setText,
-    setSource,
+    contextText: state.contextText,
+    attachments: state.attachments,
+    status: state.status,
+    loading: state.loading,
+    error: state.error,
+    canLock,
+    setContextText,
+    setAttachments,
+    addAttachment,
+    removeAttachment,
     setError,
     lock,
     unlock,
