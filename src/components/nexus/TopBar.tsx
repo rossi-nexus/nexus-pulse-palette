@@ -11,7 +11,7 @@ const TopBar = () => {
       <div className="flex items-center gap-3">
         <img src={logo} alt="æXs" className="h-6" style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.2)' }} />
         <div className="h-5 w-px bg-border" />
-        <span className="text-label uppercase tracking-[0.18em] text-foreground-muted select-none">
+        <span className="text-sm uppercase tracking-[0.18em] font-medium text-foreground-muted select-none">
           NEXUS
         </span>
         <span className="text-body-sm text-foreground-secondary ml-1 select-none">
