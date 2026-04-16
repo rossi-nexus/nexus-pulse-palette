@@ -19,7 +19,7 @@ const AxisSidebar = () => (
       <div className="flex flex-col items-start gap-3">
         <div className="bg-surface border border-border rounded-card px-4 py-3 max-w-[90%]">
           <p className="text-body-sm text-foreground-secondary">
-            Describe or paste your need. I'll help you structure it for search.
+            Describe your need or attach files and URLs. I'll analyze everything in the next step.
           </p>
         </div>
       </div>

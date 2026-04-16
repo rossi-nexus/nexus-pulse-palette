@@ -28,13 +28,15 @@ const AppShell = () => {
                   status={stepA1.status}
                 >
                   <NeedInput
-                    text={stepA1.text}
-                    sourceType={stepA1.sourceType}
-                    sourceReference={stepA1.sourceReference}
+                    contextText={stepA1.contextText}
+                    attachments={stepA1.attachments}
                     status={stepA1.status}
                     error={stepA1.error}
-                    onTextChange={stepA1.setText}
-                    onSourceChange={stepA1.setSource}
+                    canLock={stepA1.canLock}
+                    sessionId={sessionId}
+                    onContextTextChange={stepA1.setContextText}
+                    onAddAttachment={stepA1.addAttachment}
+                    onRemoveAttachment={stepA1.removeAttachment}
                     onError={stepA1.setError}
                     onLock={stepA1.lock}
                     onUnlock={stepA1.unlock}

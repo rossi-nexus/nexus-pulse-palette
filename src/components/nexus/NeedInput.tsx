@@ -1,36 +1,41 @@
 import { useState, useRef, useCallback } from "react";
-import { Paperclip, Link2, X, Loader2, Lock, Unlock } from "lucide-react";
+import { Paperclip, Link2, X, Loader2, Lock, Unlock, FileText, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import type { NeedAttachment } from "@/types/need-description";
 
 interface NeedInputProps {
-  text: string;
-  sourceType: "freeform" | "file" | "url";
-  sourceReference?: string;
+  contextText: string;
+  attachments: NeedAttachment[];
   status: "not_started" | "editing" | "locked";
   error: string | null;
-  onTextChange: (text: string) => void;
-  onSourceChange: (type: "freeform" | "file" | "url", ref?: string) => void;
+  canLock: boolean;
+  sessionId: string | null;
+  onContextTextChange: (text: string) => void;
+  onAddAttachment: (attachment: NeedAttachment) => void;
+  onRemoveAttachment: (index: number) => void;
   onError: (error: string | null) => void;
   onLock: () => void;
   onUnlock: () => void;
 }
 
 const NeedInput = ({
-  text,
-  sourceType,
-  sourceReference,
+  contextText,
+  attachments,
   status,
   error,
-  onTextChange,
-  onSourceChange,
+  canLock,
+  sessionId,
+  onContextTextChange,
+  onAddAttachment,
+  onRemoveAttachment,
   onError,
   onLock,
   onUnlock,
 }: NeedInputProps) => {
   const [uploading, setUploading] = useState(false);
-  const [fetchingUrl, setFetchingUrl] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlValue, setUrlValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +53,7 @@ const NeedInput = ({
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !sessionId) return;
 
     const validTypes = [
       "application/pdf",
@@ -67,95 +72,59 @@ const NeedInput = ({
     onError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const storagePath = `${sessionId}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("need-attachments")
+        .upload(storagePath, file, { upsert: true });
 
-      const { data, error: fnError } = await supabase.functions.invoke("extract-file-text", {
-        body: formData,
-      });
-
-      if (fnError || data?.error) {
-        const message = data?.error || fnError?.message || "Failed to extract text from file.";
-        throw new Error(message);
+      if (uploadError) {
+        throw new Error(uploadError.message || "Failed to upload file.");
       }
 
-      onTextChange(data.text);
-      onSourceChange("file", data.filename || file.name);
-      setTimeout(autoResize, 0);
+      onAddAttachment({
+        type: "file",
+        reference: file.name,
+        storage_path: storagePath,
+      });
     } catch (err: unknown) {
-      onError((err as Error).message || "Failed to extract text from file.");
+      onError((err as Error).message || "Failed to upload file.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleUrlSubmit = async () => {
-    if (!urlValue.trim()) return;
+  const handleUrlSubmit = () => {
+    const url = urlValue.trim();
+    if (!url) return;
 
-    setFetchingUrl(true);
-    onError(null);
-
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("extract-url-text", {
-        body: { url: urlValue.trim() },
-      });
-
-      if (fnError || data?.error) {
-        const message = data?.error || fnError?.message || "Failed to extract content from URL.";
-        throw new Error(message);
-      }
-
-      onTextChange(data.text);
-      onSourceChange("url", urlValue.trim());
-      setShowUrlInput(false);
-      setUrlValue("");
-      setTimeout(autoResize, 0);
-    } catch (err: unknown) {
-      onError((err as Error).message || "Failed to extract content from URL.");
-    } finally {
-      setFetchingUrl(false);
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      onError("Invalid URL format. Please provide a valid http or https URL.");
+      return;
     }
-  };
 
-  const clearSource = () => {
-    onSourceChange("freeform", undefined);
+    onError(null);
+    onAddAttachment({ type: "url", reference: url });
+    setShowUrlInput(false);
+    setUrlValue("");
   };
 
   return (
     <div className="space-y-4">
-      {/* Source badge */}
-      {sourceReference && (
-        <div className="flex items-center gap-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-elevated border border-border text-caption text-foreground-secondary">
-            {sourceType === "file" ? (
-              <Paperclip className="w-3 h-3 text-foreground-muted" />
-            ) : (
-              <Link2 className="w-3 h-3 text-foreground-muted" />
-            )}
-            <span className="truncate max-w-[300px]">{sourceReference}</span>
-            {!isLocked && (
-              <button onClick={clearSource} className="text-foreground-muted hover:text-foreground transition-colors">
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Textarea */}
       <textarea
         ref={textareaRef}
-        value={text}
+        value={contextText}
         onChange={(e) => {
-          onTextChange(e.target.value);
-          if (sourceType !== "freeform" && !sourceReference) {
-            onSourceChange("freeform");
-          }
+          onContextTextChange(e.target.value);
           autoResize();
         }}
         readOnly={isLocked}
-        placeholder="Describe what you're looking for..."
+        placeholder={
+          isLocked && !contextText.trim() && attachments.length > 0
+            ? "No context text provided — attachments will be analyzed in the next step."
+            : "Describe what you're looking for, or add context to your attachments below..."
+        }
         className={cn(
           "w-full min-h-[150px] rounded-card border px-4 py-3 text-body text-foreground placeholder:text-foreground-muted outline-none resize-none transition-colors",
           isLocked
@@ -163,6 +132,34 @@ const NeedInput = ({
             : "bg-surface border-border focus:border-border-accent focus:ring-1 focus:ring-ring"
         )}
       />
+
+      {/* Attachment badges */}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {attachments.map((att, i) => (
+            <Badge
+              key={`${att.type}-${att.reference}-${i}`}
+              variant="default"
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs"
+            >
+              {att.type === "file" ? (
+                <FileText className="w-3 h-3 shrink-0" />
+              ) : (
+                <Globe className="w-3 h-3 shrink-0" />
+              )}
+              <span className="truncate max-w-[260px]">{att.reference}</span>
+              {!isLocked && (
+                <button
+                  onClick={() => onRemoveAttachment(i)}
+                  className="ml-1 hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* Error message */}
       {error && (
@@ -186,7 +183,7 @@ const NeedInput = ({
               ) : (
                 <Paperclip className="w-3.5 h-3.5" />
               )}
-              <span>{uploading ? "Extracting..." : "Attach file"}</span>
+              <span>{uploading ? "Uploading..." : "Attach file"}</span>
             </button>
             <input
               ref={fileInputRef}
@@ -220,10 +217,10 @@ const NeedInput = ({
                   size="sm"
                   variant="secondary"
                   onClick={handleUrlSubmit}
-                  disabled={fetchingUrl || !urlValue.trim()}
+                  disabled={!urlValue.trim()}
                   className="h-7 text-xs px-3"
                 >
-                  {fetchingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : "Fetch"}
+                  Add
                 </Button>
                 <button
                   onClick={() => { setShowUrlInput(false); setUrlValue(""); }}
@@ -238,7 +235,7 @@ const NeedInput = ({
           {/* Lock button */}
           <Button
             onClick={onLock}
-            disabled={!text.trim()}
+            disabled={!canLock}
             className="gap-2"
           >
             <Lock className="w-3.5 h-3.5" />

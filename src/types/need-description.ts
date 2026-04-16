@@ -1,13 +1,20 @@
-/** A1 — Define Your Need: the raw user input describing what they're looking for */
+/** Attachment reference — file in storage or URL */
+export interface NeedAttachment {
+  type: 'file' | 'url';
+  /** Original filename or URL */
+  reference: string;
+  /** For files: path in the need-attachments storage bucket */
+  storage_path?: string;
+}
+
+/** A1 — Define Your Need: user context + attachment references */
 export interface NeedDescription {
-  /** Free-text description of the procurement need */
-  description: string;
-  /** Optional title the user gives their search */
-  title?: string;
-  /** Optional urgency or timeline */
-  timeline?: string;
-  /** Optional budget range or constraints */
-  budget?: string;
-  /** Any additional context */
-  context?: string;
+  id: string;
+  session_id: string;
+  /** User's own description / context text (optional if attachments exist) */
+  context_text?: string;
+  /** File and URL attachments */
+  attachments: NeedAttachment[];
+  /** ISO 8601 timestamp when the step was locked */
+  locked_at: string;
 }
