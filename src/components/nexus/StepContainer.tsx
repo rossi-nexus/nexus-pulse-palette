@@ -9,6 +9,7 @@ interface StepContainerProps {
   title: string;
   status: StepStatus;
   isSpecial?: boolean;
+  isActive?: boolean;
   summaryLine?: string;
   children?: React.ReactNode;
 }
@@ -19,21 +20,20 @@ const statusConfig: Record<StepStatus, { label: string; icon: typeof Circle; col
   locked: { label: "Locked", icon: Lock, colorClass: "text-accent-teal" },
 };
 
-const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine, children }: StepContainerProps) => {
+const StepContainer = ({ stepNumber, title, status, isSpecial, isActive, summaryLine, children }: StepContainerProps) => {
   const isLocked = status === "locked";
   const isEditing = status === "editing";
   const [isOpen, setIsOpen] = useState(!isLocked || !!children);
 
   const { label, icon: StatusIcon, colorClass } = statusConfig[status];
 
-  // If children are provided, always show them (controlled externally)
   const hasContent = !!children;
 
   return (
     <div
       className={cn(
         "bg-surface border rounded-card transition-all duration-200",
-        isEditing ? "border-border-accent shadow-glow" : isLocked ? "border-border-accent/40" : "border-border",
+        isActive ? "border-border-accent shadow-glow" : isLocked ? "border-border-accent/40" : "border-border",
       )}
     >
       {/* Header */}
@@ -52,7 +52,7 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine, chil
           <div
             className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center text-mono-xs font-mono shrink-0 border transition-colors",
-              isEditing || isLocked
+              isActive || isLocked
                 ? "bg-gradient-accent-subtle border-border-accent text-accent-teal"
                 : "bg-elevated border-border text-foreground-muted"
             )}
@@ -64,7 +64,7 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, summaryLine, chil
             <span
               className={cn(
                 "text-body-sm font-medium",
-                isEditing || isLocked ? "text-foreground" : "text-foreground-secondary"
+                isActive || isLocked ? "text-foreground" : "text-foreground-secondary"
               )}
             >
               {!isSpecial && stepNumber && (

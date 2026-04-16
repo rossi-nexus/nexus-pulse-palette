@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 type StepStatus = "not_started" | "editing" | "locked";
 
 interface CompactStepIndicatorProps {
-  stepNumber: number;
+  stepNumber?: number;
   title: string;
   status: StepStatus;
 }
@@ -20,9 +20,11 @@ const CompactStepIndicator = ({ stepNumber, title, status }: CompactStepIndicato
       )}
     >
       <div className="flex items-center gap-3">
-        <span className="text-mono-xs font-mono text-foreground-muted w-5 text-center">
-          {stepNumber}
-        </span>
+        {stepNumber && (
+          <span className="text-mono-xs font-mono text-foreground-muted w-5 text-center">
+            {stepNumber}
+          </span>
+        )}
         <span className="text-body-sm text-foreground-secondary">{title}</span>
       </div>
       <div className="flex items-center gap-1.5 text-foreground-muted">
