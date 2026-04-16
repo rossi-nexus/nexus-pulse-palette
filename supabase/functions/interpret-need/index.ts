@@ -36,6 +36,15 @@ You receive:
 - If the need requires a concept NOT in the provided ontology, or if existing entries are too generic for the specific need, add more precise terms to the role's "proposed_new" array. The ontology grows through use — proposals are how it learns. Do not force-fit a search into existing categories when a more specific or accurate term would serve the search better. You may BOTH select an existing broad entry AND propose a more specific one (e.g., select "Radar" from the ontology AND propose "Ground Penetrating Radar" if the search specifically needs it).
 - Never invent IDs. Use only IDs from the provided lists or the proposal mechanism.
 
+For each role, actively consider all 5 category types when selecting ontology entries:
+- **Capabilities**: what technical abilities are needed (e.g., radar detection, signal processing)
+- **Competences**: what professional expertise is needed (e.g., systems engineering, project management)
+- **Domains**: what operational environments apply (e.g., Maritime, Arctic Operations)
+- **Product types**: what tangible systems, equipment, or deliverables are implied (e.g., Radar, Camera system, UAV). If the need mentions "systems", "solutions", "equipment", or "platforms", product types should be selected.
+- **Service types**: what professional services are sought (e.g., Systems integration, Maintenance & repair, Training & education). If the need mentions "expertise", "operation", "management", or "support", service types should be selected.
+
+Do not leave product_types or service_types empty when the need text implies physical deliverables or operational services. Most real procurement needs involve both products and services.
+
 ### Constraints
 - Only extract constraints actually stated or clearly implied in the input text.
 - Omit constraint fields that have no relevant information (do not include empty or null fields — just leave them out of the object).
