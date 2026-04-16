@@ -131,7 +131,7 @@ const RoleCard = ({
           "flex-1 text-body-sm font-medium",
           role.status === "rejected" ? "line-through text-foreground-muted" : "text-foreground",
         )}>
-          {role.label}
+          {role.name}
         </span>
 
         {role.source === "axis" && (

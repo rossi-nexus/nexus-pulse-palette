@@ -85,7 +85,7 @@ export interface RoleDependency {
 
 export interface Role {
   id: string;
-  label: string;
+  name: string;
   description: string;
   reasoning: string;
   targets: RoleTargets;
