@@ -373,7 +373,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT + (useToolCalling ? "" : "\n\nReturn ONLY valid JSON matching the described output format. No markdown fences, no explanation.") },
           { role: "user", content: userMessage },
         ],
-        max_tokens: 8192,
+        max_tokens: 16384,
         reasoning: { effort: "high" },
       };
       if (useToolCalling) {
