@@ -153,7 +153,7 @@ export function useInterpretation() {
       if (!prev) return prev;
       const newRole: Role = {
         id: crypto.randomUUID(),
-        label: name,
+        name: name,
         description: "",
         reasoning: "",
         targets: {
@@ -179,7 +179,7 @@ export function useInterpretation() {
       return {
         ...prev,
         roles: prev.roles.map(r =>
-          r.id === roleId ? { ...r, label: name } : r
+          r.id === roleId ? { ...r, name: name } : r
         ),
       };
     });

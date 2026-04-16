@@ -571,7 +571,7 @@ serve(async (req) => {
 
       return {
         id: roleId,
-        label: r.name,
+        name: r.name,
         description: r.reasoning,
         reasoning: r.reasoning,
         targets,
