@@ -59,23 +59,27 @@ For each actor found:
    - WEAK: tangential relevance, few matching signals
 5. Extract key text snippets that justify the match (2-3 per actor)
 
-Sourcing rules (strict):
-- ONLY return entities that appear in the provided search results — NEVER invent, guess, or generate actors from training knowledge. If the search results contain few relevant actors, return fewer — do not pad the list.
-- Every actor MUST have at least one source URL from the search results as evidence.
-- Deduplicate: if the same entity appears in multiple results, merge into one actor.
-- Maximum 20 actors per role.
-- If a result is a directory or list page, extract individual entities from it.
-- Ignore job boards, Wikipedia overview pages, and news articles that don't identify specific entities.
-- Skip individual persons, consultants listed by personal name, freelancers, or sole proprietorships identified only by a person's name. If a search result is about a person rather than an organization, skip it entirely.
+Rules:
+- ONLY return companies/organizations that appear in the provided search results — NEVER invent, guess, or generate actors from training knowledge
+- Every actor you return MUST have at least one source URL from the search results as evidence
+- Deduplicate: if the same company appears in multiple results, merge into one actor
+- Maximum 20 actors per role
+- If a result is a directory or list page, extract individual companies from it
+- Ignore job boards, Wikipedia overview pages, and news articles that don't identify specific actors
+- If the search results contain few relevant actors, return fewer actors — do not pad the list with invented entries
 
-Actor type tagging (return ALL types — do NOT filter by type):
-Tag every actor with an actor_type field using one of these values:
-  - "commercial" — companies that can be contracted as suppliers or partners. INCLUDES state-owned companies that operate commercially (e.g., Patria, Space Norway operating as a commercial satellite operator).
-  - "government" — government agencies, defence ministries, military units, government research institutes (e.g., FFI, FOI), procurement authorities (e.g., FMV, FMA).
-  - "academic" — universities, research institutions (e.g., NTNU, RISE).
-  - "industry_body" — NATO agencies, standardization bodies, industry associations.
+Actor filtering rules:
+- Only return companies or organizations. Exclude individual persons, consultants listed by personal name, freelancers, or sole proprietorships identified only by a person's name. If a search result is about a person rather than a company, skip it entirely.
+- Exclude government agencies, defence ministries, military units, government research institutes (e.g., FFI, FOI), and procurement authorities (e.g., FMV, FMA). Only return entities that could realistically be contracted as commercial suppliers or partners.
+- EXCEPTION: State-owned companies that operate commercially as contractors or suppliers (e.g., Patria, which is state-owned but operates as a commercial defence company) should be INCLUDED and tagged as "commercial."
 
-Return every actor you find regardless of type — the consuming system controls visibility and downstream filtering. Do NOT silently drop government, academic, or industry_body actors. In practice most results will be "commercial" because persons and pure non-entities are filtered above, but when a government R&D institute, ministry, or university appears prominently in the search results, include it with the correct type tag.
+Actor type tagging:
+- Tag each actor with an actor_type field using one of these values:
+  - "commercial" — companies that can be contracted as suppliers or partners (this includes state-owned companies that operate commercially)
+  - "government" — government agencies, ministries, military units, government R&D institutes, procurement authorities
+  - "academic" — universities, research institutions
+  - "industry_body" — NATO agencies, standardization bodies, industry associations
+- Return ALL actors you find, regardless of type. Do not filter any out based on actor_type. The consuming system handles visibility. In practice, most actors should be "commercial" since the filtering rules above exclude most non-commercial entities — but if a government body or academic institution appears prominently in the results, include it with the correct type tag rather than silently dropping it.
 
 Match strength calibration:
 - When assessing match strength, consider the actor's known role in the sector, not just what appeared in one particular search result.
