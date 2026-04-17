@@ -200,7 +200,7 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
   // Searching or Reviewing — fixed frame: header (tabs + role title) / scrollable cards / pinned footer
   return (
     <StepContainer stepNumber={3} title="Search" status="editing" isActive>
-      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+      <div className="flex flex-col" style={{ height: "calc(100vh - 240px)" }}>
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
           {/* Role progress boxes */}
