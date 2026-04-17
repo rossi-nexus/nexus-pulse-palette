@@ -188,7 +188,7 @@ serve(async (req) => {
       });
     }
 
-    const { role, constraints, session_id } = await req.json();
+    const { role, constraints } = await req.json();
     if (!role) {
       return new Response(JSON.stringify({ error: "Missing role" }), {
         status: 400,
