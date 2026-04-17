@@ -195,6 +195,10 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
     });
   };
 
+  const showDev =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("dev") === "step4";
+
   // Not started
   if (status === "not_started") {
     return (
@@ -211,17 +215,21 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
               Begin analysis
             </Button>
           )}
-          <Button
-            onClick={() => startAnalysis(buildDevInput())}
-            variant="outline"
-            className="gap-2 text-foreground-muted border-border hover:text-foreground"
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            DEV: Run test analysis
-          </Button>
-          <p className="text-caption text-foreground-muted max-w-md text-center">
-            DEV mode runs real Serper + AI analysis on 3 Norwegian defence actors. This will consume API credits.
-          </p>
+          {showDev && (
+            <>
+              <Button
+                onClick={() => startAnalysis(buildDevInput())}
+                variant="outline"
+                className="gap-2 text-foreground-muted border-border hover:text-foreground"
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                DEV: Run test analysis
+              </Button>
+              <p className="text-caption text-foreground-muted max-w-md text-center">
+                DEV mode runs real Serper + AI analysis on 3 Norwegian defence actors. This will consume API credits.
+              </p>
+            </>
+          )}
         </div>
       </StepContainer>
     );

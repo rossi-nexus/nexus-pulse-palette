@@ -1,10 +1,10 @@
-import { Loader2, Lock, CheckCheck, Unlock, FlaskConical } from "lucide-react";
+import { Loader2, Lock, Unlock, FlaskConical, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import SummarySection from "./SummarySection";
 import RolesSection from "./RolesSection";
 import ConstraintsSection from "./ConstraintsSection";
-import type { NeedDescription } from "@/types/need-description";
+import type { NeedDescription, NeedAttachment } from "@/types/need-description";
 import type { useInterpretation } from "@/hooks/useInterpretation";
 
 const MOCK_NEED: NeedDescription = {
@@ -18,9 +18,19 @@ const MOCK_NEED: NeedDescription = {
 
 interface InterpretationStepProps {
   hook: ReturnType<typeof useInterpretation>;
+  step1Locked: boolean;
+  contextText: string;
+  attachments: NeedAttachment[];
+  sessionId: string | null;
 }
 
-const InterpretationStep = ({ hook }: InterpretationStepProps) => {
+const InterpretationStep = ({
+  hook,
+  step1Locked,
+  contextText,
+  attachments,
+  sessionId,
+}: InterpretationStepProps) => {
   const {
     interpretation,
     status,
@@ -43,24 +53,47 @@ const InterpretationStep = ({ hook }: InterpretationStepProps) => {
     unlock,
   } = hook;
 
+  const showDev =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("dev") === "step2";
+
+  const runFromStep1 = () => {
+    const need: NeedDescription = {
+      id: crypto.randomUUID(),
+      session_id: sessionId ?? "anonymous",
+      attachments,
+      locked_at: new Date().toISOString(),
+      ...(contextText.trim() ? { context_text: contextText.trim() } : {}),
+    };
+    runInterpretation(need);
+  };
+
   // Not started
   if (status === "not_started") {
     return (
-      <StepContainer stepNumber={2} title="Interpretation & Targets" status="not_started" isActive={false}>
+      <StepContainer stepNumber={2} title="Interpretation & Targets" status="not_started" isActive={step1Locked}>
         <div className="flex flex-col items-center justify-center py-8 gap-3">
           {error && (
             <div className="px-3 py-2 rounded border border-destructive/50 bg-destructive/10 text-caption text-destructive mb-2 max-w-md text-center">
               {error}
             </div>
           )}
-          <Button
-            onClick={() => runInterpretation(MOCK_NEED)}
-            variant="outline"
-            className="gap-2 text-foreground-muted border-border hover:text-foreground"
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            DEV: Run with test data
-          </Button>
+          {step1Locked && (
+            <Button onClick={runFromStep1} className="gap-2">
+              <Sparkles className="w-3.5 h-3.5" />
+              Run interpretation
+            </Button>
+          )}
+          {showDev && (
+            <Button
+              onClick={() => runInterpretation(MOCK_NEED)}
+              variant="outline"
+              className="gap-2 text-foreground-muted border-border hover:text-foreground"
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              DEV: Run with test data
+            </Button>
+          )}
         </div>
       </StepContainer>
     );
@@ -132,31 +165,23 @@ const InterpretationStep = ({ hook }: InterpretationStepProps) => {
             onUpdate={updateConstraint}
           />
 
-          {/* Action row */}
+          {/* Action row — Lock is always enabled once interpretation has loaded.
+              Unreviewed items are kept as-is; user can unlock later to refine. */}
           <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
             <div>
               {pendingCount > 0 && (
                 <span className="text-body-sm text-foreground-muted">
-                  {pendingCount} item{pendingCount !== 1 ? "s" : ""} pending review
+                  {pendingCount} item{pendingCount !== 1 ? "s" : ""} unreviewed (will be kept as-is)
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              {pendingCount > 0 && (
-                <Button
-                  variant="ghost"
-                  onClick={acceptAllPending}
-                  className="gap-2 text-foreground-muted hover:text-foreground"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  Accept all remaining
-                </Button>
-              )}
               <Button
-                onClick={lock}
-                disabled={!canLock}
+                onClick={() => {
+                  acceptAllPending();
+                  lock();
+                }}
                 className="gap-2"
-                title={!canLock ? "Review all proposed items first" : undefined}
               >
                 <Lock className="w-3.5 h-3.5" />
                 Lock interpretation

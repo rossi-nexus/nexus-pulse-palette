@@ -140,6 +140,10 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
 
   const expandedResult = orderedRoles.find(r => r.role_id === expandedRoleId);
 
+  const showDev =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("dev") === "step3";
+
   // Not started
   if (status === "not_started") {
     return (
@@ -159,14 +163,16 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
               Begin search
             </Button>
           )}
-          <Button
-            onClick={() => startSearch(MOCK_INTERPRETATION)}
-            variant="outline"
-            className="gap-2 text-foreground-muted border-border hover:text-foreground"
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            DEV: Run test search
-          </Button>
+          {showDev && (
+            <Button
+              onClick={() => startSearch(MOCK_INTERPRETATION)}
+              variant="outline"
+              className="gap-2 text-foreground-muted border-border hover:text-foreground"
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              DEV: Run test search
+            </Button>
+          )}
         </div>
       </StepContainer>
     );
