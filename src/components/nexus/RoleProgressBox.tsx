@@ -11,6 +11,7 @@ interface RoleProgressBoxProps {
 
 const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgressBoxProps) => {
   const isClickable = result.status === "complete" || result.status === "error";
+  const includedCount = result.actors.filter(a => a.triage_decision === "included").length;
 
   return (
     <button
@@ -41,11 +42,17 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgress
         {result.role_name}
       </span>
 
-      {/* Hit count */}
+      {/* Counts: found + included */}
       {(result.status === "searching" || result.status === "complete") && (
-        <span className="text-mono-xs font-mono text-foreground-muted">
-          {result.actors.length} found
-        </span>
+        <div className="flex items-center gap-1.5 text-mono-xs font-mono">
+          <span className="text-foreground-muted">{result.actors.length} found</span>
+          {includedCount > 0 && (
+            <>
+              <span className="text-foreground-muted/40">·</span>
+              <span className="text-accent-teal">{includedCount} ✓</span>
+            </>
+          )}
+        </div>
       )}
     </button>
   );
