@@ -339,7 +339,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
         </div>
 
         {/* PINNED FOOTER — visible during analysis and after */}
-        <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0">
+        <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0 bg-surface">
           <div className="text-body-sm text-foreground-secondary space-x-4">
             <span className="font-mono text-mono-xs text-accent-teal">{includedCount} included</span>
             {excludedCount > 0 && (
