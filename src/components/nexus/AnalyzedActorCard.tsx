@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown, Loader2, X, ExternalLink, FileText, Info } from "lucide-react";
+import { Check, ChevronDown, Loader2, X, ExternalLink, FileText, Ban, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import type { ActorAnalysis, MatchedCategory } from "@/types/analyzed-actors";
 
 interface AnalyzedActorCardProps {
   state: ActorAnalysisStatus;
+  excluded?: boolean;
+  onToggleExclude?: (actorId: string) => void;
 }
 
 const sectionCount = (analysis: ActorAnalysis | null | undefined) => {
@@ -65,80 +67,156 @@ const EvidenceLine = ({ label, evidence }: { label: string; evidence: string }) 
   </div>
 );
 
-const AnalyzedActorCard = ({ state }: AnalyzedActorCardProps) => {
+const AnalyzedActorCard = ({ state, excluded = false, onToggleExclude }: AnalyzedActorCardProps) => {
   const { source_actor: actor, status, result: analysis, error } = state;
   const counts = sectionCount(analysis);
   const isSkipped = status === "skipped";
   const isError = status === "error";
   const isAnalyzing = status === "analyzing";
   const isWaiting = status === "waiting";
+  const isComplete = status === "complete";
+
+  // Card-level expand/collapse (collapsed by default)
+  const [expanded, setExpanded] = useState(false);
+
+  // Build a 1-line preview from first capability if available
+  const previewLine = (() => {
+    if (!analysis) return null;
+    const firstCat = analysis.capabilities[0];
+    const firstEntry = firstCat?.entries?.[0];
+    if (firstEntry) return firstEntry.entryName;
+    if (analysis.products[0]) return analysis.products[0].productName;
+    if (analysis.services[0]) return analysis.services[0].serviceName;
+    return null;
+  })();
+
+  const totalMatches =
+    counts.capabilities + counts.competences + counts.domains + counts.products + counts.services;
 
   return (
     <div className={cn(
-      "border rounded-card bg-surface p-4 space-y-2 transition-all",
-      isSkipped && "opacity-60 border-border",
-      isError && "border-destructive/40",
-      isAnalyzing && "border-accent-teal/50",
-      !isSkipped && !isError && !isAnalyzing && "border-border",
+      "border rounded-card bg-surface transition-all border-l-4",
+      excluded && "opacity-50 border-destructive/30 border-l-destructive/40",
+      !excluded && isSkipped && "opacity-60 border-border border-l-border",
+      !excluded && isError && "border-destructive/40 border-l-destructive/40",
+      !excluded && isAnalyzing && "border-accent-teal/50 border-l-accent-teal/50",
+      !excluded && isComplete && "border-border border-l-accent-teal",
+      !excluded && isWaiting && "border-border border-l-border",
     )}>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-body font-medium text-foreground">{actor.name}</h4>
-            {isSkipped && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-foreground-muted/30 text-foreground-muted">
-                Reference actor — not analyzed
-              </Badge>
+      {/* Header — always visible, clickable to expand */}
+      <div className="p-4 space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <button
+            onClick={() => isComplete && setExpanded(!expanded)}
+            className={cn(
+              "flex-1 min-w-0 text-left",
+              isComplete && "cursor-pointer",
             )}
-            {isError && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-destructive/40 text-destructive">
-                Error
-              </Badge>
+            disabled={!isComplete}
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className={cn(
+                "text-body font-medium text-foreground",
+                excluded && "line-through text-foreground-muted",
+              )}>
+                {actor.name}
+              </h4>
+              {isSkipped && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-foreground-muted/30 text-foreground-muted">
+                  Reference — not analyzed
+                </Badge>
+              )}
+              {isError && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-destructive/40 text-destructive">
+                  Error
+                </Badge>
+              )}
+              {excluded && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-destructive/40 text-destructive">
+                  Excluded
+                </Badge>
+              )}
+              {isComplete && totalMatches > 0 && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-teal/30 text-accent-teal font-mono">
+                  {totalMatches} matches
+                </Badge>
+              )}
+            </div>
+            {(actor.location || actor.country) && (
+              <p className="text-caption text-foreground-muted mt-0.5">
+                {[actor.location, actor.country].filter(Boolean).join(", ")}
+              </p>
+            )}
+            {/* Preview line when collapsed */}
+            {isComplete && !expanded && previewLine && (
+              <p className="text-caption text-foreground-secondary mt-1.5 truncate">
+                <span className="text-foreground-muted">→ </span>{previewLine}
+              </p>
+            )}
+          </button>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {actor.website && (
+              <a
+                href={actor.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-foreground-muted hover:text-foreground-secondary transition-colors p-1"
+                title="Open website"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {isComplete && onToggleExclude && (
+              <button
+                onClick={() => onToggleExclude(state.actor_id)}
+                className={cn(
+                  "transition-colors p-1",
+                  excluded
+                    ? "text-foreground-muted hover:text-foreground-secondary"
+                    : "text-foreground-muted hover:text-destructive",
+                )}
+                title={excluded ? "Re-include in final set" : "Exclude from final set"}
+              >
+                {excluded ? <Undo2 className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+              </button>
+            )}
+            {isComplete && <Check className="w-4 h-4 text-accent-teal" />}
+            {isAnalyzing && <Loader2 className="w-4 h-4 text-accent-teal animate-spin" />}
+            {isError && <X className="w-4 h-4 text-destructive" />}
+            {isWaiting && <div className="w-4 h-4 rounded-full border border-border-subtle" />}
+            {isComplete && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-foreground-muted hover:text-foreground-secondary transition-colors p-1"
+                title={expanded ? "Collapse" : "Expand"}
+              >
+                <ChevronDown className={cn("w-4 h-4 transition-transform", expanded && "rotate-180")} />
+              </button>
             )}
           </div>
-          {(actor.location || actor.country) && (
-            <p className="text-caption text-foreground-muted mt-0.5">
-              {[actor.location, actor.country].filter(Boolean).join(", ")}
-            </p>
-          )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {actor.website && (
-            <a
-              href={actor.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground-muted hover:text-foreground-secondary transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          )}
-          {status === "complete" && <Check className="w-4 h-4 text-accent-teal" />}
-          {isAnalyzing && <Loader2 className="w-4 h-4 text-accent-teal animate-spin" />}
-          {isError && <X className="w-4 h-4 text-destructive" />}
-          {isWaiting && <div className="w-4 h-4 rounded-full border border-border-subtle" />}
-        </div>
+
+        {/* Reference actor — show description only */}
+        {isSkipped && (
+          <p className="text-body-sm text-foreground-secondary">{actor.description}</p>
+        )}
+
+        {/* Error */}
+        {isError && (
+          <p className="text-caption text-destructive">{error}</p>
+        )}
+
+        {/* Analyzing */}
+        {isAnalyzing && (
+          <p className="text-caption text-foreground-muted">Gathering sources and analyzing capability profile…</p>
+        )}
       </div>
 
-      {/* Reference actor — show description only */}
-      {isSkipped && (
-        <p className="text-body-sm text-foreground-secondary">{actor.description}</p>
-      )}
-
-      {/* Error */}
-      {isError && (
-        <p className="text-caption text-destructive">{error}</p>
-      )}
-
-      {/* Analyzing */}
-      {isAnalyzing && (
-        <p className="text-caption text-foreground-muted">Gathering sources and analyzing capability profile…</p>
-      )}
-
-      {/* Complete — expandable sections */}
-      {status === "complete" && analysis && (
-        <div className="space-y-0">
+      {/* Expanded detail */}
+      {isComplete && analysis && expanded && (
+        <div className="px-4 pb-2 space-y-0">
           <Section title="Capabilities" count={counts.capabilities} defaultOpen>
             {analysis.capabilities.map((cat, i) => (
               <div key={i} className="space-y-1">
@@ -285,30 +363,32 @@ const AnalyzedActorCard = ({ state }: AnalyzedActorCardProps) => {
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Footer action */}
-          <div className="border-t border-border-subtle pt-3 flex justify-end">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled
-                      className="gap-1.5 h-7 text-xs text-foreground-muted"
-                    >
-                      <FileText className="w-3 h-3" />
-                      View full profile
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-caption">Available after database check.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+      {/* Footer — always visible on completed cards */}
+      {isComplete && (
+        <div className="border-t border-border-subtle px-4 py-2 flex justify-end">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled
+                    className="gap-1.5 h-7 text-xs text-foreground-muted"
+                  >
+                    <FileText className="w-3 h-3" />
+                    View full profile
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-caption">Available after database check.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
     </div>

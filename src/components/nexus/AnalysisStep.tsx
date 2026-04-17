@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
@@ -176,12 +177,34 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
     expandedRoleId,
     error,
     totals,
-    canLock,
     setExpandedRoleId,
     startAnalysis,
     lock,
     unlock,
   } = hook;
+
+  // Local exclude state — UI-only, doesn't touch the hook
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const toggleExclude = (actorId: string) => {
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(actorId)) next.delete(actorId);
+      else next.add(actorId);
+      return next;
+    });
+  };
+
+  // Effective included count = analyzed actors that are NOT user-excluded
+  const includedCount = useMemo(() => {
+    let n = 0;
+    for (const r of orderedRoles) {
+      for (const a of r.actors) {
+        if (a.status === "complete" && !excludedIds.has(a.actor_id)) n++;
+      }
+    }
+    return n;
+  }, [orderedRoles, excludedIds]);
+  const excludedCount = excludedIds.size;
 
   const expanded = orderedRoles.find((r) => r.role_id === expandedRoleId);
 
@@ -255,34 +278,35 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
     );
   }
 
-  // Analyzing or Complete
+  // Analyzing or Complete — fixed frame: header (tabs + role title) / scrollable cards / pinned footer
   return (
     <StepContainer stepNumber={4} title="Deep Analysis" status="editing" isActive>
-      <div className="space-y-6">
-        {/* Role progress boxes */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {orderedRoles.map((r) => (
-            <AnalysisRoleProgressBox
-              key={r.role_id}
-              progress={r}
-              isActive={activeRoleId === r.role_id}
-              isExpanded={expandedRoleId === r.role_id}
-              onClick={() => setExpandedRoleId(expandedRoleId === r.role_id ? null : r.role_id)}
-            />
-          ))}
-        </div>
-
-        {/* Live processing indicator */}
-        {status === "analyzing" && (
-          <div className="flex items-center gap-2 text-body-sm text-foreground-secondary">
-            <Loader2 className="w-4 h-4 animate-spin text-accent-teal" />
-            Analyzing actors sequentially…
+      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+        {/* HEADER — always visible */}
+        <div className="space-y-4 pb-4 shrink-0">
+          {/* Role progress boxes — fit all 5 in a single row, no horizontal scroll */}
+          <div className="flex gap-2 w-full">
+            {orderedRoles.map((r) => (
+              <AnalysisRoleProgressBox
+                key={r.role_id}
+                progress={r}
+                isActive={activeRoleId === r.role_id}
+                isExpanded={expandedRoleId === r.role_id}
+                onClick={() => setExpandedRoleId(expandedRoleId === r.role_id ? null : r.role_id)}
+              />
+            ))}
           </div>
-        )}
 
-        {/* Expanded role */}
-        {expanded && expanded.actors.length > 0 && (
-          <div className="space-y-3">
+          {/* Live processing indicator */}
+          {status === "analyzing" && (
+            <div className="flex items-center gap-2 text-body-sm text-foreground-secondary">
+              <Loader2 className="w-4 h-4 animate-spin text-accent-teal" />
+              Analyzing actors sequentially…
+            </div>
+          )}
+
+          {/* Expanded role header */}
+          {expanded && expanded.actors.length > 0 && (
             <div className="flex items-center justify-between">
               <h3 className="text-body-sm font-medium text-foreground">
                 {expanded.role_name}
@@ -291,38 +315,64 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
                 </span>
               </h3>
             </div>
-            <div className="space-y-2">
-              {expanded.actors.map((actorState) => (
-                <AnalyzedActorCard key={actorState.actor_id} state={actorState} />
-              ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Summary + lock */}
-        {status === "complete" && (
-          <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
-            <div className="text-body-sm text-foreground-secondary space-x-4">
-              <span className="font-mono text-mono-xs text-accent-teal">{totals.analyzed} analyzed</span>
-              <span className="font-mono text-mono-xs">{totals.reference} reference</span>
-              {totals.errors > 0 && (
-                <span className="font-mono text-mono-xs text-destructive">{totals.errors} errors</span>
-              )}
-            </div>
-            <Button
-              onClick={lock}
-              disabled={!canLock}
-              className="gap-2"
-              title={!canLock ? "Analysis in progress" : undefined}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Lock analysis and run database check →
-            </Button>
+        {/* SCROLLABLE actor cards area */}
+        <div className="flex-1 min-h-0 relative">
+          {expanded && expanded.actors.length > 0 && (
+            <>
+              <div className="h-full overflow-y-auto pr-2 space-y-2">
+                {expanded.actors.map((actorState) => (
+                  <AnalyzedActorCard
+                    key={actorState.actor_id}
+                    state={actorState}
+                    excluded={excludedIds.has(actorState.actor_id)}
+                    onToggleExclude={toggleExclude}
+                  />
+                ))}
+              </div>
+              {/* Bottom fade indicator */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
+            </>
+          )}
+        </div>
+
+        {/* PINNED FOOTER — visible during analysis and after */}
+        <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0">
+          <div className="text-body-sm text-foreground-secondary space-x-4">
+            <span className="font-mono text-mono-xs text-accent-teal">{includedCount} included</span>
+            {excludedCount > 0 && (
+              <span className="font-mono text-mono-xs text-destructive">{excludedCount} excluded</span>
+            )}
+            <span className="font-mono text-mono-xs">{totals.analyzed} analyzed</span>
+            {totals.reference > 0 && (
+              <span className="font-mono text-mono-xs text-foreground-muted">{totals.reference} reference</span>
+            )}
+            {totals.errors > 0 && (
+              <span className="font-mono text-mono-xs text-destructive">{totals.errors} errors</span>
+            )}
           </div>
-        )}
+          <Button
+            onClick={lock}
+            disabled={status === "analyzing" || includedCount < 1}
+            className="gap-2"
+            title={
+              status === "analyzing"
+                ? "Analysis in progress…"
+                : includedCount < 1
+                  ? "At least one actor must remain included"
+                  : undefined
+            }
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Lock analysis and run database check →
+          </Button>
+        </div>
       </div>
     </StepContainer>
   );
 };
 
 export default AnalysisStep;
+
