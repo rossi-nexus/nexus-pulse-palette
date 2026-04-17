@@ -281,7 +281,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
   // Analyzing or Complete — fixed frame: header (tabs + role title) / scrollable cards / pinned footer
   return (
     <StepContainer stepNumber={4} title="Deep Analysis" status="editing" isActive>
-      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+      <div className="flex flex-col" style={{ height: "calc(100vh - 240px)" }}>
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
           {/* Role progress boxes — fit all 5 in a single row, no horizontal scroll */}
