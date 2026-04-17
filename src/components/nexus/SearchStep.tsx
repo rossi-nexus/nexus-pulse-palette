@@ -235,17 +235,24 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
               )}
             </div>
 
-            <div className="space-y-2">
-              {expandedResult.actors.map(actor => (
-                <ActorCard
-                  key={actor.id}
-                  actor={actor}
-                  roleId={expandedResult.role_id}
-                  onInclude={includeActor}
-                  onSaveForLater={saveForLater}
-                  onUndo={undoTriage}
-                />
-              ))}
+            <div className="relative">
+              <div
+                className="space-y-2 overflow-y-auto pr-2"
+                style={{ maxHeight: "1200px" }}
+              >
+                {expandedResult.actors.map(actor => (
+                  <ActorCard
+                    key={actor.id}
+                    actor={actor}
+                    roleId={expandedResult.role_id}
+                    onInclude={includeActor}
+                    onSaveForLater={saveForLater}
+                    onUndo={undoTriage}
+                  />
+                ))}
+              </div>
+              {/* Bottom fade indicator */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
             </div>
           </div>
         )}
