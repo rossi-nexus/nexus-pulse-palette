@@ -11,8 +11,7 @@ const QUERY_SYNTHESIS_PROMPT = `You are a search query specialist for the defenc
 
 Given a role description and its target categories, generate 3-5 web search queries that would find companies or organizations matching this role.
 
-Rules:
-- Each query should target a different angle (product-focused, capability-focused, location-focused, etc.)
+Baseline rules:
 - Include geographic terms from the constraints if present
 - Use industry-specific terminology, not generic terms
 - Queries should work well with Google/Bing — natural language, not boolean operators
@@ -53,10 +52,10 @@ For each actor found:
 1. Extract: name, location (city, country), brief description (1-2 sentences), website URL
 2. Check if any search results mention security classifications or clearances
 3. Check if any search results mention standards/certifications
-4. Assess match strength:
-   - STRONG: multiple signals across different sources, clearly relevant to the role targets
-   - MODERATE: some relevant signals, partially matches targets
-   - WEAK: tangential relevance, few matching signals
+4. Assess match strength (use lowercase values: "strong", "moderate", "weak"):
+   - strong: multiple signals across different sources, clearly relevant to the role targets
+   - moderate: some relevant signals, partially matches targets
+   - weak: tangential relevance, few matching signals
 5. Extract key text snippets that justify the match (2-3 per actor)
 
 Rules:
@@ -70,22 +69,21 @@ Rules:
 
 Actor filtering rules:
 - Only return companies or organizations. Exclude individual persons, consultants listed by personal name, freelancers, or sole proprietorships identified only by a person's name. If a search result is about a person rather than a company, skip it entirely.
-- Exclude government agencies, defence ministries, military units, government research institutes (e.g., FFI, FOI), and procurement authorities (e.g., FMV, FMA). Only return entities that could realistically be contracted as commercial suppliers or partners.
-- EXCEPTION: State-owned companies that operate commercially as contractors or suppliers (e.g., Patria, which is state-owned but operates as a commercial defence company) should be INCLUDED and tagged as "commercial."
+- Do NOT filter out government agencies, ministries, military units, government research institutes, procurement authorities, universities, or industry bodies. Include them and tag them with the correct actor_type below. The consuming system handles visibility — your job is to identify and tag, not to filter by type.
 
 Actor type tagging:
-- Tag each actor with an actor_type field using one of these values:
-  - "commercial" — companies that can be contracted as suppliers or partners (this includes state-owned companies that operate commercially)
-  - "government" — government agencies, ministries, military units, government R&D institutes, procurement authorities
+- Tag each actor with an actor_type field using one of these lowercase values:
+  - "commercial" — companies that can be contracted as suppliers or partners (this includes state-owned companies that operate commercially, e.g., Patria)
+  - "government" — government agencies, ministries, military units, government R&D institutes (e.g., FFI, FOI), procurement authorities (e.g., FMV, FMA)
   - "academic" — universities, research institutions
   - "industry_body" — NATO agencies, standardization bodies, industry associations
-- Return ALL actors you find, regardless of type. Do not filter any out based on actor_type. The consuming system handles visibility. In practice, most actors should be "commercial" since the filtering rules above exclude most non-commercial entities — but if a government body or academic institution appears prominently in the results, include it with the correct type tag rather than silently dropping it.
+- Return ALL actors you find, regardless of type. Do not drop any actor based on actor_type.
 
 Match strength calibration:
 - When assessing match strength, consider the actor's known role in the sector, not just what appeared in one particular search result.
-- An actor that is a recognized major provider in the relevant domain should be rated STRONG for that domain, even if the specific search result that surfaced them was about a single contract or news article rather than a general capability overview. For example: Kongsberg Defence & Aerospace for C2 systems in Norway = STRONG (they are Norway's primary C2 provider), not WEAK just because only one contract was found in the search results.
-- An actor found only in a directory listing, a tangential mention, or a single weak reference should be rated WEAK.
-- MODERATE is for actors with clear relevance but limited evidence in the search results — real companies in the right sector but not dominant players, or companies where the search results show partial overlap with the role's targets.`;
+- An actor that is a recognized major provider in the relevant domain should be rated "strong" for that domain, even if the specific search result that surfaced them was about a single contract or news article rather than a general capability overview. For example: Kongsberg Defence & Aerospace for C2 systems in Norway = strong (they are Norway's primary C2 provider), not weak just because only one contract was found in the search results.
+- An actor found only in a directory listing, a tangential mention, or a single weak reference should be rated "weak".
+- "moderate" is for actors with clear relevance but limited evidence in the search results — real companies in the right sector but not dominant players, or companies where the search results show partial overlap with the role's targets.`;
 
 const ACTOR_TOOL_SCHEMA = {
   type: "function" as const,
@@ -190,7 +188,7 @@ serve(async (req) => {
       });
     }
 
-    const { role, constraints, session_id } = await req.json();
+    const { role, constraints } = await req.json();
     if (!role) {
       return new Response(JSON.stringify({ error: "Missing role" }), {
         status: 400,
