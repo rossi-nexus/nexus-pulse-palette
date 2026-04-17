@@ -11,8 +11,7 @@ const QUERY_SYNTHESIS_PROMPT = `You are a search query specialist for the defenc
 
 Given a role description and its target categories, generate 3-5 web search queries that would find companies or organizations matching this role.
 
-Rules:
-- Each query should target a different angle (product-focused, capability-focused, location-focused, etc.)
+Baseline rules:
 - Include geographic terms from the constraints if present
 - Use industry-specific terminology, not generic terms
 - Queries should work well with Google/Bing — natural language, not boolean operators
