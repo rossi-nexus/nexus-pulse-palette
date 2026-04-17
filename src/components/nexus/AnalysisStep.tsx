@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
