@@ -124,7 +124,13 @@ const AppShell = () => {
                 {isStep2Compact ? (
                   <CompactStepIndicator stepNumber={2} title="Interpretation & Targets" status="not_started" />
                 ) : (
-                  <InterpretationStep hook={stepA2} />
+                  <InterpretationStep
+                    hook={stepA2}
+                    step1Locked={isStep1Locked}
+                    contextText={stepA1.contextText}
+                    attachments={stepA1.attachments}
+                    sessionId={sessionId}
+                  />
                 )}
 
                 {/* Step 3 — search */}
