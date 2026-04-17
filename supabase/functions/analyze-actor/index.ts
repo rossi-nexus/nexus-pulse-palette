@@ -1,0 +1,550 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const ANALYSIS_PROMPT = `You are a defence & security industry analyst performing a detailed capability assessment of a specific company.
+
+You are given:
+1. The company's name, website, and description
+2. Web search results about this company (URLs, titles, snippets)
+3. A role description with target categories (capabilities, competences, domains, product types, service types)
+4. Search constraints (geography, classification requirements, etc.)
+
+Your task: analyze the search results and produce a comprehensive capability profile for this company, specifically assessing how well it matches the given role.
+
+For each of the 5 ontology dimensions, identify ONLY items where you found evidence in the search results:
+
+1. Capabilities — match against the role's target capability categories. For each matched category, list the specific raw entries (sub-items) that have evidence. Every entry MUST have an evidence string explaining what was found.
+2. Competences — same structure. Match against target competence categories.
+3. Domains — which operational domains does this company serve? Each must have evidence.
+4. Products — specific products this company offers that are relevant to the role. Include product name, brief description, and evidence of where you found it. Only list products that appeared in the search results.
+5. Services — specific services this company offers that are relevant to the role. Same format as products.
+
+Additionally, extract if found:
+- Security classification level (which national systems, what level, evidence source)
+- Standards and certifications (ISO, AQAP, STANAG, etc.)
+- Customer references (who they've worked for, in what domain, when)
+
+Rules:
+- ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, or customer references.
+- Every match MUST have an evidence field explaining what specific text or information supports it.
+- If the search results contain limited information, produce a shorter profile. Do not pad with assumptions.
+- Match strength is not your concern here — that was assessed in Step 3. Your job is to provide detailed evidence of what this company can do.
+- Use the ontology entry IDs from the role targets when matching. If a capability matches a target entry, use that entry's ID. If you find something not in the targets, describe it but mark it as "additional" (no ontology ID).
+- For classification: be specific about which country's system (NO, SE, NATO, etc.) and the national term (HEMMELIG, HEMLIG, etc.). Only report what you found evidence for.
+- For customer references: include the customer segment (defense, civil_government, commercial, export) where identifiable.
+- All enum values MUST be lowercase: confidence ("high"|"medium"|"low"), classification level ("top_secret"|"secret"|"confidential"|"restricted"|"industrial_security"|"unclassified"|"unknown"), customer segment ("defense"|"civil_government"|"commercial"|"export"), source type ("company_website"|"news"|"directory"|"government"|"linkedin"|"annual_report"|"other").`;
+
+const ANALYSIS_TOOL_SCHEMA = {
+  type: "function" as const,
+  function: {
+    name: "submit_analysis",
+    description: "Submit the deep capability analysis for this actor.",
+    parameters: {
+      type: "object",
+      properties: {
+        capabilities: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              categoryId: { type: "string" },
+              categoryName: { type: "string" },
+              entries: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    entryId: { type: "string" },
+                    entryName: { type: "string" },
+                    evidence: { type: "string" },
+                  },
+                  required: ["entryName", "evidence"],
+                },
+              },
+            },
+            required: ["categoryName", "entries"],
+          },
+        },
+        competences: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              categoryId: { type: "string" },
+              categoryName: { type: "string" },
+              entries: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    entryId: { type: "string" },
+                    entryName: { type: "string" },
+                    evidence: { type: "string" },
+                  },
+                  required: ["entryName", "evidence"],
+                },
+              },
+            },
+            required: ["categoryName", "entries"],
+          },
+        },
+        domains: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              entryId: { type: "string" },
+              domainName: { type: "string" },
+              evidence: { type: "string" },
+            },
+            required: ["domainName", "evidence"],
+          },
+        },
+        products: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              entryId: { type: "string" },
+              productName: { type: "string" },
+              description: { type: "string" },
+              evidence: { type: "string" },
+            },
+            required: ["productName", "evidence"],
+          },
+        },
+        services: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              entryId: { type: "string" },
+              serviceName: { type: "string" },
+              description: { type: "string" },
+              evidence: { type: "string" },
+            },
+            required: ["serviceName", "evidence"],
+          },
+        },
+        classification: {
+          type: "object",
+          properties: {
+            levelNormalized: {
+              type: "string",
+              enum: ["top_secret", "secret", "confidential", "restricted", "industrial_security", "unclassified", "unknown"],
+            },
+            details: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  system: { type: "string" },
+                  levelNationalTerm: { type: "string" },
+                  confidence: { type: "string", enum: ["high", "medium", "low"] },
+                  evidence: { type: "string" },
+                },
+                required: ["system", "confidence", "evidence"],
+              },
+            },
+          },
+        },
+        standards: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              standardName: { type: "string" },
+              standardNumber: { type: "string" },
+              evidence: { type: "string" },
+            },
+            required: ["standardName", "evidence"],
+          },
+        },
+        customerHistory: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              customerName: { type: "string" },
+              description: { type: "string" },
+              year: { type: "number" },
+              domain: { type: "string" },
+              segment: {
+                type: "string",
+                enum: ["defense", "civil_government", "commercial", "export"],
+              },
+              evidence: { type: "string" },
+            },
+            required: ["customerName", "evidence"],
+          },
+        },
+        analysisSources: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              url: { type: "string" },
+              title: { type: "string" },
+              type: {
+                type: "string",
+                enum: ["company_website", "news", "directory", "government", "linkedin", "annual_report", "other"],
+              },
+            },
+            required: ["url", "title", "type"],
+          },
+        },
+      },
+      required: ["capabilities", "competences", "domains", "products", "services", "analysisSources"],
+    },
+  },
+};
+
+interface SearchSourceIn {
+  url: string;
+  title: string;
+}
+
+interface ActorIn {
+  id: string;
+  name: string;
+  website?: string;
+  description: string;
+  actor_type: string;
+  sources: SearchSourceIn[];
+  evidence_snippets: string[];
+}
+
+interface RoleTargetsIn {
+  capabilities: { entryId: string; rawName: string }[];
+  competences: { entryId: string; rawName: string }[];
+  domains: { entryId: string; rawName: string }[];
+  productTypes: { entryId: string; rawName: string }[];
+  serviceTypes: { entryId: string; rawName: string }[];
+}
+
+interface RoleIn {
+  id: string;
+  name: string;
+  targets: RoleTargetsIn;
+}
+
+function safeUrl(u?: string): URL | null {
+  if (!u) return null;
+  try {
+    return new URL(u);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeAnalysis(raw: any): any {
+  // Lowercase enums regardless of what model returned
+  const lc = (v: any) => (typeof v === "string" ? v.toLowerCase() : v);
+
+  const a = { ...raw };
+  a.capabilities = Array.isArray(raw?.capabilities) ? raw.capabilities : [];
+  a.competences = Array.isArray(raw?.competences) ? raw.competences : [];
+  a.domains = Array.isArray(raw?.domains) ? raw.domains : [];
+  a.products = Array.isArray(raw?.products) ? raw.products : [];
+  a.services = Array.isArray(raw?.services) ? raw.services : [];
+  a.standards = Array.isArray(raw?.standards) ? raw.standards : [];
+  a.customerHistory = Array.isArray(raw?.customerHistory) ? raw.customerHistory : [];
+  a.analysisSources = Array.isArray(raw?.analysisSources) ? raw.analysisSources : [];
+
+  if (raw?.classification && typeof raw.classification === "object") {
+    a.classification = {
+      levelNormalized: lc(raw.classification.levelNormalized) || "unknown",
+      details: Array.isArray(raw.classification.details)
+        ? raw.classification.details.map((d: any) => ({
+            ...d,
+            confidence: lc(d.confidence) || "low",
+          }))
+        : [],
+    };
+  }
+
+  a.customerHistory = a.customerHistory.map((c: any) => ({
+    ...c,
+    segment: c.segment ? lc(c.segment) : undefined,
+  }));
+
+  a.analysisSources = a.analysisSources.map((s: any) => ({
+    ...s,
+    type: lc(s.type) || "other",
+  }));
+
+  // Drop entries without evidence — contract requires it
+  for (const grp of ["capabilities", "competences"] as const) {
+    a[grp] = a[grp]
+      .map((cat: any) => ({
+        ...cat,
+        entries: Array.isArray(cat.entries)
+          ? cat.entries.filter((e: any) => e?.evidence && e?.entryName)
+          : [],
+      }))
+      .filter((cat: any) => cat.entries.length > 0);
+  }
+  a.domains = a.domains.filter((d: any) => d?.evidence && d?.domainName);
+  a.products = a.products.filter((p: any) => p?.evidence && p?.productName);
+  a.services = a.services.filter((s: any) => s?.evidence && s?.serviceName);
+  a.customerHistory = a.customerHistory.filter((c: any) => c?.evidence && c?.customerName);
+
+  return a;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    const serperApiKey = Deno.env.get("SERPER_API_KEY");
+
+    if (!lovableApiKey) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!serperApiKey) {
+      return new Response(
+        JSON.stringify({ error: "SERPER_API_KEY not configured. Deep analysis requires a Serper API key." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    const actor = body.actor as ActorIn;
+    const role = body.role as RoleIn;
+    const constraints = body.constraints || {};
+
+    if (!actor || !actor.name) {
+      return new Response(JSON.stringify({ error: "Missing actor" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!role || !role.name) {
+      return new Response(JSON.stringify({ error: "Missing role" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // === Step A — Source Gathering via Serper ===
+    const constraintCountry = constraints?.geography?.countries?.[0]?.toLowerCase() || "no";
+    const websiteHost = safeUrl(actor.website)?.hostname.replace(/^www\./, "");
+
+    const queries: string[] = [];
+    if (websiteHost) {
+      queries.push(`site:${websiteHost} ${role.name}`);
+    }
+    const topCaps = (role.targets.capabilities || []).slice(0, 3).map((c) => c.rawName).filter(Boolean);
+    if (topCaps.length > 0) {
+      queries.push(`"${actor.name}" ${topCaps.join(" ")}`);
+    }
+    queries.push(`"${actor.name}" defence security contract`);
+
+    const gatheredResults: { url: string; title: string; snippet: string }[] = [];
+    const seenUrls = new Set<string>();
+
+    // Seed with sources from Step 3
+    for (const s of actor.sources || []) {
+      if (s.url && !seenUrls.has(s.url)) {
+        seenUrls.add(s.url);
+        gatheredResults.push({ url: s.url, title: s.title || s.url, snippet: "" });
+      }
+    }
+
+    let serperFailed = false;
+    for (const q of queries) {
+      try {
+        const resp = await fetch("https://google.serper.dev/search", {
+          method: "POST",
+          headers: { "X-API-KEY": serperApiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ q, gl: constraintCountry, num: 8 }),
+        });
+        if (!resp.ok) {
+          console.warn(`Serper failed for "${q}": ${resp.status}`);
+          continue;
+        }
+        const data = await resp.json();
+        for (const r of data.organic || []) {
+          if (r.link && !seenUrls.has(r.link)) {
+            seenUrls.add(r.link);
+            gatheredResults.push({
+              url: r.link,
+              title: r.title || r.link,
+              snippet: r.snippet || "",
+            });
+          }
+        }
+      } catch (e) {
+        console.warn(`Serper error for "${q}":`, e);
+        serperFailed = true;
+      }
+    }
+
+    if (gatheredResults.length === 0) {
+      return new Response(JSON.stringify({
+        actor_id: actor.id,
+        role_id: role.id,
+        analysis: null,
+        processing_time_ms: Date.now() - startTime,
+        error: "No source data available for analysis (no Step 3 sources, no Serper results).",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // === Step B — Deep Analysis ===
+    const targetText = (label: string, items: { entryId: string; rawName: string }[]) => {
+      if (!items || items.length === 0) return `${label}: (none)`;
+      return `${label}:\n${items.map((i) => `  - [${i.entryId}] ${i.rawName}`).join("\n")}`;
+    };
+
+    const userMessage = `COMPANY: ${actor.name}
+WEBSITE: ${actor.website || "(unknown)"}
+ACTOR TYPE: ${actor.actor_type}
+DESCRIPTION FROM STEP 3: ${actor.description}
+
+ROLE: ${role.name} (id: ${role.id})
+
+ROLE TARGETS (use these entryIds when matching):
+${targetText("Capabilities", role.targets.capabilities)}
+${targetText("Competences", role.targets.competences)}
+${targetText("Domains", role.targets.domains)}
+${targetText("Product types", role.targets.productTypes)}
+${targetText("Service types", role.targets.serviceTypes)}
+
+CONSTRAINTS:
+${constraints?.geography?.countries ? `Geography: ${constraints.geography.countries.join(", ")}` : ""}
+${constraints?.security_classification?.required_level ? `Security level required: ${constraints.security_classification.required_level}` : ""}
+${constraints?.standards?.required ? `Required standards: ${constraints.standards.required.join(", ")}` : ""}
+
+EVIDENCE SNIPPETS FROM STEP 3:
+${(actor.evidence_snippets || []).map((s, i) => `[s${i + 1}] ${s}`).join("\n") || "(none)"}
+
+WEB SEARCH RESULTS (${gatheredResults.length}):
+${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.snippet || "(no snippet)"}`).join("\n\n")}`;
+
+    async function callAI(): Promise<{ data: any; mode: "tool" | "json" }> {
+      // Attempt 1: tool calling
+      const body1 = {
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: ANALYSIS_PROMPT },
+          { role: "user", content: userMessage },
+        ],
+        max_tokens: 8192,
+        tools: [ANALYSIS_TOOL_SCHEMA],
+        tool_choice: { type: "function", function: { name: "submit_analysis" } },
+      };
+      const resp1 = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body1),
+      });
+      if (resp1.status === 429) throw new Error("Rate limited (429). Please retry shortly.");
+      if (resp1.status === 402) throw new Error("Lovable AI credits exhausted (402).");
+      if (resp1.ok) {
+        const r1 = await resp1.json();
+        const args = r1.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+        if (args) {
+          try {
+            return { data: JSON.parse(args), mode: "tool" };
+          } catch {
+            // fall through
+          }
+        }
+      } else {
+        console.warn("Tool-call attempt failed:", resp1.status, await resp1.text().catch(() => ""));
+      }
+
+      // Attempt 2: JSON fallback
+      const body2 = {
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: ANALYSIS_PROMPT + "\n\nReturn ONLY valid JSON matching the submit_analysis schema. No markdown fences." },
+          { role: "user", content: userMessage },
+        ],
+        max_tokens: 8192,
+      };
+      const resp2 = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body2),
+      });
+      if (resp2.status === 429) throw new Error("Rate limited (429). Please retry shortly.");
+      if (resp2.status === 402) throw new Error("Lovable AI credits exhausted (402).");
+      if (!resp2.ok) throw new Error(`AI JSON fallback failed: ${resp2.status}`);
+      const r2 = await resp2.json();
+      let content = r2.choices?.[0]?.message?.content || "";
+      content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      return { data: JSON.parse(content), mode: "json" };
+    }
+
+    let analysisRaw: any;
+    let mode: "tool" | "json";
+    try {
+      const r = await callAI();
+      analysisRaw = r.data;
+      mode = r.mode;
+    } catch (e) {
+      console.error("AI analysis failed:", e);
+      return new Response(JSON.stringify({
+        actor_id: actor.id,
+        role_id: role.id,
+        analysis: null,
+        processing_time_ms: Date.now() - startTime,
+        error: `AI analysis failed: ${(e as Error).message}`,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const analysis = normalizeAnalysis(analysisRaw);
+
+    return new Response(JSON.stringify({
+      actor_id: actor.id,
+      role_id: role.id,
+      analysis,
+      processing_time_ms: Date.now() - startTime,
+      sources_gathered: gatheredResults.length,
+      serper_partial_failure: serperFailed,
+      analysis_mode: mode,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("analyze-actor error:", e);
+    return new Response(JSON.stringify({
+      error: (e as Error).message || "Unknown error",
+      processing_time_ms: Date.now() - startTime,
+    }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});

@@ -7,11 +7,13 @@ import ExampleSearchCard from "./ExampleSearchCard";
 import CompactStepIndicator from "./CompactStepIndicator";
 import InterpretationStep from "./InterpretationStep";
 import SearchStep from "./SearchStep";
+import AnalysisStep from "./AnalysisStep";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSession } from "@/hooks/useSession";
 import { useStepA1 } from "@/hooks/useStepA1";
 import { useInterpretation } from "@/hooks/useInterpretation";
 import { useSearch } from "@/hooks/useSearch";
+import { useAnalysis } from "@/hooks/useAnalysis";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect } from "react";
 
@@ -20,6 +22,7 @@ const AppShell = () => {
   const stepA1 = useStepA1({ sessionId });
   const stepA2 = useInterpretation();
   const stepA3 = useSearch();
+  const stepA4 = useAnalysis();
   const [showExamples, setShowExamples] = useState(false);
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
@@ -33,6 +36,8 @@ const AppShell = () => {
   const isStep2Compact = stepA2.status === "not_started" && !stepA2.error;
   const isStep2Locked = stepA2.status === "locked";
   const isStep3Compact = stepA3.status === "not_started" && !isStep2Locked && !stepA3.error;
+  const isStep3Locked = stepA3.status === "locked";
+  const isStep4Compact = stepA4.status === "not_started" && !isStep3Locked && !stepA4.error;
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -124,8 +129,17 @@ const AppShell = () => {
                   />
                 )}
 
-                {/* Step 4: compact indicator */}
-                <CompactStepIndicator stepNumber={4} title="Deep Analysis" status="not_started" />
+                {/* Step 4: deep analysis */}
+                {isStep4Compact ? (
+                  <CompactStepIndicator stepNumber={4} title="Deep Analysis" status="not_started" />
+                ) : (
+                  <AnalysisStep
+                    hook={stepA4}
+                    interpretation={stepA2.interpretation}
+                    searchHook={stepA3}
+                    step3Locked={isStep3Locked}
+                  />
+                )}
 
                 {/* Database Check — compact indicator */}
                 <CompactStepIndicator title="Database Check" status="not_started" />

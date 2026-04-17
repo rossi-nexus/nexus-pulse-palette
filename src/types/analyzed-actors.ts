@@ -1,45 +1,77 @@
 /** A4 — Deep Analysis: enriched analysis of selected actors */
 
+export type AnalysisConfidence = 'high' | 'medium' | 'low';
+
+export type ClassificationLevel =
+  | 'top_secret'
+  | 'secret'
+  | 'confidential'
+  | 'restricted'
+  | 'industrial_security'
+  | 'unclassified'
+  | 'unknown';
+
+export type CustomerSegment = 'defense' | 'civil_government' | 'commercial' | 'export';
+
+export type AnalysisSourceType =
+  | 'company_website'
+  | 'news'
+  | 'directory'
+  | 'government'
+  | 'linkedin'
+  | 'annual_report'
+  | 'other';
+
+/** A single matched ontology entry with mandatory evidence */
 export interface MatchedEntry {
-  entryId: string;
-  rawName: string;
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-  evidence?: string;
+  entryId?: string;
+  entryName: string;
+  evidence: string;
 }
 
+/** A category bucket (capabilities/competences) with its matched entries */
 export interface MatchedCategory {
-  categoryId: string;
+  categoryId?: string;
   categoryName: string;
   entries: MatchedEntry[];
 }
 
-export interface CapabilityAnalysis {
-  capabilities: MatchedCategory[];
-  competences: MatchedCategory[];
-  domains: MatchedCategory[];
-  productTypes: MatchedCategory[];
-  serviceTypes: MatchedCategory[];
+export interface MatchedDomain {
+  entryId?: string;
+  domainName: string;
+  evidence: string;
+}
+
+export interface MatchedProduct {
+  entryId?: string;
+  productName: string;
+  description?: string;
+  evidence: string;
+}
+
+export interface MatchedService {
+  entryId?: string;
+  serviceName: string;
+  description?: string;
+  evidence: string;
+}
+
+export interface ClassificationDetail {
+  system: string;
+  levelNationalTerm?: string;
+  confidence: AnalysisConfidence;
+  evidence: string;
 }
 
 export interface ClassificationAnalysis {
-  classificationSystem: string;
-  levelNormalized: string;
-  levelNationalTerm?: string;
-  issuingAuthority?: string;
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-  evidence?: string;
-  validFrom?: string;
-  validTo?: string;
+  levelNormalized: ClassificationLevel;
+  details: ClassificationDetail[];
 }
 
 export interface StandardAnalysis {
   standardName: string;
   standardNumber?: string;
-  scope?: string;
-  certifyingBody?: string;
-  validFrom?: string;
-  validTo?: string;
-  evidence?: string;
+  evidence: string;
 }
 
 export interface CustomerHistoryAnalysis {
@@ -47,46 +79,41 @@ export interface CustomerHistoryAnalysis {
   description?: string;
   year?: number;
   domain?: string;
-  customerSegment?: 'defense' | 'civil_government' | 'commercial' | 'export';
-  branchDetail?: string;
-  isReference: boolean;
+  segment?: CustomerSegment;
+  evidence: string;
 }
 
-export interface CapacityAnalysis {
-  attributeType: string;
-  valueText: string;
-  valueMin?: number;
-  valueMax?: number;
-  unit?: string;
-  evidence?: string;
+export interface AnalysisSource {
+  url: string;
+  title: string;
+  type: AnalysisSourceType;
 }
 
 export interface ActorAnalysis {
-  /** Ontology coverage analysis */
-  capabilities: CapabilityAnalysis;
-  /** Security classifications found */
-  classifications: ClassificationAnalysis[];
-  /** Standards and certifications */
-  standards: StandardAnalysis[];
-  /** Customer references */
-  customerHistory: CustomerHistoryAnalysis[];
-  /** Capacity attributes */
-  capacityAttributes: CapacityAnalysis[];
-  /** AI-generated descriptions */
-  descriptions: { type: string; content: string }[];
-  /** Overall assessment notes */
-  notes?: string;
+  capabilities: MatchedCategory[];
+  competences: MatchedCategory[];
+  domains: MatchedDomain[];
+  products: MatchedProduct[];
+  services: MatchedService[];
+  classification?: ClassificationAnalysis;
+  standards?: StandardAnalysis[];
+  customerHistory?: CustomerHistoryAnalysis[];
+  analysisSources: AnalysisSource[];
 }
 
 export interface AnalyzedActor {
-  /** The session_actors.id */
+  /** session_actors.id from Step 3 */
   selectionId: string;
-  /** The actor being analyzed */
+  /** Actor identifier */
   actorId: string;
-  /** The role this analysis is for */
+  /** Role this analysis is scoped to */
   roleId: string;
-  /** The deep analysis results */
-  analysis: ActorAnalysis;
+  /** Whether the AI ran or it was skipped (e.g., non-commercial reference actor) */
+  status: 'analyzed' | 'skipped' | 'error';
+  /** The deep analysis results — null when skipped or error */
+  analysis: ActorAnalysis | null;
+  /** Reason for skip / error message */
+  note?: string;
 }
 
 export interface AnalyzedActors {

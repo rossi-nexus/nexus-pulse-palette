@@ -12,6 +12,8 @@ export interface SearchSource {
   credibility: "high" | "medium" | "low";
 }
 
+export type ActorTypeTag = "commercial" | "government" | "academic" | "industry_body";
+
 export interface ActorCardData {
   id: string;
   name: string;
@@ -20,6 +22,7 @@ export interface ActorCardData {
   website?: string;
   description: string;
   match_strength: "strong" | "moderate" | "weak";
+  actor_type: ActorTypeTag;
   classification_found?: string;
   standards_found?: string[];
   sources: SearchSource[];
@@ -143,6 +146,7 @@ export function useSearch() {
           website: a.website,
           description: a.description,
           match_strength: a.match_strength || "moderate",
+          actor_type: (a.actor_type as ActorTypeTag) || "commercial",
           classification_found: a.classification_found,
           standards_found: a.standards_found,
           sources: a.sources || [],
