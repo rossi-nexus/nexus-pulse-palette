@@ -32,12 +32,21 @@ const AppShell = () => {
     if (hasContent) setShowExamples(false);
   }, [hasContent]);
 
+  const devStep = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("dev")
+    : null;
+
   const isStep1Active = stepA1.status === "editing";
-  const isStep2Compact = stepA2.status === "not_started" && !stepA2.error;
+  const isStep1Locked = stepA1.status === "locked";
   const isStep2Locked = stepA2.status === "locked";
-  const isStep3Compact = stepA3.status === "not_started" && !isStep2Locked && !stepA3.error;
   const isStep3Locked = stepA3.status === "locked";
-  const isStep4Compact = stepA4.status === "not_started" && !isStep3Locked && !stepA4.error;
+
+  const isStep2Compact =
+    stepA2.status === "not_started" && !isStep1Locked && !stepA2.error && devStep !== "step2";
+  const isStep3Compact =
+    stepA3.status === "not_started" && !isStep2Locked && !stepA3.error && devStep !== "step3";
+  const isStep4Compact =
+    stepA4.status === "not_started" && !isStep3Locked && !stepA4.error && devStep !== "step4";
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
