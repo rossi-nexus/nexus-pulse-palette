@@ -281,7 +281,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
   // Analyzing or Complete — fixed frame: header (tabs + role title) / scrollable cards / pinned footer
   return (
     <StepContainer stepNumber={4} title="Deep Analysis" status="editing" isActive>
-      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+      <div className="flex flex-col" style={{ height: "calc(100vh - 240px)" }}>
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
           {/* Role progress boxes — fit all 5 in a single row, no horizontal scroll */}
@@ -339,7 +339,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
         </div>
 
         {/* PINNED FOOTER — visible during analysis and after */}
-        <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0">
+        <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0 bg-surface">
           <div className="text-body-sm text-foreground-secondary space-x-4">
             <span className="font-mono text-mono-xs text-accent-teal">{includedCount} included</span>
             {excludedCount > 0 && (

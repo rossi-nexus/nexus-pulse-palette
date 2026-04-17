@@ -200,7 +200,7 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
   // Searching or Reviewing — fixed frame: header (tabs + role title) / scrollable cards / pinned footer
   return (
     <StepContainer stepNumber={3} title="Search" status="editing" isActive>
-      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+      <div className="flex flex-col" style={{ height: "calc(100vh - 240px)" }}>
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
           {/* Role progress boxes */}
@@ -274,7 +274,7 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
 
         {/* PINNED FOOTER — always visible: stats + lock (visible during search, enabled when ≥1 included) */}
         {(status === "searching" || status === "reviewing") && (
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0">
+          <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0 bg-surface">
             <div className="text-body-sm text-foreground-secondary space-x-4">
               <span className="font-mono text-mono-xs">{totalFound} found</span>
               <span className="font-mono text-mono-xs text-accent-teal">{totalIncluded} included</span>
