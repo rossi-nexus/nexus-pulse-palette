@@ -274,7 +274,7 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
 
         {/* PINNED FOOTER — always visible: stats + lock (visible during search, enabled when ≥1 included) */}
         {(status === "searching" || status === "reviewing") && (
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0">
+          <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0 bg-surface">
             <div className="text-body-sm text-foreground-secondary space-x-4">
               <span className="font-mono text-mono-xs">{totalFound} found</span>
               <span className="font-mono text-mono-xs text-accent-teal">{totalIncluded} included</span>
