@@ -235,17 +235,24 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
               )}
             </div>
 
-            <div className="space-y-2">
-              {expandedResult.actors.map(actor => (
-                <ActorCard
-                  key={actor.id}
-                  actor={actor}
-                  roleId={expandedResult.role_id}
-                  onInclude={includeActor}
-                  onSaveForLater={saveForLater}
-                  onUndo={undoTriage}
-                />
-              ))}
+            <div className="relative">
+              <div
+                className="space-y-2 overflow-y-auto pr-2"
+                style={{ maxHeight: "1200px" }}
+              >
+                {expandedResult.actors.map(actor => (
+                  <ActorCard
+                    key={actor.id}
+                    actor={actor}
+                    roleId={expandedResult.role_id}
+                    onInclude={includeActor}
+                    onSaveForLater={saveForLater}
+                    onUndo={undoTriage}
+                  />
+                ))}
+              </div>
+              {/* Bottom fade indicator */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
             </div>
           </div>
         )}
@@ -269,9 +276,9 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
             </div>
             <Button
               onClick={lock}
-              disabled={!canLock}
+              disabled={totalIncluded < 1}
               className="gap-2"
-              title={!canLock ? "Decide on all actors before locking" : undefined}
+              title={totalIncluded < 1 ? "Include at least one actor before locking" : undefined}
             >
               <Lock className="w-3.5 h-3.5" />
               Lock selection and proceed to Step 4 →
