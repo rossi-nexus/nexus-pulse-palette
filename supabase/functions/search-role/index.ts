@@ -384,10 +384,31 @@ ${searchResultsText}`;
       });
     }
 
-    const actors = (actorsData.actors || []).map((a: any) => ({
-      ...a,
-      id: crypto.randomUUID(),
-    }));
+    const rawActors = (actorsData.actors || []) as any[];
+    const droppedNoSources: string[] = [];
+    const actors = rawActors
+      .map((a: any) => {
+        const ms = typeof a.match_strength === "string" ? a.match_strength.toLowerCase() : a.match_strength;
+        const at = typeof a.actor_type === "string" ? a.actor_type.toLowerCase() : a.actor_type;
+        return {
+          ...a,
+          match_strength: ms,
+          actor_type: at,
+          sources: Array.isArray(a.sources) ? a.sources : [],
+          id: crypto.randomUUID(),
+        };
+      })
+      .filter((a: any) => {
+        if (a.sources.length === 0) {
+          droppedNoSources.push(a.name);
+          return false;
+        }
+        return true;
+      });
+
+    if (droppedNoSources.length > 0) {
+      console.warn(`Dropped ${droppedNoSources.length} actor(s) without sources:`, droppedNoSources);
+    }
 
     return new Response(JSON.stringify({
       role_id: role.id,
