@@ -16,7 +16,15 @@ Rules:
 - Include geographic terms from the constraints if present
 - Use industry-specific terminology, not generic terms
 - Queries should work well with Google/Bing — natural language, not boolean operators
-- If security classification constraints exist, include terms like "defence contractor" or "NATO cleared" where relevant`;
+- If security classification constraints exist, include terms like "defence contractor" or "NATO cleared" where relevant
+
+Query diversity rules:
+- Generate queries that approach the role from DIFFERENT angles. At least one query should target manufacturers or product companies, one should target service providers or operators, and one should target integrators or specialists. Do not generate queries that all use the same angle or sentence structure.
+- Draw search terms from ALL of the role's target categories: capabilities, competences, domains, product types, AND service types. For example, combine a product type with a geographic constraint ("thermal camera Arctic surveillance Norway"), or a service type with a domain ("systems integration managed services Nordic defence"). Do not rely only on broad capability terms — use specific product names, service descriptions, and competence areas from the role's targets.
+- Include at least one query specifically targeting smaller or specialist companies in the constraint countries. For example: "Norwegian specialist [product type] manufacturer" or "[service type] company Finland defence" or "niche [domain] provider Sweden." This is critical — broad sector queries tend to surface only the largest primes and miss important niche players.
+- Include one query targeting recent developments, partnerships, joint ventures, or acquisitions in the relevant sector and geography. For example: "Nordic defence [domain] partnership 2025" or "Norway [capability area] joint venture recent." This helps find newly formed entities and changing market structures.
+- When the need involves comprehensive or multi-domain coverage (e.g., land, sea, and air), explicitly consider ALL operational domains including space and satellite-based systems as a query angle. For example: "satellite surveillance [country] defence" or "space-based [domain] Nordic."
+- Never include specific company names in search queries. Always search by what is needed — using the role's target categories (capabilities, competences, domains, product types, service types) combined with geographic and sector constraints. The goal is to DISCOVER unknown actors, not to confirm actors you already know about.`;
 
 const QUERY_TOOL_SCHEMA = {
   type: "function" as const,
@@ -58,7 +66,26 @@ Rules:
 - Maximum 20 actors per role
 - If a result is a directory or list page, extract individual companies from it
 - Ignore job boards, Wikipedia overview pages, and news articles that don't identify specific actors
-- If the search results contain few relevant actors, return fewer actors — do not pad the list with invented entries`;
+- If the search results contain few relevant actors, return fewer actors — do not pad the list with invented entries
+
+Actor filtering rules:
+- Only return companies or organizations. Exclude individual persons, consultants listed by personal name, freelancers, or sole proprietorships identified only by a person's name. If a search result is about a person rather than a company, skip it entirely.
+- Exclude government agencies, defence ministries, military units, government research institutes (e.g., FFI, FOI), and procurement authorities (e.g., FMV, FMA). Only return entities that could realistically be contracted as commercial suppliers or partners.
+- EXCEPTION: State-owned companies that operate commercially as contractors or suppliers (e.g., Patria, which is state-owned but operates as a commercial defence company) should be INCLUDED and tagged as "commercial."
+
+Actor type tagging:
+- Tag each actor with an actor_type field using one of these values:
+  - "commercial" — companies that can be contracted as suppliers or partners (this includes state-owned companies that operate commercially)
+  - "government" — government agencies, ministries, military units, government R&D institutes, procurement authorities
+  - "academic" — universities, research institutions
+  - "industry_body" — NATO agencies, standardization bodies, industry associations
+- Return ALL actors you find, regardless of type. Do not filter any out based on actor_type. The consuming system handles visibility. In practice, most actors should be "commercial" since the filtering rules above exclude most non-commercial entities — but if a government body or academic institution appears prominently in the results, include it with the correct type tag rather than silently dropping it.
+
+Match strength calibration:
+- When assessing match strength, consider the actor's known role in the sector, not just what appeared in one particular search result.
+- An actor that is a recognized major provider in the relevant domain should be rated STRONG for that domain, even if the specific search result that surfaced them was about a single contract or news article rather than a general capability overview. For example: Kongsberg Defence & Aerospace for C2 systems in Norway = STRONG (they are Norway's primary C2 provider), not WEAK just because only one contract was found in the search results.
+- An actor found only in a directory listing, a tangential mention, or a single weak reference should be rated WEAK.
+- MODERATE is for actors with clear relevance but limited evidence in the search results — real companies in the right sector but not dominant players, or companies where the search results show partial overlap with the role's targets.`;
 
 const ACTOR_TOOL_SCHEMA = {
   type: "function" as const,
@@ -78,6 +105,7 @@ const ACTOR_TOOL_SCHEMA = {
               country: { type: "string" },
               website: { type: "string" },
               description: { type: "string" },
+              actor_type: { type: "string", enum: ["commercial", "government", "academic", "industry_body"] },
               match_strength: { type: "string", enum: ["strong", "moderate", "weak"] },
               classification_found: { type: "string" },
               standards_found: { type: "array", items: { type: "string" } },
@@ -95,8 +123,19 @@ const ACTOR_TOOL_SCHEMA = {
                 },
               },
               evidence_snippets: { type: "array", items: { type: "string" } },
+              ontology_signals: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    ontology_entry_id: { type: "string" },
+                    confidence: { type: "string", enum: ["high", "medium", "low"] },
+                  },
+                  required: ["ontology_entry_id", "confidence"],
+                },
+              },
             },
-            required: ["name", "description", "match_strength", "sources", "evidence_snippets"],
+            required: ["name", "description", "actor_type", "match_strength", "sources", "evidence_snippets"],
           },
         },
       },
