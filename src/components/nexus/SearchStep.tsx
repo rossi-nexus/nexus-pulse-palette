@@ -197,36 +197,37 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
     );
   }
 
-  // Searching or Reviewing
+  // Searching or Reviewing — fixed frame: header (tabs + role title) / scrollable cards / pinned footer
   return (
     <StepContainer stepNumber={3} title="Search" status="editing" isActive>
-      <div className="space-y-6">
-        {/* Role progress boxes — horizontal row */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {orderedRoles.map(result => (
-            <RoleProgressBox
-              key={result.role_id}
-              result={result}
-              isActive={hook.activeRoleId === result.role_id}
-              isExpanded={expandedRoleId === result.role_id}
-              onClick={() => setExpandedRoleId(
-                expandedRoleId === result.role_id ? null : result.role_id
-              )}
-            />
-          ))}
-        </div>
-
-        {/* Processing indicator */}
-        {status === "searching" && (
-          <div className="flex items-center gap-2 text-body-sm text-foreground-secondary">
-            <Loader2 className="w-4 h-4 animate-spin text-accent-teal" />
-            Searching roles sequentially...
+      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+        {/* HEADER — always visible */}
+        <div className="space-y-4 pb-4 shrink-0">
+          {/* Role progress boxes */}
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {orderedRoles.map(result => (
+              <RoleProgressBox
+                key={result.role_id}
+                result={result}
+                isActive={hook.activeRoleId === result.role_id}
+                isExpanded={expandedRoleId === result.role_id}
+                onClick={() => setExpandedRoleId(
+                  expandedRoleId === result.role_id ? null : result.role_id
+                )}
+              />
+            ))}
           </div>
-        )}
 
-        {/* Expanded role actors */}
-        {expandedResult && expandedResult.actors.length > 0 && (
-          <div className="space-y-3">
+          {/* Processing indicator */}
+          {status === "searching" && (
+            <div className="flex items-center gap-2 text-body-sm text-foreground-secondary">
+              <Loader2 className="w-4 h-4 animate-spin text-accent-teal" />
+              Searching roles sequentially...
+            </div>
+          )}
+
+          {/* Expanded role header */}
+          {expandedResult && expandedResult.actors.length > 0 && (
             <div className="flex items-center justify-between">
               <h3 className="text-body-sm font-medium text-foreground">
                 {expandedResult.role_name}
@@ -240,12 +241,14 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
                 </span>
               )}
             </div>
+          )}
+        </div>
 
-            <div className="relative">
-              <div
-                className="space-y-2 overflow-y-auto pr-2"
-                style={{ maxHeight: "1200px" }}
-              >
+        {/* SCROLLABLE actor cards area */}
+        <div className="flex-1 min-h-0 relative">
+          {expandedResult && expandedResult.actors.length > 0 && (
+            <>
+              <div className="h-full overflow-y-auto pr-2 space-y-2">
                 {expandedResult.actors.map(actor => (
                   <ActorCard
                     key={actor.id}
@@ -259,19 +262,19 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
               </div>
               {/* Bottom fade indicator */}
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
+            </>
+          )}
+
+          {expandedResult?.error && (
+            <div className="px-3 py-2 rounded border border-destructive/50 bg-destructive/10 text-caption text-destructive">
+              {expandedResult.error}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {expandedResult?.error && (
-          <div className="px-3 py-2 rounded border border-destructive/50 bg-destructive/10 text-caption text-destructive">
-            {expandedResult.error}
-          </div>
-        )}
-
-        {/* Summary + lock */}
-        {status === "reviewing" && (
-          <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+        {/* PINNED FOOTER — always visible: stats + lock (visible during search, enabled when ≥1 included) */}
+        {(status === "searching" || status === "reviewing") && (
+          <div className="flex items-center justify-between pt-4 mt-2 border-t border-border-subtle shrink-0">
             <div className="text-body-sm text-foreground-secondary space-x-4">
               <span className="font-mono text-mono-xs">{totalFound} found</span>
               <span className="font-mono text-mono-xs text-accent-teal">{totalIncluded} included</span>
@@ -297,3 +300,4 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
 };
 
 export default SearchStep;
+

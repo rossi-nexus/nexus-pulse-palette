@@ -24,11 +24,12 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo }: ActorCa
 
   return (
     <div className={cn(
-      "border rounded-card bg-surface p-4 space-y-3 transition-all",
-      hasDecision && "opacity-60",
-      !hasDecision && "border-border",
-      actor.triage_decision === "included" && "border-accent-teal/30",
-      actor.triage_decision === "saved_for_later" && "border-foreground-muted/30",
+      "border rounded-card bg-surface p-4 space-y-3 transition-all border-l-4",
+      !hasDecision && "border-border border-l-border",
+      actor.triage_decision === "included" &&
+        "border-accent-teal/40 border-l-accent-teal bg-accent-teal/5 shadow-[0_0_0_1px_hsl(var(--accent-teal)/0.15)]",
+      actor.triage_decision === "saved_for_later" &&
+        "border-foreground-muted/30 border-l-foreground-muted/40 opacity-70",
     )}>
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
