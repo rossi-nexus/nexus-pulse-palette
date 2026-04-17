@@ -276,9 +276,9 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
             </div>
             <Button
               onClick={lock}
-              disabled={!canLock}
+              disabled={totalIncluded < 1}
               className="gap-2"
-              title={!canLock ? "Decide on all actors before locking" : undefined}
+              title={totalIncluded < 1 ? "Include at least one actor before locking" : undefined}
             >
               <Lock className="w-3.5 h-3.5" />
               Lock selection and proceed to Step 4 →
