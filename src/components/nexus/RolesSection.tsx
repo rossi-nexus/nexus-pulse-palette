@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, ChevronDown, GripVertical, Plus } from "lucide-react";
+import { Check, X, ChevronDown, GripVertical, Plus, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -7,8 +7,8 @@ import type { Role, OntologySelection } from "@/types/interpretation";
 
 interface RolesSectionProps {
   roles: Role[];
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
+  onEdit: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   onAdd: (name: string) => void;
   onToggleSelection: (roleId: string, entryId: string, categoryType: string) => void;
   onReorder: (orderedIds: string[]) => void;
@@ -39,7 +39,6 @@ const OntologyCategory = ({
 
   if (selections.length === 0) return null;
 
-  // Sort: selected first, then unselected
   const sorted = [...selections].sort((a, b) => {
     if (a.selected && !b.selected) return -1;
     if (!a.selected && b.selected) return 1;
@@ -52,7 +51,7 @@ const OntologyCategory = ({
   return (
     <div className="space-y-1.5">
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
         className="flex items-center gap-2 text-body-sm font-medium text-foreground-secondary hover:text-foreground transition-colors"
       >
         <ChevronDown className={cn("w-3 h-3 transition-transform", expanded && "rotate-180")} />
@@ -63,6 +62,7 @@ const OntologyCategory = ({
           {displayed.map((sel) => (
             <label
               key={sel.id}
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-2 py-0.5 cursor-pointer group"
             >
               <Checkbox
@@ -76,11 +76,6 @@ const OntologyCategory = ({
               )}>
                 {sel.rawName}
               </span>
-              {sel.selected && sel.source === "axis" && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-accent-teal/40 text-accent-teal">
-                  Axis
-                </Badge>
-              )}
               {sel.is_proposed_new && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-warning/40 text-warning">
                   New
@@ -90,7 +85,7 @@ const OntologyCategory = ({
           ))}
           {!showAll && !showMore && selections.length > 10 && (
             <button
-              onClick={() => setShowMore(true)}
+              onClick={(e) => { e.stopPropagation(); setShowMore(true); }}
               className="text-caption text-foreground-muted hover:text-foreground-secondary transition-colors ml-5"
             >
               Show all {selections.length} entries
@@ -104,84 +99,135 @@ const OntologyCategory = ({
 
 const RoleCard = ({
   role,
-  onAccept,
-  onReject,
+  onEdit,
+  onDelete,
   onToggleSelection,
+  isEdited,
+  markEdited,
 }: {
   role: Role;
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
+  onEdit: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   onToggleSelection: (roleId: string, entryId: string, categoryType: string) => void;
+  isEdited: boolean;
+  markEdited: (id: string) => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(role.name);
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditName(role.name);
+    setEditing(true);
+  };
+
+  const confirmEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (editName.trim() && editName.trim() !== role.name) {
+      onEdit(role.id, editName.trim());
+      markEdited(role.id);
+    }
+    setEditing(false);
+  };
+
+  const cancelEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditing(false);
+    setEditName(role.name);
+  };
 
   return (
     <div
       className={cn(
-        "border rounded-card transition-all",
-        role.status === "pending" && "border-l-[3px] border-l-accent-teal border-border bg-surface",
-        role.status === "accepted" && "border-border bg-surface",
-        role.status === "rejected" && "border-border bg-surface opacity-40",
+        "border rounded-card transition-all bg-surface",
+        isEdited ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
       )}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3">
-        <GripVertical className="w-4 h-4 text-foreground-muted shrink-0 cursor-grab" />
-        <span className={cn(
-          "flex-1 text-body-sm font-medium",
-          role.status === "rejected" ? "line-through text-foreground-muted" : "text-foreground",
-        )}>
-          {role.name}
-        </span>
+      {/* Header — clickable to expand */}
+      <div
+        onClick={() => !editing && setExpanded(!expanded)}
+        className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-surface-elevated/50 transition-colors"
+      >
+        <GripVertical
+          className="w-4 h-4 text-foreground-muted shrink-0 cursor-grab"
+          onClick={(e) => e.stopPropagation()}
+        />
 
-        {role.source === "axis" && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-accent-teal/40 text-accent-teal">
-            Axis
-          </Badge>
+        {editing ? (
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") confirmEdit();
+              if (e.key === "Escape") cancelEdit();
+            }}
+            className="flex-1 h-8 px-2 rounded border border-border-accent bg-background text-body-sm font-medium text-foreground outline-none"
+            autoFocus
+          />
+        ) : (
+          <span className="flex-1 text-body-sm font-medium text-foreground">
+            {role.name}
+            {isEdited && (
+              <span className="ml-2 text-caption text-accent-teal font-normal">edited</span>
+            )}
+          </span>
         )}
 
-        {role.status === "pending" && (
+        {editing ? (
           <>
             <button
-              onClick={() => onAccept(role.id)}
+              onClick={confirmEdit}
               className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-success hover:bg-success/10 transition-colors"
+              title="Confirm"
             >
               <Check className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => onReject(role.id)}
+              onClick={cancelEdit}
               className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="Cancel"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </>
+        ) : (
+          <>
+            <button
+              onClick={startEdit}
+              className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
+              title="Edit name"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(role.id); }}
+              className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="Delete"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+            <ChevronDown className={cn("w-4 h-4 text-foreground-muted transition-transform shrink-0", expanded && "rotate-180")} />
+          </>
         )}
-        {role.status === "accepted" && (
-          <Check className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
-        )}
-        {role.status === "rejected" && (
-          <button
-            onClick={() => onReject(role.id)}
-            className="text-mono-xs text-foreground-muted hover:text-foreground transition-colors"
-          >
-            undo
-          </button>
-        )}
-
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-foreground transition-colors"
-        >
-          <ChevronDown className={cn("w-4 h-4 transition-transform", expanded && "rotate-180")} />
-        </button>
       </div>
 
       {/* Expanded content */}
-      {expanded && (
+      {expanded && !editing && (
         <div className="px-4 pb-4 space-y-4 border-t border-border-subtle">
+          {/* Description */}
+          {role.description && (
+            <p className="text-body-sm text-foreground-secondary pt-3">
+              {role.description}
+            </p>
+          )}
+
           {/* Reasoning */}
           {role.reasoning && (
-            <p className="text-body-sm text-foreground-secondary italic pt-3">
+            <p className="text-body-sm text-foreground-muted italic">
               {role.reasoning}
             </p>
           )}
@@ -217,10 +263,15 @@ const RoleCard = ({
   );
 };
 
-const RolesSection = ({ roles, onAccept, onReject, onAdd, onToggleSelection, onReorder }: RolesSectionProps) => {
+const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReorder }: RolesSectionProps) => {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [editedIds, setEditedIds] = useState<Set<string>>(new Set());
+
+  const markEdited = (id: string) => {
+    setEditedIds(prev => new Set(prev).add(id));
+  };
 
   const handleAdd = () => {
     if (newName.trim()) {
@@ -230,9 +281,7 @@ const RolesSection = ({ roles, onAccept, onReject, onAdd, onToggleSelection, onR
     }
   };
 
-  const handleDragStart = (roleId: string) => {
-    setDraggedId(roleId);
-  };
+  const handleDragStart = (roleId: string) => setDraggedId(roleId);
 
   const handleDragOver = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
@@ -270,9 +319,11 @@ const RolesSection = ({ roles, onAccept, onReject, onAdd, onToggleSelection, onR
           >
             <RoleCard
               role={role}
-              onAccept={onAccept}
-              onReject={onReject}
+              onEdit={onEdit}
+              onDelete={onDelete}
               onToggleSelection={onToggleSelection}
+              isEdited={editedIds.has(role.id)}
+              markEdited={markEdited}
             />
           </div>
         ))}
