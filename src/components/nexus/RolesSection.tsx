@@ -340,7 +340,7 @@ const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReo
       <div className="flex items-center gap-3">
         <h3 className="text-body-lg font-semibold text-foreground">Roles</h3>
         <Badge variant="secondary" className="text-mono-xs">
-          {roles.length} roles
+          {roles.filter(r => r.status !== "rejected").length} roles
         </Badge>
       </div>
 
