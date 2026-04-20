@@ -362,6 +362,8 @@ export function useInterpretation() {
     processingMessage,
     pendingCount,
     canLock,
+    populatingRoleIds,
+    populationFailedRoleIds,
     runInterpretation,
     acceptSummaryPoint,
     rejectSummaryPoint,
