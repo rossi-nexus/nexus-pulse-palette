@@ -36,7 +36,7 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgress
 
       {/* Role name */}
       <span className={cn(
-        "text-caption font-medium truncate max-w-[100px]",
+        "text-caption font-medium leading-tight text-center line-clamp-3 [text-wrap:balance] break-words",
         result.status === "waiting" ? "text-foreground-muted" : "text-foreground-secondary",
         (isActive || isExpanded) && "text-foreground",
       )}>
