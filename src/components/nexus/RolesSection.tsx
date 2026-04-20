@@ -106,6 +106,8 @@ const RoleCard = ({
   onToggleSelection,
   isEdited,
   markEdited,
+  isPopulating,
+  populationFailed,
 }: {
   role: Role;
   onEdit: (id: string, name: string) => void;
@@ -113,6 +115,8 @@ const RoleCard = ({
   onToggleSelection: (roleId: string, entryId: string, categoryType: string) => void;
   isEdited: boolean;
   markEdited: (id: string) => void;
+  isPopulating: boolean;
+  populationFailed: boolean;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
