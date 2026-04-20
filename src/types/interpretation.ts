@@ -8,6 +8,8 @@ export interface SummaryPoint {
   text: string;
   source: ItemSource;
   status: ItemStatus;
+  /** IDs of roles that address/cover this summary point. Empty array means no role covers it (potential gap). */
+  covered_by_roles?: string[];
 }
 
 export interface OntologySelection {
