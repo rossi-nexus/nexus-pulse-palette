@@ -345,27 +345,30 @@ const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReo
       </div>
 
       <div className="space-y-2">
-        {roles.filter(r => r.status !== "rejected").map((role) => (
-          <div
-            key={role.id}
-            draggable
-            onDragStart={() => handleDragStart(role.id)}
-            onDragOver={(e) => handleDragOver(e, role.id)}
-            onDragEnd={handleDragEnd}
-            className={cn(draggedId === role.id && "opacity-50")}
-          >
-            <RoleCard
-              role={role}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggleSelection={onToggleSelection}
-              isEdited={editedIds.has(role.id)}
-              markEdited={markEdited}
-              isPopulating={populatingRoleIds?.has(role.id) ?? false}
-              populationFailed={populationFailedRoleIds?.has(role.id) ?? false}
-            />
-          </div>
-        ))}
+        {roles.map((role) => {
+          const isRejected = role.status === "rejected";
+          return (
+            <div
+              key={role.id}
+              draggable={!isRejected}
+              onDragStart={() => !isRejected && handleDragStart(role.id)}
+              onDragOver={(e) => !isRejected && handleDragOver(e, role.id)}
+              onDragEnd={handleDragEnd}
+              className={cn(draggedId === role.id && "opacity-50")}
+            >
+              <RoleCard
+                role={role}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onToggleSelection={onToggleSelection}
+                isEdited={editedIds.has(role.id)}
+                markEdited={markEdited}
+                isPopulating={populatingRoleIds?.has(role.id) ?? false}
+                populationFailed={populationFailedRoleIds?.has(role.id) ?? false}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {adding ? (
