@@ -1,18 +1,21 @@
-import { Check, X, Plus } from "lucide-react";
+import { Check, X, Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SummaryPoint } from "@/types/interpretation";
 import { useState } from "react";
 
 interface SummarySectionProps {
   points: SummaryPoint[];
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
+  onEdit: (id: string, text: string) => void;
+  onDelete: (id: string) => void;
   onAdd: (text: string) => void;
 }
 
-const SummarySection = ({ points, onAccept, onReject, onAdd }: SummarySectionProps) => {
+const SummarySection = ({ points, onEdit, onDelete, onAdd }: SummarySectionProps) => {
   const [adding, setAdding] = useState(false);
   const [newText, setNewText] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editedIds, setEditedIds] = useState<Set<string>>(new Set());
 
   const handleAdd = () => {
     if (newText.trim()) {
@@ -22,60 +25,99 @@ const SummarySection = ({ points, onAccept, onReject, onAdd }: SummarySectionPro
     }
   };
 
+  const startEdit = (point: SummaryPoint) => {
+    setEditingId(point.id);
+    setEditText(point.text);
+  };
+
+  const confirmEdit = (id: string) => {
+    if (editText.trim()) {
+      onEdit(id, editText.trim());
+      setEditedIds(prev => new Set(prev).add(id));
+    }
+    setEditingId(null);
+    setEditText("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
   return (
     <div className="space-y-3">
       <h3 className="text-body-lg font-semibold text-foreground">Summary</h3>
       <div className="space-y-2">
-        {points.map((point) => (
-          <div
-            key={point.id}
-            className={cn(
-              "flex items-start gap-3 px-4 py-3 rounded-card border transition-all",
-              point.status === "pending" && "border-l-[3px] border-l-accent-teal bg-accent-teal/5 border-border",
-              point.status === "accepted" && "border-border bg-surface",
-              point.status === "rejected" && "border-border bg-surface opacity-40",
-            )}
-          >
-            <p className={cn(
-              "flex-1 text-body text-foreground",
-              point.status === "rejected" && "line-through",
-            )}>
-              {point.text}
-            </p>
-            <div className="flex items-center gap-1 shrink-0">
-              {point.status === "pending" && (
-                <>
-                  <button
-                    onClick={() => onAccept(point.id)}
-                    className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-success hover:bg-success/10 transition-colors"
-                    title="Accept"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => onReject(point.id)}
-                    className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Reject"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </>
+        {points.map((point) => {
+          const isEditing = editingId === point.id;
+          const isEdited = editedIds.has(point.id);
+          return (
+            <div
+              key={point.id}
+              className={cn(
+                "flex items-start gap-3 px-4 py-3 rounded-card border transition-all bg-surface",
+                isEdited ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
               )}
-              {point.status === "accepted" && (
-                <Check className="w-3.5 h-3.5 text-foreground-muted" />
+            >
+              {isEditing ? (
+                <textarea
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) confirmEdit(point.id);
+                    if (e.key === "Escape") cancelEdit();
+                  }}
+                  className="flex-1 min-h-[60px] px-2 py-1 rounded border border-border-accent bg-background text-body text-foreground outline-none resize-y"
+                  autoFocus
+                />
+              ) : (
+                <p className="flex-1 text-body text-foreground">
+                  {point.text}
+                  {isEdited && (
+                    <span className="ml-2 text-caption text-accent-teal">edited</span>
+                  )}
+                </p>
               )}
-              {point.status === "rejected" && (
-                <button
-                  onClick={() => onReject(point.id)}
-                  className="text-mono-xs text-foreground-muted hover:text-foreground transition-colors"
-                  title="Undo reject"
-                >
-                  undo
-                </button>
-              )}
+              <div className="flex items-center gap-1 shrink-0">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={() => confirmEdit(point.id)}
+                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-success hover:bg-success/10 transition-colors"
+                      title="Confirm edit"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      title="Cancel edit"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => startEdit(point)}
+                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(point.id)}
+                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      title="Delete"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {adding ? (
