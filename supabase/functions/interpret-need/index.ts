@@ -455,10 +455,12 @@ serve(async (req) => {
     }
 
     const aiResult1 = await aiResponse1.json();
+    console.log("[DIAG] Raw AI response (first 2000 chars):", JSON.stringify(JSON.stringify(aiResult1).substring(0, 2000)));
     const toolCall = aiResult1.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {
         parsed = JSON.parse(toolCall.function.arguments);
+        console.log("[DIAG] Parsed security_classification:", JSON.stringify(parsed?.constraints?.security_classification));
       } catch (e) {
         console.error("Failed to parse tool call arguments, will retry with JSON mode");
       }
@@ -479,11 +481,13 @@ serve(async (req) => {
       }
 
       const aiResult2 = await aiResponse2.json();
+      console.log("[DIAG] Raw AI response (first 2000 chars):", JSON.stringify(JSON.stringify(aiResult2).substring(0, 2000)));
       let content = aiResult2.choices?.[0]?.message?.content || "";
       // Strip markdown fences if present
       content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
       try {
         parsed = JSON.parse(content);
+        console.log("[DIAG] Parsed security_classification:", JSON.stringify(parsed?.constraints?.security_classification));
       } catch (e) {
         console.error("Failed to parse JSON from AI content:", content.slice(0, 500));
         return new Response(JSON.stringify({ error: "AI returned unparseable response after retry" }), {
