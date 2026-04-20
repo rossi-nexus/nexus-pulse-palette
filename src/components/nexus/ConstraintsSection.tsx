@@ -24,7 +24,16 @@ const SEARCH_CONTEXT_OPTIONS = [
 ];
 
 const COMPANY_SIZE_OPTIONS = ["any", "SMB", "Mid-size", "Large"];
-const CLASSIFICATION_OPTIONS = ["any", "Restricted", "Confidential", "Secret", "Top Secret"];
+const CLASSIFICATION_OPTIONS: { value: string; label: string }[] = [
+  { value: "any", label: "Any" },
+  { value: "unclassified", label: "Unclassified" },
+  { value: "restricted_no", label: "Restricted (NO)" },
+  { value: "nato_restricted", label: "NATO Restricted" },
+  { value: "confidential_no", label: "Confidential (NO)" },
+  { value: "nato_confidential", label: "NATO Confidential" },
+  { value: "secret_no", label: "Secret (NO)" },
+  { value: "nato_secret", label: "NATO Secret" },
+];
 
 const TagInput = ({
   tags,
@@ -171,7 +180,7 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
                 onChange={(e) => onUpdate("security_classification", { required_level: e.target.value })}
                 className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none"
               >
-                {CLASSIFICATION_OPTIONS.map(o => <option key={o} value={o.toLowerCase()}>{o}</option>)}
+                {CLASSIFICATION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <p className="text-caption text-foreground-muted">Hard filter — actors below this level are excluded</p>
             </div>
