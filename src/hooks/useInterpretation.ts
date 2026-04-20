@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Interpretation, ClarificationPoint, SummaryPoint, Role, Constraints, ItemStatus } from "@/types/interpretation";
 import type { NeedDescription } from "@/types/need-description";
@@ -20,6 +20,12 @@ export function useInterpretation() {
   const [processingMessage, setProcessingMessage] = useState("");
   const [populatingRoleIds, setPopulatingRoleIds] = useState<Set<string>>(new Set());
   const [populationFailedRoleIds, setPopulationFailedRoleIds] = useState<Set<string>>(new Set());
+
+  // Latest-interpretation ref so async callbacks can snapshot without state-setter trickery
+  const interpretationRef = useRef<Interpretation | null>(null);
+  useEffect(() => {
+    interpretationRef.current = interpretation;
+  }, [interpretation]);
 
   const runInterpretation = useCallback(async (needDescription: NeedDescription) => {
     setStatus("processing");
@@ -190,18 +196,13 @@ export function useInterpretation() {
         const token = session?.access_token;
         if (!token) throw new Error("Not authenticated");
 
-        // Snapshot existing role names (excluding the just-added one)
-        const existingRoleNames: { name: string }[] = [];
-        setInterpretation(prev => {
-          if (prev) {
-            for (const r of prev.roles) {
-              if (r.id !== newRoleId && r.status !== "rejected") {
-                existingRoleNames.push({ name: r.name });
-              }
-            }
-          }
-          return prev;
-        });
+        // Snapshot existing role names from ref (excluding the just-added one)
+        const currentInterp = interpretationRef.current;
+        const existingRoleNames: { name: string }[] = currentInterp
+          ? currentInterp.roles
+              .filter(r => r.id !== newRoleId && r.status !== "rejected")
+              .map(r => ({ name: r.name }))
+          : [];
 
         const resp = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/populate-role`,
