@@ -281,7 +281,7 @@ const RoleCard = ({
   );
 };
 
-const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReorder }: RolesSectionProps) => {
+const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReorder, populatingRoleIds, populationFailedRoleIds }: RolesSectionProps) => {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -342,6 +342,8 @@ const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReo
               onToggleSelection={onToggleSelection}
               isEdited={editedIds.has(role.id)}
               markEdited={markEdited}
+              isPopulating={populatingRoleIds?.has(role.id) ?? false}
+              populationFailed={populationFailedRoleIds?.has(role.id) ?? false}
             />
           </div>
         ))}
