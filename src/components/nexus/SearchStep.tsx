@@ -204,7 +204,7 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
           {/* Role progress boxes */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 pb-2 w-full">
             {orderedRoles.map(result => (
               <RoleProgressBox
                 key={result.role_id}
