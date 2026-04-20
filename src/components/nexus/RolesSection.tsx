@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, ChevronDown, GripVertical, Plus, Pencil } from "lucide-react";
+import { Check, X, ChevronDown, GripVertical, Plus, Pencil, Loader2, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,8 @@ interface RolesSectionProps {
   onAdd: (name: string) => void;
   onToggleSelection: (roleId: string, entryId: string, categoryType: string) => void;
   onReorder: (orderedIds: string[]) => void;
+  populatingRoleIds?: Set<string>;
+  populationFailedRoleIds?: Set<string>;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
