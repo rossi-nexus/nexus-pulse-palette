@@ -18,7 +18,7 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgress
       onClick={isClickable ? onClick : undefined}
       title={result.role_name}
       className={cn(
-        "flex flex-col items-center gap-1.5 px-4 py-3 rounded-card border transition-all min-w-[140px] max-w-[180px] shrink-0",
+        "flex flex-col items-center gap-1.5 px-3 py-3 rounded-card border transition-all flex-1 min-w-0 basis-0",
         isExpanded && "border-border-accent shadow-glow",
         isActive && !isExpanded && "border-border-accent",
         result.status === "waiting" && "border-border bg-surface",
