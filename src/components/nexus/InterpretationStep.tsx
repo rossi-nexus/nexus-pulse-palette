@@ -145,15 +145,15 @@ const InterpretationStep = ({
         <div className="space-y-8">
           <SummarySection
             points={interpretation.summary}
-            onAccept={acceptSummaryPoint}
-            onReject={rejectSummaryPoint}
+            onEdit={editSummaryPoint}
+            onDelete={rejectSummaryPoint}
             onAdd={addSummaryPoint}
           />
 
           <RolesSection
             roles={interpretation.roles}
-            onAccept={acceptRole}
-            onReject={rejectRole}
+            onEdit={editRoleName}
+            onDelete={rejectRole}
             onAdd={addRole}
             onToggleSelection={toggleSelection}
             onReorder={reorderRoles}
