@@ -1,4 +1,4 @@
-import { Check, X, Plus, Pencil, AlertTriangle } from "lucide-react";
+import { Check, X, Plus, Pencil, AlertTriangle, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SummaryPoint, Role } from "@/types/interpretation";
 import { useState, useMemo } from "react";
@@ -53,27 +53,27 @@ const SummarySection = ({ points, roles, onEdit, onDelete, onAdd }: SummarySecti
     setEditText("");
   };
 
-  const visiblePoints = points.filter(p => p.status !== "rejected");
-
   return (
     <div className="space-y-3">
       <h3 className="text-body-lg font-semibold text-foreground">Summary</h3>
       <div className="space-y-2">
-        {visiblePoints.map((point) => {
+        {points.map((point) => {
           const isEditing = editingId === point.id;
           const isEdited = editedIds.has(point.id);
+          const isRejected = point.status === "rejected";
           const coveringRoleNames = (point.covered_by_roles ?? [])
             .map((id) => roleNameById.get(id))
             .filter((n): n is string => !!n);
-          const hasCoverageData = point.covered_by_roles !== undefined;
-          const isUncovered = hasCoverageData && coveringRoleNames.length === 0;
+          // Treat undefined the same as [] — manual points get the warning too
+          const isUncovered = coveringRoleNames.length === 0;
 
           return (
             <div
               key={point.id}
               className={cn(
                 "px-4 py-3 rounded-card border transition-all bg-surface",
-                isEdited ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
+                isEdited && !isRejected ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
+                isRejected && "opacity-50",
               )}
             >
               <div className="flex items-start gap-3">
@@ -89,9 +89,9 @@ const SummarySection = ({ points, roles, onEdit, onDelete, onAdd }: SummarySecti
                     autoFocus
                   />
                 ) : (
-                  <p className="flex-1 text-body text-foreground">
+                  <p className={cn("flex-1 text-body text-foreground", isRejected && "line-through")}>
                     {point.text}
-                    {isEdited && (
+                    {isEdited && !isRejected && (
                       <span className="ml-2 text-caption text-accent-teal">edited</span>
                     )}
                   </p>
@@ -114,6 +114,15 @@ const SummarySection = ({ points, roles, onEdit, onDelete, onAdd }: SummarySecti
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </>
+                  ) : isRejected ? (
+                    <button
+                      onClick={() => onDelete(point.id)}
+                      className="inline-flex items-center gap-1 h-7 px-2 rounded text-caption text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
+                      title="Restore"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      Restore
+                    </button>
                   ) : (
                     <>
                       <button
@@ -148,7 +157,7 @@ const SummarySection = ({ points, roles, onEdit, onDelete, onAdd }: SummarySecti
                   ))}
                 </div>
               )}
-              {!isEditing && isUncovered && (
+              {!isEditing && !isRejected && isUncovered && (
                 <div className="flex items-center gap-1.5 mt-2 text-caption text-warning">
                   <AlertTriangle className="w-3 h-3" />
                   Not covered by any role

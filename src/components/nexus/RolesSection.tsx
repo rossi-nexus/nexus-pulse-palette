@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, ChevronDown, GripVertical, Plus, Pencil, Loader2, AlertTriangle } from "lucide-react";
+import { Check, X, ChevronDown, GripVertical, Plus, Pencil, Loader2, AlertTriangle, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -121,6 +121,7 @@ const RoleCard = ({
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(role.name);
+  const isRejected = role.status === "rejected";
 
   const startEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -143,17 +144,23 @@ const RoleCard = ({
     setEditName(role.name);
   };
 
+  const showExpanded = expanded && !editing && !isRejected;
+
   return (
     <div
       className={cn(
         "border rounded-card transition-all bg-surface",
-        isEdited ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
+        isEdited && !isRejected ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
+        isRejected && "opacity-50",
       )}
     >
       {/* Header — clickable to expand */}
       <div
-        onClick={() => !editing && setExpanded(!expanded)}
-        className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-surface-elevated/50 transition-colors"
+        onClick={() => !editing && !isRejected && setExpanded(!expanded)}
+        className={cn(
+          "flex items-center gap-2 px-4 py-3 transition-colors",
+          !isRejected && "cursor-pointer hover:bg-surface-elevated/50",
+        )}
       >
         <GripVertical
           className="w-4 h-4 text-foreground-muted shrink-0 cursor-grab"
@@ -175,9 +182,12 @@ const RoleCard = ({
             autoFocus
           />
         ) : (
-          <span className="flex-1 text-body-sm font-medium text-foreground inline-flex items-center gap-2">
+          <span className={cn(
+            "flex-1 text-body-sm font-medium text-foreground inline-flex items-center gap-2",
+            isRejected && "line-through",
+          )}>
             {role.name}
-            {isEdited && (
+            {isEdited && !isRejected && (
               <span className="text-caption text-accent-teal font-normal">edited</span>
             )}
             {isPopulating && (
@@ -212,6 +222,15 @@ const RoleCard = ({
               <X className="w-3.5 h-3.5" />
             </button>
           </>
+        ) : isRejected ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(role.id); }}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-caption text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
+            title="Restore"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            Restore
+          </button>
         ) : (
           <>
             <button
@@ -234,7 +253,7 @@ const RoleCard = ({
       </div>
 
       {/* Expanded content */}
-      {expanded && !editing && (
+      {showExpanded && (
         <div className="px-4 pb-4 space-y-4 border-t border-border-subtle">
           {/* Description */}
           {role.description && (
@@ -321,32 +340,35 @@ const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReo
       <div className="flex items-center gap-3">
         <h3 className="text-body-lg font-semibold text-foreground">Roles</h3>
         <Badge variant="secondary" className="text-mono-xs">
-          {roles.length} roles
+          {roles.filter(r => r.status !== "rejected").length} roles
         </Badge>
       </div>
 
       <div className="space-y-2">
-        {roles.filter(r => r.status !== "rejected").map((role) => (
-          <div
-            key={role.id}
-            draggable
-            onDragStart={() => handleDragStart(role.id)}
-            onDragOver={(e) => handleDragOver(e, role.id)}
-            onDragEnd={handleDragEnd}
-            className={cn(draggedId === role.id && "opacity-50")}
-          >
-            <RoleCard
-              role={role}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggleSelection={onToggleSelection}
-              isEdited={editedIds.has(role.id)}
-              markEdited={markEdited}
-              isPopulating={populatingRoleIds?.has(role.id) ?? false}
-              populationFailed={populationFailedRoleIds?.has(role.id) ?? false}
-            />
-          </div>
-        ))}
+        {roles.map((role) => {
+          const isRejected = role.status === "rejected";
+          return (
+            <div
+              key={role.id}
+              draggable={!isRejected}
+              onDragStart={() => !isRejected && handleDragStart(role.id)}
+              onDragOver={(e) => !isRejected && handleDragOver(e, role.id)}
+              onDragEnd={handleDragEnd}
+              className={cn(draggedId === role.id && "opacity-50")}
+            >
+              <RoleCard
+                role={role}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onToggleSelection={onToggleSelection}
+                isEdited={editedIds.has(role.id)}
+                markEdited={markEdited}
+                isPopulating={populatingRoleIds?.has(role.id) ?? false}
+                populationFailed={populationFailedRoleIds?.has(role.id) ?? false}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {adding ? (
