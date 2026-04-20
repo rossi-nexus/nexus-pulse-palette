@@ -204,7 +204,7 @@ serve(async (req) => {
     }
 
     const roleDescription = `Role: ${role.name}
-Selected targets:
+${role.description ? `Description: ${role.description}\n` : ''}${role.reasoning ? `Reasoning: ${role.reasoning}\n` : ''}Selected targets:
 ${Object.entries(selectedTargets).map(([k, v]) => `  ${k}: ${v.join(", ")}`).join("\n")}
 ${constraints?.geography?.countries ? `Geography: ${constraints.geography.countries.join(", ")}` : ""}
 ${constraints?.geography?.regions ? `Regions: ${constraints.geography.regions.join(", ")}` : ""}
