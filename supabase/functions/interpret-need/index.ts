@@ -71,7 +71,7 @@ When the user's need mentions a contract period, framework agreement duration, p
 
 **Readiness/Mobilization:**
 When the user's need mentions operational deadlines, mobilization timelines, or delivery requirements (e.g., "operational within 12 months"), populate the readiness.max_response_time and readiness.description fields. Do NOT only mention this in summary points.
-
+`;
 
 const TOOL_SCHEMA = {
   type: "function" as const,
