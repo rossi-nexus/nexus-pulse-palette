@@ -37,6 +37,8 @@ const InterpretationStep = ({
     error,
     processingMessage,
     pendingCount,
+    populatingRoleIds,
+    populationFailedRoleIds,
     runInterpretation,
     rejectSummaryPoint,
     addSummaryPoint,
@@ -155,9 +157,11 @@ const InterpretationStep = ({
             roles={interpretation.roles}
             onEdit={editRoleName}
             onDelete={rejectRole}
-            onAdd={addRole}
+            onAdd={(name) => addRole(name, contextText)}
             onToggleSelection={toggleSelection}
             onReorder={reorderRoles}
+            populatingRoleIds={populatingRoleIds}
+            populationFailedRoleIds={populationFailedRoleIds}
           />
 
           <ConstraintsSection
