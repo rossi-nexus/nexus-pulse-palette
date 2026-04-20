@@ -259,7 +259,7 @@ serve(async (req) => {
             .from("need-attachments")
             .download(att.storage_path);
           if (dlError || !fileData) {
-            extractionErrors.push(`Failed to download ${att.reference}: ${dlError?.message}`);
+            extractionErrors.push(`Failed to download ${att.reference}: ${dlError && dlError.message ? dlError.message : 'unknown error'}`);
             continue;
           }
           // Call extract-file-text edge function
