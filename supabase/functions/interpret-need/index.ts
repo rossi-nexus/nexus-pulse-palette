@@ -226,6 +226,9 @@ const TOOL_SCHEMA = {
   },
 };
 
+const securityClassificationSchema =
+  TOOL_SCHEMA.function.parameters.properties.constraints.properties.security_classification.properties.required_level.enum;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -415,6 +418,7 @@ serve(async (req) => {
         reasoning: { effort: "high" },
       };
       if (useToolCalling) {
+        console.log("[DIAG] Schema security_classification enum:", JSON.stringify(securityClassificationSchema));
         body.tools = [TOOL_SCHEMA];
         body.tool_choice = { type: "function", function: { name: "submit_interpretation" } };
       }
