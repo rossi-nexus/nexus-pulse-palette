@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, ChevronDown, GripVertical, Plus, Pencil } from "lucide-react";
+import { Check, X, ChevronDown, GripVertical, Plus, Pencil, Loader2, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,8 @@ interface RolesSectionProps {
   onAdd: (name: string) => void;
   onToggleSelection: (roleId: string, entryId: string, categoryType: string) => void;
   onReorder: (orderedIds: string[]) => void;
+  populatingRoleIds?: Set<string>;
+  populationFailedRoleIds?: Set<string>;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -104,6 +106,8 @@ const RoleCard = ({
   onToggleSelection,
   isEdited,
   markEdited,
+  isPopulating,
+  populationFailed,
 }: {
   role: Role;
   onEdit: (id: string, name: string) => void;
@@ -111,6 +115,8 @@ const RoleCard = ({
   onToggleSelection: (roleId: string, entryId: string, categoryType: string) => void;
   isEdited: boolean;
   markEdited: (id: string) => void;
+  isPopulating: boolean;
+  populationFailed: boolean;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -169,10 +175,22 @@ const RoleCard = ({
             autoFocus
           />
         ) : (
-          <span className="flex-1 text-body-sm font-medium text-foreground">
+          <span className="flex-1 text-body-sm font-medium text-foreground inline-flex items-center gap-2">
             {role.name}
             {isEdited && (
-              <span className="ml-2 text-caption text-accent-teal font-normal">edited</span>
+              <span className="text-caption text-accent-teal font-normal">edited</span>
+            )}
+            {isPopulating && (
+              <span className="inline-flex items-center gap-1 text-caption text-foreground-muted font-normal">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Populating role…
+              </span>
+            )}
+            {populationFailed && !isPopulating && (
+              <span className="inline-flex items-center gap-1 text-caption text-warning font-normal" title="Could not auto-populate — role will use name only for search">
+                <AlertTriangle className="w-3 h-3" />
+                Auto-populate failed
+              </span>
             )}
           </span>
         )}
@@ -263,7 +281,7 @@ const RoleCard = ({
   );
 };
 
-const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReorder }: RolesSectionProps) => {
+const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReorder, populatingRoleIds, populationFailedRoleIds }: RolesSectionProps) => {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -324,6 +342,8 @@ const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReo
               onToggleSelection={onToggleSelection}
               isEdited={editedIds.has(role.id)}
               markEdited={markEdited}
+              isPopulating={populatingRoleIds?.has(role.id) ?? false}
+              populationFailed={populationFailedRoleIds?.has(role.id) ?? false}
             />
           </div>
         ))}
