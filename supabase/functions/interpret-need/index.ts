@@ -71,6 +71,9 @@ When the user's need mentions a contract period, framework agreement duration, p
 
 **Readiness/Mobilization:**
 When the user's need mentions operational deadlines, mobilization timelines, or delivery requirements (e.g., "operational within 12 months"), populate the readiness.max_response_time and readiness.description fields. Do NOT only mention this in summary points.
+
+**Geography — Nordic context:**
+When the user mentions "Nordic" in a defence/security/preparedness context, default to Norway (NO), Sweden (SE), Finland (FI), and Denmark (DK). Only include Iceland (IS) if the user explicitly mentions Iceland or if the context clearly requires it (e.g., North Atlantic maritime operations, GIUK gap).
 `;
 
 const TOOL_SCHEMA = {
@@ -151,7 +154,21 @@ const TOOL_SCHEMA = {
             company_size: { type: "string" },
             security_classification: {
               type: "object",
-              properties: { required_level: { type: "string" } },
+              properties: {
+                required_level: {
+                  type: "string",
+                  enum: [
+                    "any",
+                    "unclassified",
+                    "restricted_no",
+                    "nato_restricted",
+                    "confidential_no",
+                    "nato_confidential",
+                    "secret_no",
+                    "nato_secret",
+                  ],
+                },
+              },
             },
             readiness: {
               type: "object",

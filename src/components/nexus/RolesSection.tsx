@@ -308,7 +308,7 @@ const RolesSection = ({ roles, onEdit, onDelete, onAdd, onToggleSelection, onReo
       </div>
 
       <div className="space-y-2">
-        {roles.map((role) => (
+        {roles.filter(r => r.status !== "rejected").map((role) => (
           <div
             key={role.id}
             draggable

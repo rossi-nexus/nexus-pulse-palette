@@ -44,11 +44,13 @@ const SummarySection = ({ points, onEdit, onDelete, onAdd }: SummarySectionProps
     setEditText("");
   };
 
+  const visiblePoints = points.filter(p => p.status !== "rejected");
+
   return (
     <div className="space-y-3">
       <h3 className="text-body-lg font-semibold text-foreground">Summary</h3>
       <div className="space-y-2">
-        {points.map((point) => {
+        {visiblePoints.map((point) => {
           const isEditing = editingId === point.id;
           const isEdited = editedIds.has(point.id);
           return (

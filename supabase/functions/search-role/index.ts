@@ -23,7 +23,15 @@ Query diversity rules:
 - Include at least one query specifically targeting smaller or specialist companies in the constraint countries. For example: "Norwegian specialist [product type] manufacturer" or "[service type] company Finland defence" or "niche [domain] provider Sweden." This is critical — broad sector queries tend to surface only the largest primes and miss important niche players.
 - Include one query targeting recent developments, partnerships, joint ventures, or acquisitions in the relevant sector and geography. For example: "Nordic defence [domain] partnership 2025" or "Norway [capability area] joint venture recent." This helps find newly formed entities and changing market structures.
 - When the need involves comprehensive or multi-domain coverage (e.g., land, sea, and air), explicitly consider ALL operational domains including space and satellite-based systems as a query angle. For example: "satellite surveillance [country] defence" or "space-based [domain] Nordic."
-- Never include specific company names in search queries. Always search by what is needed — using the role's target categories (capabilities, competences, domains, product types, service types) combined with geographic and sector constraints. The goal is to DISCOVER unknown actors, not to confirm actors you already know about.`;
+- Never include specific company names in search queries. Always search by what is needed — using the role's target categories (capabilities, competences, domains, product types, service types) combined with geographic and sector constraints. The goal is to DISCOVER unknown actors, not to confirm actors you already know about.
+
+IMPORTANT — Geographic context vs. company location:
+When the role description, reasoning, or need mentions specific locations (cities, islands, regions, coastlines, fjords, municipalities), treat these as OPERATIONAL CONTEXT — where the work will be performed. Do NOT narrow your search queries to companies located in those specific places. Instead, search broadly within the countries listed in the Geography constraint for companies that have the capabilities to serve that operational area.
+
+For example: "surveillance on Askøy island" should search for Norwegian/Nordic surveillance companies, NOT "Askøy surveillance companies."
+For example: "Finnmark coastline" should search for Norwegian/Nordic coastal surveillance providers, NOT "Finnmark companies."
+
+The Geography constraint (countries) controls WHERE to look for companies. Specific place names from the role context describe WHERE the work happens — they should inform domain/operational language (e.g., "Arctic", "coastal", "remote") but never become the company-location filter in your search query.`;
 
 const QUERY_TOOL_SCHEMA = {
   type: "function" as const,
