@@ -145,6 +145,7 @@ const InterpretationStep = ({
         <div className="space-y-8">
           <SummarySection
             points={interpretation.summary}
+            roles={interpretation.roles}
             onEdit={editSummaryPoint}
             onDelete={rejectSummaryPoint}
             onAdd={addSummaryPoint}

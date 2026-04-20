@@ -74,6 +74,9 @@ When the user's need mentions operational deadlines, mobilization timelines, or 
 
 **Geography — Nordic context:**
 When the user mentions "Nordic" in a defence/security/preparedness context, default to Norway (NO), Sweden (SE), Finland (FI), and Denmark (DK). Only include Iceland (IS) if the user explicitly mentions Iceland or if the context clearly requires it (e.g., North Atlantic maritime operations, GIUK gap).
+
+### SUMMARY-TO-ROLE MAPPING
+For each summary point, include a "covered_by_role_indices" array containing the 0-based positional indices of roles (from the roles array you generate) that address or contribute to that summary point. A summary point may be covered by multiple roles. Every summary point should ideally be covered by at least one role. If a summary point genuinely has no covering role, that indicates a potential gap — still include the field with an empty array.
 `;
 
 const TOOL_SCHEMA = {
@@ -90,8 +93,13 @@ const TOOL_SCHEMA = {
             type: "object",
             properties: {
               text: { type: "string", description: "One key point about the need (1-2 sentences)" },
+              covered_by_role_indices: {
+                type: "array",
+                items: { type: "integer" },
+                description: "0-based positional indices of roles (from the roles array) that address this summary point. May be empty if no role covers it.",
+              },
             },
-            required: ["text"],
+            required: ["text", "covered_by_role_indices"],
           },
           description: "3-6 summary points capturing distinct aspects of the need",
         },
@@ -484,15 +492,7 @@ serve(async (req) => {
     const entryMap = new Map(entries.map((e: any) => [e.id, e]));
     const interpretationId = crypto.randomUUID();
 
-    // Build summary points
-    const summary = (parsed.summary || []).map((s: any) => ({
-      id: crypto.randomUUID(),
-      text: s.text,
-      source: "axis" as const,
-      status: "pending" as const,
-    }));
-
-    // Build role name->id map for dependencies
+    // Build role name->id map for dependencies; also collect ordered ids for index mapping
     const roleNameToId = new Map<string, string>();
     const roleIds: string[] = [];
     for (const r of parsed.roles || []) {
@@ -500,6 +500,22 @@ serve(async (req) => {
       roleNameToId.set(r.name, rid);
       roleIds.push(rid);
     }
+
+    // Build summary points (now that roleIds exist, map role indices to IDs)
+    const summary = (parsed.summary || []).map((s: any) => ({
+      id: crypto.randomUUID(),
+      text: s.text,
+      source: "axis" as const,
+      status: "pending" as const,
+      covered_by_roles: Array.isArray(s.covered_by_role_indices)
+        ? s.covered_by_role_indices
+            .map((i: number) => roleIds[i])
+            .filter((id: string | undefined): id is string => !!id)
+        : [],
+    }));
+
+
+
 
     // Build ontology selections helper
     const buildSelections = (selectedIds: string[], categoryType: string) => {
