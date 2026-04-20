@@ -106,6 +106,8 @@ export function useSearch() {
           role: {
             id: role.id,
             name: role.name,
+            description: role.description || '',
+            reasoning: role.reasoning || '',
             targets: {
               capabilities: buildTargets(role.targets.capabilities),
               competences: buildTargets(role.targets.competences),
