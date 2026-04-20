@@ -1,16 +1,25 @@
-import { Check, X, Plus, Pencil } from "lucide-react";
+import { Check, X, Plus, Pencil, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SummaryPoint } from "@/types/interpretation";
-import { useState } from "react";
+import type { SummaryPoint, Role } from "@/types/interpretation";
+import { useState, useMemo } from "react";
 
 interface SummarySectionProps {
   points: SummaryPoint[];
+  roles: Role[];
   onEdit: (id: string, text: string) => void;
   onDelete: (id: string) => void;
   onAdd: (text: string) => void;
 }
 
-const SummarySection = ({ points, onEdit, onDelete, onAdd }: SummarySectionProps) => {
+const SummarySection = ({ points, roles, onEdit, onDelete, onAdd }: SummarySectionProps) => {
+  const roleNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of roles) {
+      if (r.status !== "rejected") m.set(r.id, r.name);
+    }
+    return m;
+  }, [roles]);
+
   const [adding, setAdding] = useState(false);
   const [newText, setNewText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -53,33 +62,40 @@ const SummarySection = ({ points, onEdit, onDelete, onAdd }: SummarySectionProps
         {visiblePoints.map((point) => {
           const isEditing = editingId === point.id;
           const isEdited = editedIds.has(point.id);
+          const coveringRoleNames = (point.covered_by_roles ?? [])
+            .map((id) => roleNameById.get(id))
+            .filter((n): n is string => !!n);
+          const hasCoverageData = point.covered_by_roles !== undefined;
+          const isUncovered = hasCoverageData && coveringRoleNames.length === 0;
+
           return (
             <div
               key={point.id}
               className={cn(
-                "flex items-start gap-3 px-4 py-3 rounded-card border transition-all bg-surface",
+                "px-4 py-3 rounded-card border transition-all bg-surface",
                 isEdited ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
               )}
             >
-              {isEditing ? (
-                <textarea
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) confirmEdit(point.id);
-                    if (e.key === "Escape") cancelEdit();
-                  }}
-                  className="flex-1 min-h-[60px] px-2 py-1 rounded border border-border-accent bg-background text-body text-foreground outline-none resize-y"
-                  autoFocus
-                />
-              ) : (
-                <p className="flex-1 text-body text-foreground">
-                  {point.text}
-                  {isEdited && (
-                    <span className="ml-2 text-caption text-accent-teal">edited</span>
-                  )}
-                </p>
-              )}
+              <div className="flex items-start gap-3">
+                {isEditing ? (
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) confirmEdit(point.id);
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    className="flex-1 min-h-[60px] px-2 py-1 rounded border border-border-accent bg-background text-body text-foreground outline-none resize-y"
+                    autoFocus
+                  />
+                ) : (
+                  <p className="flex-1 text-body text-foreground">
+                    {point.text}
+                    {isEdited && (
+                      <span className="ml-2 text-caption text-accent-teal">edited</span>
+                    )}
+                  </p>
+                )}
               <div className="flex items-center gap-1 shrink-0">
                 {isEditing ? (
                   <>
