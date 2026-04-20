@@ -175,10 +175,22 @@ const RoleCard = ({
             autoFocus
           />
         ) : (
-          <span className="flex-1 text-body-sm font-medium text-foreground">
+          <span className="flex-1 text-body-sm font-medium text-foreground inline-flex items-center gap-2">
             {role.name}
             {isEdited && (
-              <span className="ml-2 text-caption text-accent-teal font-normal">edited</span>
+              <span className="text-caption text-accent-teal font-normal">edited</span>
+            )}
+            {isPopulating && (
+              <span className="inline-flex items-center gap-1 text-caption text-foreground-muted font-normal">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Populating role…
+              </span>
+            )}
+            {populationFailed && !isPopulating && (
+              <span className="inline-flex items-center gap-1 text-caption text-warning font-normal" title="Could not auto-populate — role will use name only for search">
+                <AlertTriangle className="w-3 h-3" />
+                Auto-populate failed
+              </span>
             )}
           </span>
         )}
