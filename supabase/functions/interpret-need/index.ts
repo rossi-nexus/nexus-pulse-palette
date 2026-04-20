@@ -51,15 +51,27 @@ Do not leave product_types or service_types empty when the need text implies phy
 - geography.countries uses ISO 3166-1 alpha-2 codes.
 - security_classification.required_level means: actors at this level or above qualify.
 
-### Clarification points
-- 2-4 genuine ambiguities or things worth considering.
-- These help the user refine, not block progress. Frame as considerations, not demands.
-- Domain-specific insights the user might not have thought of are especially valuable.
+### CONSTRAINT EXTRACTION — CRITICAL
 
-### General
-- Each search is unique. Do not force needs into templates.
-- The output structure is fixed but the content is entirely driven by the specific input.
-- Every role must include its reasoning field.`;
+You MUST populate the structured constraint fields, not just mention constraints in summary prose. The downstream search system relies on these typed values.
+
+**Security Classification:**
+When the user's need mentions any security classification or clearance requirement, you MUST populate the security_classification.required_level field with the correct value. Map common terms:
+- "SECRET (NO)", "Norwegian SECRET", "hemmelig" → "secret_no"
+- "CONFIDENTIAL (NO)", "Norwegian CONFIDENTIAL", "konfidensielt" → "confidential_no"
+- "NATO SECRET", "NS" → "nato_secret"
+- "NATO CONFIDENTIAL", "NC" → "nato_confidential"
+- "RESTRICTED (NO)", "begrenset" → "restricted_no"
+- "NATO RESTRICTED", "NR" → "nato_restricted"
+- "UNCLASSIFIED", "ugradert" → "unclassified"
+If security is mentioned but the specific level is unclear, set required_level to the most likely match based on context. Do NOT leave it as "any" when the user has specified a clearance requirement.
+
+**Contract Duration:**
+When the user's need mentions a contract period, framework agreement duration, project timeline, or operational period, you MUST populate the contract_duration.duration field. Extract the duration value (e.g., "5 years", "12 months", "3 years") and any description. Do NOT only mention this in summary points — the typed field must be filled.
+
+**Readiness/Mobilization:**
+When the user's need mentions operational deadlines, mobilization timelines, or delivery requirements (e.g., "operational within 12 months"), populate the readiness.max_response_time and readiness.description fields. Do NOT only mention this in summary points.
+
 
 const TOOL_SCHEMA = {
   type: "function" as const,
