@@ -18,6 +18,8 @@ export function useInterpretation() {
   const [status, setStatus] = useState<A2Status>("not_started");
   const [error, setError] = useState<string | null>(null);
   const [processingMessage, setProcessingMessage] = useState("");
+  const [populatingRoleIds, setPopulatingRoleIds] = useState<Set<string>>(new Set());
+  const [populationFailedRoleIds, setPopulationFailedRoleIds] = useState<Set<string>>(new Set());
 
   const runInterpretation = useCallback(async (needDescription: NeedDescription) => {
     setStatus("processing");
@@ -148,11 +150,13 @@ export function useInterpretation() {
     });
   }, []);
 
-  const addRole = useCallback((name: string) => {
+  const addRole = useCallback((name: string, contextText?: string) => {
+    const newRoleId = crypto.randomUUID();
+
     setInterpretation(prev => {
       if (!prev) return prev;
       const newRole: Role = {
-        id: crypto.randomUUID(),
+        id: newRoleId,
         name: name,
         description: "",
         reasoning: "",
@@ -171,6 +175,84 @@ export function useInterpretation() {
       };
       return { ...prev, roles: [...prev.roles, newRole] };
     });
+
+    // Auto-populate the new role with ontology targets via edge function
+    setPopulatingRoleIds(prev => new Set(prev).add(newRoleId));
+    setPopulationFailedRoleIds(prev => {
+      const next = new Set(prev);
+      next.delete(newRoleId);
+      return next;
+    });
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error("Not authenticated");
+
+        // Snapshot existing role names (excluding the just-added one)
+        const existingRoleNames: { name: string }[] = [];
+        setInterpretation(prev => {
+          if (prev) {
+            for (const r of prev.roles) {
+              if (r.id !== newRoleId && r.status !== "rejected") {
+                existingRoleNames.push({ name: r.name });
+              }
+            }
+          }
+          return prev;
+        });
+
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/populate-role`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({
+              role_name: name,
+              context_text: contextText || "",
+              existing_roles: existingRoleNames,
+            }),
+          }
+        );
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+
+        setInterpretation(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            roles: prev.roles.map(r =>
+              r.id === newRoleId
+                ? {
+                    ...r,
+                    description: data.description || "",
+                    reasoning: data.reasoning || "",
+                    targets: data.targets || r.targets,
+                  }
+                : r
+            ),
+          };
+        });
+      } catch (e) {
+        console.error("populate-role failed:", e);
+        setPopulationFailedRoleIds(prev => new Set(prev).add(newRoleId));
+      } finally {
+        setPopulatingRoleIds(prev => {
+          const next = new Set(prev);
+          next.delete(newRoleId);
+          return next;
+        });
+      }
+    })();
   }, []);
 
   const editRoleName = useCallback((roleId: string, name: string) => {
