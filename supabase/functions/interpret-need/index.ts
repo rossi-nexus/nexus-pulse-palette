@@ -514,14 +514,8 @@ serve(async (req) => {
         : [],
     }));
 
-    // Build role name->id map for dependencies
-    const roleNameToId = new Map<string, string>();
-    const roleIds: string[] = [];
-    for (const r of parsed.roles || []) {
-      const rid = crypto.randomUUID();
-      roleNameToId.set(r.name, rid);
-      roleIds.push(rid);
-    }
+
+
 
     // Build ontology selections helper
     const buildSelections = (selectedIds: string[], categoryType: string) => {
