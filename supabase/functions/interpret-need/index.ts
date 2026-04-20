@@ -656,6 +656,8 @@ serve(async (req) => {
       constraints,
     };
 
+    console.log("[DIAG] Final response constraints:", JSON.stringify(interpretation.constraints));
+
     return new Response(
       JSON.stringify({ interpretation, clarification_points: clarificationPoints }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
