@@ -96,43 +96,64 @@ const SummarySection = ({ points, roles, onEdit, onDelete, onAdd }: SummarySecti
                     )}
                   </p>
                 )}
-              <div className="flex items-center gap-1 shrink-0">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={() => confirmEdit(point.id)}
-                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-success hover:bg-success/10 transition-colors"
-                      title="Confirm edit"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      title="Cancel edit"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => startEdit(point)}
-                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
-                      title="Edit"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(point.id)}
-                      className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      title="Delete"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={() => confirmEdit(point.id)}
+                        className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-success hover:bg-success/10 transition-colors"
+                        title="Confirm edit"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Cancel edit"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => startEdit(point)}
+                        className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-elevated transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(point.id)}
+                        className="w-7 h-7 rounded flex items-center justify-center text-foreground-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Delete"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
+
+              {!isEditing && coveringRoleNames.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-caption text-foreground-muted uppercase tracking-wide">Covered by:</span>
+                  {coveringRoleNames.map((name, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-elevated border border-border-subtle text-caption text-foreground-secondary"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {!isEditing && isUncovered && (
+                <div className="flex items-center gap-1.5 mt-2 text-caption text-warning">
+                  <AlertTriangle className="w-3 h-3" />
+                  Not covered by any role
+                </div>
+              )}
             </div>
           );
         })}
