@@ -448,26 +448,37 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
 
         {/* SCROLLABLE actor cards area */}
         <div className="flex-1 min-h-0 relative">
-          {expanded && expanded.actors.length > 0 && (
-            <>
-              <div className="h-full overflow-y-auto pr-2 space-y-2">
-                {/* Reference-actor explainer — once per role, only when present */}
-                {expanded.actors.some((a) => a.status === "skipped") && (
-                  <ReferenceActorInfoBox />
-                )}
-                {expanded.actors.map((actorState) => (
-                  <AnalyzedActorCard
-                    key={actorState.actor_id}
-                    state={actorState}
-                    excluded={excludedIds.has(actorState.actor_id)}
-                    onToggleExclude={toggleExclude}
-                  />
-                ))}
-              </div>
-              {/* Bottom fade indicator */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
-            </>
-          )}
+          {expanded && expanded.actors.length > 0 && (() => {
+            const sorted = sortReferenceLast(expanded.actors);
+            const firstSkippedIdx = sorted.findIndex((a) => a.status === "skipped");
+            const hasSkipped = firstSkippedIdx >= 0;
+            return (
+              <>
+                <div className="h-full overflow-y-auto pr-2 space-y-2">
+                  {sorted.map((actorState, idx) => (
+                    <div key={actorState.actor_id}>
+                      {/* Insert info box + label right before the first reference actor */}
+                      {hasSkipped && idx === firstSkippedIdx && (
+                        <>
+                          <ReferenceActorInfoBox />
+                          <p className="text-mono-xs font-mono uppercase tracking-wider text-accent-blue/80 mt-3 mb-2 px-1">
+                            Reference actors
+                          </p>
+                        </>
+                      )}
+                      <AnalyzedActorCard
+                        state={actorState}
+                        excluded={excludedIds.has(actorState.actor_id)}
+                        onToggleExclude={toggleExclude}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {/* Bottom fade indicator */}
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
+              </>
+            );
+          })()}
         </div>
 
         {/* PINNED FOOTER — visible during analysis and after */}
