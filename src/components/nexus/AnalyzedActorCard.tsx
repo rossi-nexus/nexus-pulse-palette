@@ -16,6 +16,8 @@ interface AnalyzedActorCardProps {
   state: ActorAnalysisStatus;
   excluded?: boolean;
   onToggleExclude?: (actorId: string) => void;
+  /** When true, hides exclude/restore action buttons (review-only view). */
+  readOnly?: boolean;
 }
 
 const sectionCount = (analysis: ActorAnalysis | null | undefined) => {
@@ -67,7 +69,7 @@ const EvidenceLine = ({ label, evidence }: { label: string; evidence: string }) 
   </div>
 );
 
-const AnalyzedActorCard = ({ state, excluded = false, onToggleExclude }: AnalyzedActorCardProps) => {
+const AnalyzedActorCard = ({ state, excluded = false, onToggleExclude, readOnly = false }: AnalyzedActorCardProps) => {
   const { source_actor: actor, status, result: analysis, error } = state;
   const counts = sectionCount(analysis);
   const isSkipped = status === "skipped";
@@ -97,7 +99,8 @@ const AnalyzedActorCard = ({ state, excluded = false, onToggleExclude }: Analyze
     <div className={cn(
       "border rounded-card bg-surface transition-all border-l-4",
       excluded && "opacity-50 border-destructive/30 border-l-destructive/40",
-      !excluded && isSkipped && "opacity-60 border-border border-l-border",
+      // Reference (non-commercial) actor — distinct blue/info lane to tie it to the info box
+      !excluded && isSkipped && "opacity-50 bg-accent-blue/[0.03] border-accent-blue/20 border-l-accent-blue/60",
       !excluded && isError && "border-destructive/40 border-l-destructive/40",
       !excluded && isAnalyzing && "border-accent-teal/50 border-l-accent-teal/50",
       !excluded && isComplete && "border-border border-l-accent-teal",
@@ -122,7 +125,7 @@ const AnalyzedActorCard = ({ state, excluded = false, onToggleExclude }: Analyze
                 {actor.name}
               </h4>
               {isSkipped && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-foreground-muted/30 text-foreground-muted">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-blue/40 text-accent-blue bg-accent-blue/5">
                   Reference — not analyzed
                 </Badge>
               )}
@@ -168,7 +171,7 @@ const AnalyzedActorCard = ({ state, excluded = false, onToggleExclude }: Analyze
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
-            {isComplete && onToggleExclude && (
+            {isComplete && onToggleExclude && !readOnly && (
               <button
                 onClick={() => onToggleExclude(state.actor_id)}
                 className={cn(

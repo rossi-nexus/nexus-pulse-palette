@@ -5,8 +5,9 @@ import StepContainer from "./StepContainer";
 import AnalysisRoleProgressBox from "./AnalysisRoleProgressBox";
 import AnalyzedActorCard from "./AnalyzedActorCard";
 import ReferenceActorInfoBox from "./ReferenceActorInfoBox";
+import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
-import type { useAnalysis, AnalysisInput } from "@/hooks/useAnalysis";
+import type { useAnalysis, AnalysisInput, ActorAnalysisStatus } from "@/hooks/useAnalysis";
 import type { Interpretation } from "@/types/interpretation";
 import type { useSearch } from "@/hooks/useSearch";
 import type { ActorAnalysis, MatchedCategory } from "@/types/analyzed-actors";
@@ -23,6 +24,12 @@ const matchCount = (analysis: ActorAnalysis | null | undefined): number => {
     (analysis.products?.length || 0) +
     (analysis.services?.length || 0)
   );
+};
+
+/** Sort actors so reference (skipped) actors are grouped at the end of the list. */
+const sortReferenceLast = (actors: ActorAnalysisStatus[]): ActorAnalysisStatus[] => {
+  const rank = (a: ActorAnalysisStatus) => (a.status === "skipped" ? 1 : 0);
+  return [...actors].sort((a, b) => rank(a) - rank(b));
 };
 
 interface AnalysisStepProps {
@@ -202,6 +209,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
   } = hook;
 
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
@@ -293,8 +301,8 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
             {totals.errors > 0 && ` · ${totals.errors} errors`}
           </p>
 
-          {/* Role-by-role breakdown */}
-          {orderedRoles.length > 0 && (
+          {/* Compact role-by-role breakdown — shown when not in Review mode */}
+          {!reviewExpanded && orderedRoles.length > 0 && (
             <div className="space-y-3">
               {orderedRoles.map((role) => {
                 const analyzed = role.actors.filter((a) => a.status === "complete");
@@ -338,7 +346,50 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
             </div>
           )}
 
-          <div className="flex justify-end">
+          {/* Expanded review — full read-only content per role */}
+          {reviewExpanded && orderedRoles.length > 0 && (
+            <div className="space-y-6 pt-2">
+              {orderedRoles.map((role) => {
+                const sorted = sortReferenceLast(role.actors);
+                const firstSkippedIdx = sorted.findIndex((a) => a.status === "skipped");
+                const hasSkipped = firstSkippedIdx >= 0;
+                return (
+                  <section key={role.role_id} className="space-y-2">
+                    <h3 className="text-body-sm font-medium text-foreground border-b border-border-subtle pb-1.5">
+                      {role.role_name}
+                      <span className="text-foreground-muted ml-2">
+                        — {role.actors.filter((a) => a.status === "complete").length} analyzed
+                        {role.actors.filter((a) => a.status === "skipped").length > 0 &&
+                          `, ${role.actors.filter((a) => a.status === "skipped").length} reference`}
+                      </span>
+                    </h3>
+                    <div className="space-y-2">
+                      {sorted.map((actorState, idx) => (
+                        <div key={actorState.actor_id}>
+                          {hasSkipped && idx === firstSkippedIdx && (
+                            <>
+                              <ReferenceActorInfoBox />
+                              <p className="text-mono-xs font-mono uppercase tracking-wider text-accent-blue/80 mt-3 mb-2 px-1">
+                                Reference actors
+                              </p>
+                            </>
+                          )}
+                          <AnalyzedActorCard
+                            state={actorState}
+                            excluded={excludedIds.has(actorState.actor_id)}
+                            readOnly
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex justify-end items-center gap-1">
+            <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
@@ -397,26 +448,37 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
 
         {/* SCROLLABLE actor cards area */}
         <div className="flex-1 min-h-0 relative">
-          {expanded && expanded.actors.length > 0 && (
-            <>
-              <div className="h-full overflow-y-auto pr-2 space-y-2">
-                {/* Reference-actor explainer — once per role, only when present */}
-                {expanded.actors.some((a) => a.status === "skipped") && (
-                  <ReferenceActorInfoBox />
-                )}
-                {expanded.actors.map((actorState) => (
-                  <AnalyzedActorCard
-                    key={actorState.actor_id}
-                    state={actorState}
-                    excluded={excludedIds.has(actorState.actor_id)}
-                    onToggleExclude={toggleExclude}
-                  />
-                ))}
-              </div>
-              {/* Bottom fade indicator */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
-            </>
-          )}
+          {expanded && expanded.actors.length > 0 && (() => {
+            const sorted = sortReferenceLast(expanded.actors);
+            const firstSkippedIdx = sorted.findIndex((a) => a.status === "skipped");
+            const hasSkipped = firstSkippedIdx >= 0;
+            return (
+              <>
+                <div className="h-full overflow-y-auto pr-2 space-y-2">
+                  {sorted.map((actorState, idx) => (
+                    <div key={actorState.actor_id}>
+                      {/* Insert info box + label right before the first reference actor */}
+                      {hasSkipped && idx === firstSkippedIdx && (
+                        <>
+                          <ReferenceActorInfoBox />
+                          <p className="text-mono-xs font-mono uppercase tracking-wider text-accent-blue/80 mt-3 mb-2 px-1">
+                            Reference actors
+                          </p>
+                        </>
+                      )}
+                      <AnalyzedActorCard
+                        state={actorState}
+                        excluded={excludedIds.has(actorState.actor_id)}
+                        onToggleExclude={toggleExclude}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {/* Bottom fade indicator */}
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
+              </>
+            );
+          })()}
         </div>
 
         {/* PINNED FOOTER — visible during analysis and after */}
