@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Sparkles, CheckCircle2, Database, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
+import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import { buildCheckInputs, type useDatabaseCheck } from "@/hooks/useDatabaseCheck";
 import type { useAnalysis } from "@/hooks/useAnalysis";
@@ -89,6 +90,7 @@ const DatabaseCheckStep = ({
   const { status, phase, result, savedCount, error, runCheck, saveToPersonalSpace, lock, totalMatches, totalSuggestions } = hook;
 
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
@@ -129,7 +131,73 @@ const DatabaseCheckStep = ({
             {totalMatches} verified · {totalSuggestions} similar in database
             {savedCount > 0 && ` · ${savedCount} saved to your collection`}
           </p>
-          <div className="flex justify-end">
+
+          {reviewExpanded && result && (
+            <div className="space-y-6 pt-2">
+              {/* Phase 1 — exact matches (read-only) */}
+              <section className="space-y-2">
+                <span className="text-label uppercase tracking-wider text-foreground-muted">
+                  Phase 1 · Exact match
+                </span>
+                {result.phase1_matches.length === 0 ? (
+                  <p className="text-body-sm text-foreground-muted">No matches in database.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {result.phase1_matches.map((m) => (
+                      <li
+                        key={m.session_actor_id}
+                        className="flex items-start gap-3 rounded border border-border bg-elevated/40 px-3 py-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-accent-green shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-body-sm font-medium text-foreground">{m.db_actor_name}</span>
+                          <span className="ml-2 text-mono-xs font-mono uppercase text-accent-green">Verified</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {result.phase1_not_in_db.length > 0 && (
+                  <p className="text-caption text-foreground-muted">
+                    — {result.phase1_not_in_db.length} actor{result.phase1_not_in_db.length === 1 ? "" : "s"} not found in database —
+                  </p>
+                )}
+              </section>
+
+              {/* Phase 2 — similar suggestions (read-only) */}
+              <section className="space-y-2">
+                <span className="text-label uppercase tracking-wider text-foreground-muted">
+                  Phase 2 · Similar actors in database
+                </span>
+                {result.phase2_suggestions.length === 0 ? (
+                  <p className="text-body-sm text-foreground-muted">No additional actors found.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {result.phase2_suggestions.map((s) => (
+                      <li key={s.db_actor_id} className="rounded border border-border bg-elevated/40 px-3 py-2 space-y-1">
+                        <div className="text-body-sm font-medium text-foreground">{s.actor_name}</div>
+                        <div className="text-caption text-foreground-muted">{s.similarity_basis}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              {savedCount > 0 && (
+                <div className="rounded border border-accent-green/40 bg-accent-green/10 px-3 py-2 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-accent-green" />
+                  <span className="text-body-sm text-foreground">
+                    {savedCount} actor{savedCount === 1 ? "" : "s"} saved to your collection
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end items-center gap-1">
+            {result && (
+              <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
+            )}
             <Button
               variant="ghost"
               onClick={handleUnlockClick}

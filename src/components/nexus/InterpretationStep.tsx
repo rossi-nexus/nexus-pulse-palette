@@ -130,20 +130,54 @@ const InterpretationStep = ({
   if (status === "locked" && interpretation) {
     const visibleSummary = interpretation.summary.filter(s => s.status !== "rejected");
     const visibleRoles = interpretation.roles.filter(r => r.status !== "rejected");
+    const noop = () => {};
 
     return (
       <StepContainer stepNumber={2} title="Interpretation & Targets" status="locked">
         <div className="space-y-3">
-          <div>
-            <span className="text-caption text-foreground-muted">Summary:</span>
-            <ul className="list-disc list-inside text-body-sm text-foreground-secondary mt-1">
-              {visibleSummary.map(s => <li key={s.id}>{s.text}</li>)}
-            </ul>
-          </div>
-          <p className="text-body-sm text-foreground-secondary">
-            {visibleRoles.length} roles defined
-          </p>
-          <div className="flex justify-end">
+          {!reviewExpanded && (
+            <>
+              <div>
+                <span className="text-caption text-foreground-muted">Summary:</span>
+                <ul className="list-disc list-inside text-body-sm text-foreground-secondary mt-1">
+                  {visibleSummary.map(s => <li key={s.id}>{s.text}</li>)}
+                </ul>
+              </div>
+              <p className="text-body-sm text-foreground-secondary">
+                {visibleRoles.length} roles defined
+              </p>
+            </>
+          )}
+
+          {reviewExpanded && (
+            <div
+              className="space-y-8 pt-2 [&_button]:pointer-events-none [&_input]:pointer-events-none [&_textarea]:pointer-events-none"
+              aria-label="Read-only review of locked interpretation"
+            >
+              <SummarySection
+                points={interpretation.summary}
+                roles={interpretation.roles}
+                onEdit={noop}
+                onDelete={noop}
+                onAdd={noop}
+              />
+              <RolesSection
+                roles={interpretation.roles}
+                onEdit={noop}
+                onDelete={noop}
+                onAdd={noop}
+                onToggleSelection={noop}
+                onReorder={noop}
+              />
+              <ConstraintsSection
+                constraints={interpretation.constraints}
+                onUpdate={noop}
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end items-center gap-1">
+            <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
