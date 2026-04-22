@@ -8,12 +8,14 @@ import CompactStepIndicator from "./CompactStepIndicator";
 import InterpretationStep from "./InterpretationStep";
 import SearchStep from "./SearchStep";
 import AnalysisStep from "./AnalysisStep";
+import DatabaseCheckStep from "./DatabaseCheckStep";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSession } from "@/hooks/useSession";
 import { useStepA1 } from "@/hooks/useStepA1";
 import { useInterpretation } from "@/hooks/useInterpretation";
 import { useSearch } from "@/hooks/useSearch";
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { useDatabaseCheck } from "@/hooks/useDatabaseCheck";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Interpretation, ClarificationPoint } from "@/types/interpretation";
@@ -24,6 +26,7 @@ const STEP_NAMES: Record<number, string> = {
   2: "Interpretation & Targets",
   3: "Search",
   4: "Deep Analysis",
+  5: "Database Check",
 };
 
 const AppShell = () => {
