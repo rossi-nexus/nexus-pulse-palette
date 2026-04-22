@@ -400,6 +400,10 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
           {expanded && expanded.actors.length > 0 && (
             <>
               <div className="h-full overflow-y-auto pr-2 space-y-2">
+                {/* Reference-actor explainer — once per role, only when present */}
+                {expanded.actors.some((a) => a.status === "skipped") && (
+                  <ReferenceActorInfoBox />
+                )}
                 {expanded.actors.map((actorState) => (
                   <AnalyzedActorCard
                     key={actorState.actor_id}
