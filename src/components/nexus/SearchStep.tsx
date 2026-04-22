@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import RoleProgressBox from "./RoleProgressBox";
 import ActorCard from "./ActorCard";
+import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { useSearch } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
 
@@ -116,9 +118,16 @@ interface SearchStepProps {
   hook: ReturnType<typeof useSearch>;
   interpretation: Interpretation | null;
   step2Locked: boolean;
+  onUnlock: () => void;
+  downstreamStepNames: string[];
 }
 
-const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
+const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames }: SearchStepProps) => {
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const handleUnlockClick = () => {
+    if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
+    else onUnlock();
+  };
   const {
     status,
     orderedRoles,
@@ -187,12 +196,18 @@ const SearchStep = ({ hook, interpretation, step2Locked }: SearchStepProps) => {
             {totalIncluded} actors included · {totalSavedForLater} saved for later · {totalFound} total found
           </p>
           <div className="flex justify-end">
-            <Button variant="ghost" onClick={unlock} className="gap-2 text-foreground-muted hover:text-foreground">
+            <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
             </Button>
           </div>
         </div>
+        <UnlockConfirmDialog
+          open={unlockDialogOpen}
+          onOpenChange={setUnlockDialogOpen}
+          downstreamStepNames={downstreamStepNames}
+          onConfirm={onUnlock}
+        />
       </StepContainer>
     );
   }

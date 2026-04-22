@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import AnalysisRoleProgressBox from "./AnalysisRoleProgressBox";
 import AnalyzedActorCard from "./AnalyzedActorCard";
+import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { useAnalysis, AnalysisInput } from "@/hooks/useAnalysis";
 import type { Interpretation } from "@/types/interpretation";
 import type { useSearch } from "@/hooks/useSearch";
@@ -13,6 +14,8 @@ interface AnalysisStepProps {
   interpretation: Interpretation | null;
   searchHook: ReturnType<typeof useSearch>;
   step3Locked: boolean;
+  onUnlock: () => void;
+  downstreamStepNames: string[];
 }
 
 /**
@@ -169,7 +172,7 @@ const buildDevInput = (): AnalysisInput => {
   return { roles, roleResults, constraints };
 };
 
-const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: AnalysisStepProps) => {
+const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock, downstreamStepNames }: AnalysisStepProps) => {
   const {
     status,
     orderedRoles,
@@ -180,8 +183,13 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
     setExpandedRoleId,
     startAnalysis,
     lock,
-    unlock,
   } = hook;
+
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const handleUnlockClick = () => {
+    if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
+    else onUnlock();
+  };
 
   // Local exclude state — UI-only, doesn't touch the hook
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
@@ -268,12 +276,18 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
             {totals.errors > 0 && ` · ${totals.errors} errors`}
           </p>
           <div className="flex justify-end">
-            <Button variant="ghost" onClick={unlock} className="gap-2 text-foreground-muted hover:text-foreground">
+            <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
             </Button>
           </div>
         </div>
+        <UnlockConfirmDialog
+          open={unlockDialogOpen}
+          onOpenChange={setUnlockDialogOpen}
+          downstreamStepNames={downstreamStepNames}
+          onConfirm={onUnlock}
+        />
       </StepContainer>
     );
   }
