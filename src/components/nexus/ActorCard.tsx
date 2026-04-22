@@ -10,6 +10,8 @@ interface ActorCardProps {
   onInclude: (roleId: string, actorId: string) => void;
   onSaveForLater: (roleId: string, actorId: string) => void;
   onUndo: (roleId: string, actorId: string) => void;
+  /** When true, hides include/save/undo action buttons (review-only view). */
+  readOnly?: boolean;
 }
 
 const strengthConfig = {
@@ -18,7 +20,7 @@ const strengthConfig = {
   weak: { label: "Weak", className: "bg-foreground-muted/10 text-foreground-muted border-foreground-muted/20" },
 };
 
-const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo }: ActorCardProps) => {
+const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly = false }: ActorCardProps) => {
   const strength = strengthConfig[actor.match_strength] || strengthConfig.moderate;
   const hasDecision = actor.triage_decision !== undefined;
 
@@ -111,9 +113,15 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo }: ActorCa
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Action buttons — hidden in review-only mode; status is still shown */}
       <div className="flex items-center gap-2 pt-1 border-t border-border-subtle">
-        {!hasDecision ? (
+        {readOnly ? (
+          hasDecision && (
+            <span className="text-mono-xs font-mono text-foreground-muted uppercase tracking-wider">
+              {actor.triage_decision === "included" ? "✓ Included" : "⏳ Saved"}
+            </span>
+          )
+        ) : !hasDecision ? (
           <>
             <Button
               size="sm"
