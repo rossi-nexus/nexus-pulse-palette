@@ -114,8 +114,8 @@ const InterpretationStep = ({
 
   // Locked
   if (status === "locked" && interpretation) {
-    const acceptedSummary = interpretation.summary.filter(s => s.status === "accepted");
-    const acceptedRoles = interpretation.roles.filter(r => r.status === "accepted");
+    const visibleSummary = interpretation.summary.filter(s => s.status !== "rejected");
+    const visibleRoles = interpretation.roles.filter(r => r.status !== "rejected");
 
     return (
       <StepContainer stepNumber={2} title="Interpretation & Targets" status="locked">
@@ -123,11 +123,11 @@ const InterpretationStep = ({
           <div>
             <span className="text-caption text-foreground-muted">Summary:</span>
             <ul className="list-disc list-inside text-body-sm text-foreground-secondary mt-1">
-              {acceptedSummary.map(s => <li key={s.id}>{s.text}</li>)}
+              {visibleSummary.map(s => <li key={s.id}>{s.text}</li>)}
             </ul>
           </div>
           <p className="text-body-sm text-foreground-secondary">
-            {acceptedRoles.length} roles defined
+            {visibleRoles.length} roles defined
           </p>
           <div className="flex justify-end">
             <Button variant="ghost" onClick={unlock} className="gap-2 text-foreground-muted hover:text-foreground">
