@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import RoleProgressBox from "./RoleProgressBox";
 import ActorCard from "./ActorCard";
+import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { useSearch } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
@@ -124,6 +125,7 @@ interface SearchStepProps {
 
 const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames }: SearchStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
@@ -189,6 +191,8 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
 
   // Locked
   if (status === "locked") {
+    // Helpers — noop callbacks for read-only ActorCard rendering
+    const noop = () => {};
     return (
       <StepContainer stepNumber={3} title="Search" status="locked">
         <div className="space-y-4">
@@ -197,8 +201,8 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
             {totalIncluded} actors included · {totalSavedForLater} saved for later · {totalFound} total found
           </p>
 
-          {/* Role-by-role breakdown */}
-          {orderedRoles.length > 0 && (
+          {/* Compact role-by-role breakdown — shown when not in Review mode */}
+          {!reviewExpanded && orderedRoles.length > 0 && (
             <div className="space-y-3">
               {orderedRoles.map((role) => {
                 const included = role.actors.filter((a) => a.triage_decision === "included");
@@ -224,7 +228,41 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
             </div>
           )}
 
-          <div className="flex justify-end">
+          {/* Expanded review — full read-only actor cards per role */}
+          {reviewExpanded && orderedRoles.length > 0 && (
+            <div className="space-y-6 pt-2">
+              {orderedRoles.map((role) => (
+                <section key={role.role_id} className="space-y-2">
+                  <h3 className="text-body-sm font-medium text-foreground border-b border-border-subtle pb-1.5">
+                    {role.role_name}
+                    <span className="text-foreground-muted ml-2">
+                      — {role.actors.length} actors found
+                    </span>
+                  </h3>
+                  {role.actors.length === 0 ? (
+                    <p className="text-caption text-foreground-muted pl-1 italic">No actors found.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {role.actors.map((actor) => (
+                        <ActorCard
+                          key={actor.id}
+                          actor={actor}
+                          roleId={role.role_id}
+                          onInclude={noop}
+                          onSaveForLater={noop}
+                          onUndo={noop}
+                          readOnly
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end items-center gap-1">
+            <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
