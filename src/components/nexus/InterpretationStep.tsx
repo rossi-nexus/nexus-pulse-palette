@@ -142,12 +142,18 @@ const InterpretationStep = ({
             {visibleRoles.length} roles defined
           </p>
           <div className="flex justify-end">
-            <Button variant="ghost" onClick={unlock} className="gap-2 text-foreground-muted hover:text-foreground">
+            <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
             </Button>
           </div>
         </div>
+        <UnlockConfirmDialog
+          open={unlockDialogOpen}
+          onOpenChange={setUnlockDialogOpen}
+          downstreamStepNames={downstreamStepNames}
+          onConfirm={onUnlock}
+        />
       </StepContainer>
     );
   }
