@@ -286,11 +286,58 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
   if (status === "locked") {
     return (
       <StepContainer stepNumber={4} title="Deep Analysis" status="locked">
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Top stats line */}
           <p className="text-body-sm text-foreground-secondary">
             {totals.analyzed} actors analyzed · {totals.reference} reference actors
             {totals.errors > 0 && ` · ${totals.errors} errors`}
           </p>
+
+          {/* Role-by-role breakdown */}
+          {orderedRoles.length > 0 && (
+            <div className="space-y-3">
+              {orderedRoles.map((role) => {
+                const analyzed = role.actors.filter((a) => a.status === "complete");
+                const reference = role.actors.filter((a) => a.status === "skipped");
+                const shownAnalyzed = analyzed.slice(0, 3);
+                const moreAnalyzed = analyzed.length - shownAnalyzed.length;
+                return (
+                  <div key={role.role_id} className="space-y-0.5">
+                    <p className="text-body-sm text-foreground">
+                      {role.role_name}
+                      <span className="text-foreground-muted">
+                        {" — "}
+                        {analyzed.length} analyzed
+                        {reference.length > 0 && `, ${reference.length} reference`}
+                      </span>
+                    </p>
+                    {analyzed.length === 0 && reference.length === 0 ? (
+                      <p className="text-caption text-foreground-muted pl-3">— none</p>
+                    ) : (
+                      <>
+                        {shownAnalyzed.map((a) => (
+                          <p key={a.actor_id} className="text-caption text-foreground-muted pl-3">
+                            <span className="text-foreground-secondary">{a.actor_name}</span>
+                            {" — "}
+                            {matchCount(a.result)} matches
+                          </p>
+                        ))}
+                        {moreAnalyzed > 0 && (
+                          <p className="text-caption text-foreground-muted pl-3">+{moreAnalyzed} more</p>
+                        )}
+                        {reference.length > 0 && (
+                          <p className="text-caption text-foreground-muted/80 pl-3 italic">
+                            {reference.map((a) => a.actor_name).join(", ")} — reference (not analyzed)
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
