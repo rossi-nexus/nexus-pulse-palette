@@ -199,7 +199,7 @@ const AppShell = () => {
                 ) : (
                   <SearchStep
                     hook={stepA3}
-                    interpretation={stepA2.interpretation}
+                    interpretation={lockedA2Output?.interpretation ?? null}
                     step2Locked={isStep2Locked}
                   />
                 )}
@@ -210,7 +210,7 @@ const AppShell = () => {
                 ) : (
                   <AnalysisStep
                     hook={stepA4}
-                    interpretation={stepA2.interpretation}
+                    interpretation={lockedA2Output?.interpretation ?? null}
                     searchHook={stepA3}
                     step3Locked={isStep3Locked}
                   />
