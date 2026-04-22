@@ -203,6 +203,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
   } = hook;
 
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
