@@ -4,10 +4,26 @@ import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import AnalysisRoleProgressBox from "./AnalysisRoleProgressBox";
 import AnalyzedActorCard from "./AnalyzedActorCard";
+import ReferenceActorInfoBox from "./ReferenceActorInfoBox";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { useAnalysis, AnalysisInput } from "@/hooks/useAnalysis";
 import type { Interpretation } from "@/types/interpretation";
 import type { useSearch } from "@/hooks/useSearch";
+import type { ActorAnalysis, MatchedCategory } from "@/types/analyzed-actors";
+
+/** Sum of all matched ontology entries across every category. */
+const matchCount = (analysis: ActorAnalysis | null | undefined): number => {
+  if (!analysis) return 0;
+  const cat = (cats: MatchedCategory[]) =>
+    (cats || []).reduce((s, c) => s + (c.entries?.length || 0), 0);
+  return (
+    cat(analysis.capabilities) +
+    cat(analysis.competences) +
+    (analysis.domains?.length || 0) +
+    (analysis.products?.length || 0) +
+    (analysis.services?.length || 0)
+  );
+};
 
 interface AnalysisStepProps {
   hook: ReturnType<typeof useAnalysis>;
