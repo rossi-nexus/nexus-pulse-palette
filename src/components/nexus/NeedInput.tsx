@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { NeedAttachment } from "@/types/need-description";
 
 interface NeedInputProps {
@@ -18,7 +19,10 @@ interface NeedInputProps {
   onRemoveAttachment: (index: number) => void;
   onError: (error: string | null) => void;
   onLock: () => void;
+  /** Cascade-aware unlock; called after the user confirms the dialog (or immediately if no downstream data). */
   onUnlock: () => void;
+  /** Names of downstream steps that have data and will be cleared on unlock. */
+  downstreamStepNames: string[];
 }
 
 const NeedInput = ({
@@ -34,12 +38,22 @@ const NeedInput = ({
   onError,
   onLock,
   onUnlock,
+  downstreamStepNames,
 }: NeedInputProps) => {
   const [uploading, setUploading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlValue, setUrlValue] = useState("");
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleUnlockClick = () => {
+    if (downstreamStepNames.length > 0) {
+      setUnlockDialogOpen(true);
+    } else {
+      onUnlock();
+    }
+  };
 
   const isLocked = status === "locked";
 
@@ -247,12 +261,19 @@ const NeedInput = ({
       {/* Locked state controls */}
       {isLocked && (
         <div className="flex justify-end">
-          <Button variant="outline" onClick={onUnlock} className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive">
+          <Button variant="outline" onClick={handleUnlockClick} className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive">
             <Unlock className="w-3.5 h-3.5" />
             Unlock
           </Button>
         </div>
       )}
+
+      <UnlockConfirmDialog
+        open={unlockDialogOpen}
+        onOpenChange={setUnlockDialogOpen}
+        downstreamStepNames={downstreamStepNames}
+        onConfirm={onUnlock}
+      />
     </div>
   );
 };

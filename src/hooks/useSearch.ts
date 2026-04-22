@@ -334,6 +334,22 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     setStatus("reviewing");
   }, [sessionId]);
 
+  // Full reset — used by upstream cascade
+  const reset = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A3");
+    }
+    setStatus("not_started");
+    setRoleResults(new Map());
+    setActiveRoleId(null);
+    setExpandedRoleId(null);
+    setError(null);
+  }, [sessionId]);
+
   // Computed
   const allActors = useMemo(() => {
     const actors: ActorCardData[] = [];
@@ -386,5 +402,6 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     undoTriage,
     lock,
     unlock,
+    reset,
   };
 }

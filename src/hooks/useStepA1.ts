@@ -147,6 +147,24 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
     setState((s) => ({ ...s, status: "editing" }));
   }, [sessionId]);
 
+  const reset = useCallback(async () => {
+    // Step 1 has no upstream — reset clears the row and returns to a fresh editing state
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A1");
+    }
+    setState({
+      contextText: "",
+      attachments: [],
+      status: "editing",
+      loading: false,
+      error: null,
+    });
+  }, [sessionId]);
+
   return {
     contextText: state.contextText,
     attachments: state.attachments,
@@ -161,5 +179,6 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
     setError,
     lock,
     unlock,
+    reset,
   };
 }

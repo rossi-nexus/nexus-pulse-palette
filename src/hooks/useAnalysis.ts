@@ -322,6 +322,23 @@ export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null 
     setStatus("complete");
   }, [sessionId]);
 
+  // Full reset — used by upstream cascade
+  const reset = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A4");
+    }
+    setStatus("not_started");
+    setRoleProgress(new Map());
+    setActiveRoleId(null);
+    setActiveActorId(null);
+    setExpandedRoleId(null);
+    setError(null);
+  }, [sessionId]);
+
   const orderedRoles = useMemo(() => Array.from(roleProgress.values()), [roleProgress]);
 
   const totals = useMemo(() => {
@@ -372,6 +389,7 @@ export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null 
     startAnalysis,
     lock,
     unlock,
+    reset,
     buildAnalyzedActors,
   };
 }

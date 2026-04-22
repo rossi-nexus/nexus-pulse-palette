@@ -402,6 +402,24 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     setStatus("editing");
   }, [sessionId]);
 
+  // Full reset — used by upstream cascade when Step 1 unlocks
+  const reset = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A2");
+    }
+    setInterpretation(null);
+    setClarificationPoints([]);
+    setStatus("not_started");
+    setError(null);
+    setProcessingMessage("");
+    setPopulatingRoleIds(new Set());
+    setPopulationFailedRoleIds(new Set());
+  }, [sessionId]);
+
   // Computed
   const pendingCount = useMemo(() => {
     if (!interpretation) return 0;
@@ -437,5 +455,6 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     acceptAllPending,
     lock,
     unlock,
+    reset,
   };
 }

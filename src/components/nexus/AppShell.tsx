@@ -15,8 +15,16 @@ import { useInterpretation } from "@/hooks/useInterpretation";
 import { useSearch } from "@/hooks/useSearch";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Interpretation, ClarificationPoint } from "@/types/interpretation";
+
+// Step display names used by the unlock confirmation dialog
+const STEP_NAMES: Record<number, string> = {
+  1: "Define Your Need",
+  2: "Interpretation & Targets",
+  3: "Search",
+  4: "Deep Analysis",
+};
 
 const AppShell = () => {
   const { sessionId } = useSession();
@@ -79,7 +87,7 @@ const AppShell = () => {
         clarificationPoints: stepA2.clarificationPoints,
       });
     }
-    // When A2 unlocks, clear its locked output (downstream cascade is a separate prompt)
+    // When A2 unlocks, clear its locked output so downstream steps lose their input contract
     if (prevA2Status.current === "locked" && stepA2.status !== "locked") {
       setLockedA2Output(null);
     }
@@ -91,6 +99,48 @@ const AppShell = () => {
   useEffect(() => {
     prevA3Status.current = stepA3.status;
   }, [stepA3.status]);
+
+  // ── Unlock cascade ─────────────────────────────────────────────────────
+  // When step N is unlocked, every downstream step (>N) must be reset:
+  // its locked_output cleared from the DB and its hook returned to initial
+  // state. The step being unlocked itself runs its own unlock() last.
+  const handleUnlockWithCascade = useCallback(
+    async (stepNumber: number) => {
+      const downstreamResets: Array<() => Promise<void>> = [];
+      if (stepNumber <= 1) downstreamResets.push(stepA2.reset);
+      if (stepNumber <= 2) downstreamResets.push(stepA3.reset);
+      if (stepNumber <= 3) downstreamResets.push(stepA4.reset);
+
+      // Clear cached locked output in AppShell — downstream steps must lose
+      // their input contract immediately (they'll see null and collapse).
+      if (stepNumber <= 2) setLockedA2Output(null);
+
+      // Run all downstream resets in parallel, then unlock the step itself.
+      await Promise.all(downstreamResets.map((fn) => fn()));
+
+      switch (stepNumber) {
+        case 1: await stepA1.unlock(); break;
+        case 2: await stepA2.unlock(); break;
+        case 3: await stepA3.unlock(); break;
+        case 4: await stepA4.unlock(); break;
+      }
+    },
+    [stepA1, stepA2, stepA3, stepA4]
+  );
+
+  // For each step, compute the names of downstream steps that have data
+  // (anything beyond "not_started"). Used to populate the confirmation dialog.
+  const downstreamNamesForStep = useMemo(() => {
+    const a2Has = stepA2.status !== "not_started";
+    const a3Has = stepA3.status !== "not_started";
+    const a4Has = stepA4.status !== "not_started";
+    return {
+      1: [a2Has && STEP_NAMES[2], a3Has && STEP_NAMES[3], a4Has && STEP_NAMES[4]].filter(Boolean) as string[],
+      2: [a3Has && STEP_NAMES[3], a4Has && STEP_NAMES[4]].filter(Boolean) as string[],
+      3: [a4Has && STEP_NAMES[4]].filter(Boolean) as string[],
+      4: [] as string[],
+    };
+  }, [stepA2.status, stepA3.status, stepA4.status]);
 
   const devStep = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("dev")
@@ -150,7 +200,8 @@ const AppShell = () => {
                     onRemoveAttachment={stepA1.removeAttachment}
                     onError={stepA1.setError}
                     onLock={stepA1.lock}
-                    onUnlock={stepA1.unlock}
+                    onUnlock={() => handleUnlockWithCascade(1)}
+                    downstreamStepNames={downstreamNamesForStep[1]}
                   />
 
                   {/* Example searches toggle — only in editing state */}
@@ -190,6 +241,8 @@ const AppShell = () => {
                     contextText={stepA1.contextText}
                     attachments={stepA1.attachments}
                     sessionId={sessionId}
+                    onUnlock={() => handleUnlockWithCascade(2)}
+                    downstreamStepNames={downstreamNamesForStep[2]}
                   />
                 )}
 
@@ -201,6 +254,8 @@ const AppShell = () => {
                     hook={stepA3}
                     interpretation={lockedA2Output?.interpretation ?? null}
                     step2Locked={isStep2Locked}
+                    onUnlock={() => handleUnlockWithCascade(3)}
+                    downstreamStepNames={downstreamNamesForStep[3]}
                   />
                 )}
 
@@ -213,6 +268,8 @@ const AppShell = () => {
                     interpretation={lockedA2Output?.interpretation ?? null}
                     searchHook={stepA3}
                     step3Locked={isStep3Locked}
+                    onUnlock={() => handleUnlockWithCascade(4)}
+                    downstreamStepNames={downstreamNamesForStep[4]}
                   />
                 )}
 
