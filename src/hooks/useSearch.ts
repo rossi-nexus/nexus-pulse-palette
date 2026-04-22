@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Interpretation, Constraints } from "@/types/interpretation";
 
@@ -43,12 +43,39 @@ export interface RoleSearchResult {
   error?: string;
 }
 
-export function useSearch() {
+interface UseSearchProps {
+  sessionId: string | null;
+}
+
+export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
   const [status, setStatus] = useState<SearchStatus>("not_started");
   const [roleResults, setRoleResults] = useState<Map<string, RoleSearchResult>>(new Map());
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Load existing locked state from DB on init
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("session_step_states")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("step", "A3")
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const output = data.locked_output as { roleResults?: RoleSearchResult[] } | null;
+      if (data.status === "locked" && output?.roleResults) {
+        const restored = new Map<string, RoleSearchResult>();
+        for (const r of output.roleResults) restored.set(r.role_id, r);
+        setRoleResults(restored);
+        setStatus("locked");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
   const startSearch = useCallback(async (interpretation: Interpretation) => {
     setStatus("searching");
@@ -268,8 +295,44 @@ export function useSearch() {
     });
   }, []);
 
-  const lock = useCallback(() => setStatus("locked"), []);
-  const unlock = useCallback(() => setStatus("reviewing"), []);
+  const lock = useCallback(async () => {
+    if (sessionId) {
+      const now = new Date().toISOString();
+      const lockedOutput = { roleResults: Array.from(roleResults.values()) };
+      const { data: existing } = await supabase
+        .from("session_step_states")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("step", "A3")
+        .maybeSingle();
+      if (existing) {
+        await supabase
+          .from("session_step_states")
+          .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("session_step_states").insert([{
+          session_id: sessionId,
+          step: "A3",
+          status: "locked",
+          locked_output: lockedOutput as any,
+          locked_at: now,
+        }]);
+      }
+    }
+    setStatus("locked");
+  }, [sessionId, roleResults]);
+
+  const unlock = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A3");
+    }
+    setStatus("reviewing");
+  }, [sessionId]);
 
   // Computed
   const allActors = useMemo(() => {

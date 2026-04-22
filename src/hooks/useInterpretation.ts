@@ -12,7 +12,11 @@ const PROCESSING_MESSAGES = [
   "Structuring results…",
 ];
 
-export function useInterpretation() {
+interface UseInterpretationProps {
+  sessionId: string | null;
+}
+
+export function useInterpretation({ sessionId }: UseInterpretationProps = { sessionId: null }) {
   const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
   const [clarificationPoints, setClarificationPoints] = useState<ClarificationPoint[]>([]);
   const [status, setStatus] = useState<A2Status>("not_started");
@@ -26,6 +30,28 @@ export function useInterpretation() {
   useEffect(() => {
     interpretationRef.current = interpretation;
   }, [interpretation]);
+
+  // Load existing locked state from DB on init
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("session_step_states")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("step", "A2")
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const output = data.locked_output as { interpretation?: Interpretation; clarificationPoints?: ClarificationPoint[] } | null;
+      if (data.status === "locked" && output?.interpretation) {
+        setInterpretation(output.interpretation);
+        setClarificationPoints(output.clarificationPoints || []);
+        setStatus("locked");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
   const runInterpretation = useCallback(async (needDescription: NeedDescription) => {
     setStatus("processing");
@@ -336,14 +362,45 @@ export function useInterpretation() {
     });
   }, []);
 
-  // Lock / unlock
-  const lock = useCallback(() => {
+  // Lock / unlock — persists to session_step_states
+  const lock = useCallback(async () => {
+    if (sessionId && interpretation) {
+      const now = new Date().toISOString();
+      const lockedOutput = { interpretation, clarificationPoints };
+      const { data: existing } = await supabase
+        .from("session_step_states")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("step", "A2")
+        .maybeSingle();
+      if (existing) {
+        await supabase
+          .from("session_step_states")
+          .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("session_step_states").insert([{
+          session_id: sessionId,
+          step: "A2",
+          status: "locked",
+          locked_output: lockedOutput as any,
+          locked_at: now,
+        }]);
+      }
+    }
     setStatus("locked");
-  }, []);
+  }, [sessionId, interpretation, clarificationPoints]);
 
-  const unlock = useCallback(() => {
+  const unlock = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A2");
+    }
     setStatus("editing");
-  }, []);
+  }, [sessionId]);
 
   // Computed
   const pendingCount = useMemo(() => {
