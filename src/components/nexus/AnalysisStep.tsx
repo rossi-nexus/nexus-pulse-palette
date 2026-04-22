@@ -295,8 +295,8 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
             {totals.errors > 0 && ` · ${totals.errors} errors`}
           </p>
 
-          {/* Role-by-role breakdown */}
-          {orderedRoles.length > 0 && (
+          {/* Compact role-by-role breakdown — shown when not in Review mode */}
+          {!reviewExpanded && orderedRoles.length > 0 && (
             <div className="space-y-3">
               {orderedRoles.map((role) => {
                 const analyzed = role.actors.filter((a) => a.status === "complete");
@@ -340,7 +340,50 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
             </div>
           )}
 
-          <div className="flex justify-end">
+          {/* Expanded review — full read-only content per role */}
+          {reviewExpanded && orderedRoles.length > 0 && (
+            <div className="space-y-6 pt-2">
+              {orderedRoles.map((role) => {
+                const sorted = sortReferenceLast(role.actors);
+                const firstSkippedIdx = sorted.findIndex((a) => a.status === "skipped");
+                const hasSkipped = firstSkippedIdx >= 0;
+                return (
+                  <section key={role.role_id} className="space-y-2">
+                    <h3 className="text-body-sm font-medium text-foreground border-b border-border-subtle pb-1.5">
+                      {role.role_name}
+                      <span className="text-foreground-muted ml-2">
+                        — {role.actors.filter((a) => a.status === "complete").length} analyzed
+                        {role.actors.filter((a) => a.status === "skipped").length > 0 &&
+                          `, ${role.actors.filter((a) => a.status === "skipped").length} reference`}
+                      </span>
+                    </h3>
+                    <div className="space-y-2">
+                      {sorted.map((actorState, idx) => (
+                        <div key={actorState.actor_id}>
+                          {hasSkipped && idx === firstSkippedIdx && (
+                            <>
+                              <ReferenceActorInfoBox />
+                              <p className="text-mono-xs font-mono uppercase tracking-wider text-accent-blue/80 mt-3 mb-2 px-1">
+                                Reference actors
+                              </p>
+                            </>
+                          )}
+                          <AnalyzedActorCard
+                            state={actorState}
+                            excluded={excludedIds.has(actorState.actor_id)}
+                            readOnly
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex justify-end items-center gap-1">
+            <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
               Unlock
