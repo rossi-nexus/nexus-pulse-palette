@@ -210,7 +210,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked }: Analysi
 
   const runFromState = () => {
     if (!interpretation) return;
-    const acceptedRoles = interpretation.roles.filter((r) => r.status === "accepted");
+    const acceptedRoles = interpretation.roles.filter((r) => r.status !== "rejected");
     startAnalysis({
       roles: acceptedRoles,
       roleResults: searchHook.orderedRoles,
