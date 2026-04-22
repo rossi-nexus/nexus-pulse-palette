@@ -295,8 +295,44 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     });
   }, []);
 
-  const lock = useCallback(() => setStatus("locked"), []);
-  const unlock = useCallback(() => setStatus("reviewing"), []);
+  const lock = useCallback(async () => {
+    if (sessionId) {
+      const now = new Date().toISOString();
+      const lockedOutput = { roleResults: Array.from(roleResults.values()) };
+      const { data: existing } = await supabase
+        .from("session_step_states")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("step", "A3")
+        .maybeSingle();
+      if (existing) {
+        await supabase
+          .from("session_step_states")
+          .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("session_step_states").insert([{
+          session_id: sessionId,
+          step: "A3",
+          status: "locked",
+          locked_output: lockedOutput as any,
+          locked_at: now,
+        }]);
+      }
+    }
+    setStatus("locked");
+  }, [sessionId, roleResults]);
+
+  const unlock = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A3");
+    }
+    setStatus("reviewing");
+  }, [sessionId]);
 
   // Computed
   const allActors = useMemo(() => {
