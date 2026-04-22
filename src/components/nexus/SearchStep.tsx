@@ -191,10 +191,39 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
   if (status === "locked") {
     return (
       <StepContainer stepNumber={3} title="Search" status="locked">
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Top stats line */}
           <p className="text-body-sm text-foreground-secondary">
             {totalIncluded} actors included · {totalSavedForLater} saved for later · {totalFound} total found
           </p>
+
+          {/* Role-by-role breakdown */}
+          {orderedRoles.length > 0 && (
+            <div className="space-y-3">
+              {orderedRoles.map((role) => {
+                const included = role.actors.filter((a) => a.triage_decision === "included");
+                const shown = included.slice(0, 3);
+                const more = included.length - shown.length;
+                return (
+                  <div key={role.role_id} className="space-y-0.5">
+                    <p className="text-body-sm text-foreground">
+                      {role.role_name}
+                      <span className="text-foreground-muted"> — {included.length} included</span>
+                    </p>
+                    {included.length === 0 ? (
+                      <p className="text-caption text-foreground-muted pl-3">— none included</p>
+                    ) : (
+                      <p className="text-caption text-foreground-muted pl-3">
+                        {shown.map((a) => a.name).join(", ")}
+                        {more > 0 && `, +${more} more`}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
