@@ -849,33 +849,75 @@ export type Database = {
       }
       user_personal_actors: {
         Row: {
-          actor_id: string
+          actor_description: string | null
+          actor_name: string
+          actor_type: string | null
+          actor_website: string | null
+          analysis_data: Json | null
+          country: string | null
           created_at: string
           id: string
+          match_timestamp: string | null
+          matched_main_db_actor_id: string | null
           merged_actor_id: string | null
           notes: string | null
+          profile_completeness: number | null
+          role_names: string[] | null
+          search_data: Json | null
+          sharing_level: string | null
+          source_session_id: string | null
+          source_step: string | null
+          source_urls: string[] | null
           status: string
           suggested_at: string | null
           tags: string[] | null
           user_id: string
         }
         Insert: {
-          actor_id: string
+          actor_description?: string | null
+          actor_name?: string
+          actor_type?: string | null
+          actor_website?: string | null
+          analysis_data?: Json | null
+          country?: string | null
           created_at?: string
           id?: string
+          match_timestamp?: string | null
+          matched_main_db_actor_id?: string | null
           merged_actor_id?: string | null
           notes?: string | null
+          profile_completeness?: number | null
+          role_names?: string[] | null
+          search_data?: Json | null
+          sharing_level?: string | null
+          source_session_id?: string | null
+          source_step?: string | null
+          source_urls?: string[] | null
           status?: string
           suggested_at?: string | null
           tags?: string[] | null
           user_id: string
         }
         Update: {
-          actor_id?: string
+          actor_description?: string | null
+          actor_name?: string
+          actor_type?: string | null
+          actor_website?: string | null
+          analysis_data?: Json | null
+          country?: string | null
           created_at?: string
           id?: string
+          match_timestamp?: string | null
+          matched_main_db_actor_id?: string | null
           merged_actor_id?: string | null
           notes?: string | null
+          profile_completeness?: number | null
+          role_names?: string[] | null
+          search_data?: Json | null
+          sharing_level?: string | null
+          source_session_id?: string | null
+          source_step?: string | null
+          source_urls?: string[] | null
           status?: string
           suggested_at?: string | null
           tags?: string[] | null
@@ -883,8 +925,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "user_personal_actors_actor_id_fkey"
-            columns: ["actor_id"]
+            foreignKeyName: "user_personal_actors_matched_main_db_actor_id_fkey"
+            columns: ["matched_main_db_actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
             referencedColumns: ["id"]
