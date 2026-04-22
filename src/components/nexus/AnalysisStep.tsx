@@ -4,10 +4,26 @@ import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import AnalysisRoleProgressBox from "./AnalysisRoleProgressBox";
 import AnalyzedActorCard from "./AnalyzedActorCard";
+import ReferenceActorInfoBox from "./ReferenceActorInfoBox";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { useAnalysis, AnalysisInput } from "@/hooks/useAnalysis";
 import type { Interpretation } from "@/types/interpretation";
 import type { useSearch } from "@/hooks/useSearch";
+import type { ActorAnalysis, MatchedCategory } from "@/types/analyzed-actors";
+
+/** Sum of all matched ontology entries across every category. */
+const matchCount = (analysis: ActorAnalysis | null | undefined): number => {
+  if (!analysis) return 0;
+  const cat = (cats: MatchedCategory[]) =>
+    (cats || []).reduce((s, c) => s + (c.entries?.length || 0), 0);
+  return (
+    cat(analysis.capabilities) +
+    cat(analysis.competences) +
+    (analysis.domains?.length || 0) +
+    (analysis.products?.length || 0) +
+    (analysis.services?.length || 0)
+  );
+};
 
 interface AnalysisStepProps {
   hook: ReturnType<typeof useAnalysis>;
@@ -270,11 +286,58 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
   if (status === "locked") {
     return (
       <StepContainer stepNumber={4} title="Deep Analysis" status="locked">
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Top stats line */}
           <p className="text-body-sm text-foreground-secondary">
             {totals.analyzed} actors analyzed · {totals.reference} reference actors
             {totals.errors > 0 && ` · ${totals.errors} errors`}
           </p>
+
+          {/* Role-by-role breakdown */}
+          {orderedRoles.length > 0 && (
+            <div className="space-y-3">
+              {orderedRoles.map((role) => {
+                const analyzed = role.actors.filter((a) => a.status === "complete");
+                const reference = role.actors.filter((a) => a.status === "skipped");
+                const shownAnalyzed = analyzed.slice(0, 3);
+                const moreAnalyzed = analyzed.length - shownAnalyzed.length;
+                return (
+                  <div key={role.role_id} className="space-y-0.5">
+                    <p className="text-body-sm text-foreground">
+                      {role.role_name}
+                      <span className="text-foreground-muted">
+                        {" — "}
+                        {analyzed.length} analyzed
+                        {reference.length > 0 && `, ${reference.length} reference`}
+                      </span>
+                    </p>
+                    {analyzed.length === 0 && reference.length === 0 ? (
+                      <p className="text-caption text-foreground-muted pl-3">— none</p>
+                    ) : (
+                      <>
+                        {shownAnalyzed.map((a) => (
+                          <p key={a.actor_id} className="text-caption text-foreground-muted pl-3">
+                            <span className="text-foreground-secondary">{a.actor_name}</span>
+                            {" — "}
+                            {matchCount(a.result)} matches
+                          </p>
+                        ))}
+                        {moreAnalyzed > 0 && (
+                          <p className="text-caption text-foreground-muted pl-3">+{moreAnalyzed} more</p>
+                        )}
+                        {reference.length > 0 && (
+                          <p className="text-caption text-foreground-muted/80 pl-3 italic">
+                            {reference.map((a) => a.actor_name).join(", ")} — reference (not analyzed)
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
@@ -337,6 +400,10 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
           {expanded && expanded.actors.length > 0 && (
             <>
               <div className="h-full overflow-y-auto pr-2 space-y-2">
+                {/* Reference-actor explainer — once per role, only when present */}
+                {expanded.actors.some((a) => a.status === "skipped") && (
+                  <ReferenceActorInfoBox />
+                )}
                 {expanded.actors.map((actorState) => (
                   <AnalyzedActorCard
                     key={actorState.actor_id}
