@@ -15,15 +15,23 @@ import { useInterpretation } from "@/hooks/useInterpretation";
 import { useSearch } from "@/hooks/useSearch";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { Interpretation, ClarificationPoint } from "@/types/interpretation";
 
 const AppShell = () => {
   const { sessionId } = useSession();
   const stepA1 = useStepA1({ sessionId });
-  const stepA2 = useInterpretation();
-  const stepA3 = useSearch();
-  const stepA4 = useAnalysis();
+  const stepA2 = useInterpretation({ sessionId });
+  const stepA3 = useSearch({ sessionId });
+  const stepA4 = useAnalysis({ sessionId });
   const [showExamples, setShowExamples] = useState(false);
+
+  // Locked downstream contract outputs — what downstream steps see.
+  // These are populated from DB on init and refreshed when an upstream step locks.
+  const [lockedA2Output, setLockedA2Output] = useState<{
+    interpretation: Interpretation | null;
+    clarificationPoints: ClarificationPoint[];
+  } | null>(null);
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
 
@@ -31,6 +39,58 @@ const AppShell = () => {
   useEffect(() => {
     if (hasContent) setShowExamples(false);
   }, [hasContent]);
+
+  // Track previous A2/A3 status to detect lock/unlock transitions
+  const prevA2Status = useRef(stepA2.status);
+  const prevA3Status = useRef(stepA3.status);
+
+  // On initial load: read locked A2 output from DB (so contract survives refresh)
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("session_step_states")
+        .select("step,status,locked_output")
+        .eq("session_id", sessionId)
+        .in("step", ["A2"])
+        .eq("status", "locked");
+      if (cancelled || !data) return;
+      const a2 = data.find((r) => r.step === "A2");
+      if (a2?.locked_output) {
+        const out = a2.locked_output as { interpretation?: Interpretation; clarificationPoints?: ClarificationPoint[] };
+        if (out.interpretation) {
+          setLockedA2Output({
+            interpretation: out.interpretation,
+            clarificationPoints: out.clarificationPoints || [],
+          });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
+
+  // Capture locked A2 output when A2 transitions to "locked"
+  useEffect(() => {
+    if (prevA2Status.current !== "locked" && stepA2.status === "locked" && stepA2.interpretation) {
+      setLockedA2Output({
+        interpretation: stepA2.interpretation,
+        clarificationPoints: stepA2.clarificationPoints,
+      });
+    }
+    // When A2 unlocks, clear its locked output (downstream cascade is a separate prompt)
+    if (prevA2Status.current === "locked" && stepA2.status !== "locked") {
+      setLockedA2Output(null);
+    }
+    prevA2Status.current = stepA2.status;
+  }, [stepA2.status, stepA2.interpretation, stepA2.clarificationPoints]);
+
+  // Track A3 lock transitions for unlock side-effects (data lives in stepA3 hook itself,
+  // and useSearch already restores its own locked roleResults from DB on init).
+  useEffect(() => {
+    prevA3Status.current = stepA3.status;
+  }, [stepA3.status]);
 
   const devStep = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("dev")
