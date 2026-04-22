@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActorCardData, RoleSearchResult } from "@/hooks/useSearch";
 import type { Constraints, Role } from "@/types/interpretation";
@@ -77,13 +77,40 @@ function buildTargets(role: Role) {
   };
 }
 
-export function useAnalysis() {
+interface UseAnalysisProps {
+  sessionId: string | null;
+}
+
+export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null }) {
   const [status, setStatus] = useState<AnalysisStatus>("not_started");
   const [roleProgress, setRoleProgress] = useState<Map<string, RoleAnalysisProgress>>(new Map());
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [activeActorId, setActiveActorId] = useState<string | null>(null);
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Load existing locked state from DB on init
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("session_step_states")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("step", "A4")
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const output = data.locked_output as { roleProgress?: RoleAnalysisProgress[] } | null;
+      if (data.status === "locked" && output?.roleProgress) {
+        const restored = new Map<string, RoleAnalysisProgress>();
+        for (const r of output.roleProgress) restored.set(r.role_id, r);
+        setRoleProgress(restored);
+        setStatus("locked");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
   const startAnalysis = useCallback(async (input: AnalysisInput) => {
     setError(null);
@@ -256,8 +283,44 @@ export function useAnalysis() {
     setStatus("complete");
   }, []);
 
-  const lock = useCallback(() => setStatus("locked"), []);
-  const unlock = useCallback(() => setStatus("complete"), []);
+  const lock = useCallback(async () => {
+    if (sessionId) {
+      const now = new Date().toISOString();
+      const lockedOutput = { roleProgress: Array.from(roleProgress.values()) };
+      const { data: existing } = await supabase
+        .from("session_step_states")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("step", "A4")
+        .maybeSingle();
+      if (existing) {
+        await supabase
+          .from("session_step_states")
+          .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("session_step_states").insert([{
+          session_id: sessionId,
+          step: "A4",
+          status: "locked",
+          locked_output: lockedOutput as any,
+          locked_at: now,
+        }]);
+      }
+    }
+    setStatus("locked");
+  }, [sessionId, roleProgress]);
+
+  const unlock = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A4");
+    }
+    setStatus("complete");
+  }, [sessionId]);
 
   const orderedRoles = useMemo(() => Array.from(roleProgress.values()), [roleProgress]);
 
