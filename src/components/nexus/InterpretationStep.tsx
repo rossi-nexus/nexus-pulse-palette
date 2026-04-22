@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import SummarySection from "./SummarySection";
 import RolesSection from "./RolesSection";
 import ConstraintsSection from "./ConstraintsSection";
+import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { NeedDescription, NeedAttachment } from "@/types/need-description";
 import type { useInterpretation } from "@/hooks/useInterpretation";
 
@@ -22,6 +24,10 @@ interface InterpretationStepProps {
   contextText: string;
   attachments: NeedAttachment[];
   sessionId: string | null;
+  /** Cascade-aware unlock from AppShell; the hook's own unlock is no longer called directly. */
+  onUnlock: () => void;
+  /** Names of downstream steps with data — populates the confirmation dialog. */
+  downstreamStepNames: string[];
 }
 
 const InterpretationStep = ({
@@ -30,7 +36,14 @@ const InterpretationStep = ({
   contextText,
   attachments,
   sessionId,
+  onUnlock,
+  downstreamStepNames,
 }: InterpretationStepProps) => {
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const handleUnlockClick = () => {
+    if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
+    else onUnlock();
+  };
   const {
     interpretation,
     status,
@@ -51,7 +64,6 @@ const InterpretationStep = ({
     updateConstraint,
     acceptAllPending,
     lock,
-    unlock,
   } = hook;
 
   const showDev =
