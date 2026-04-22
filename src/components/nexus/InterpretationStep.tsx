@@ -5,6 +5,7 @@ import StepContainer from "./StepContainer";
 import SummarySection from "./SummarySection";
 import RolesSection from "./RolesSection";
 import ConstraintsSection from "./ConstraintsSection";
+import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { NeedDescription, NeedAttachment } from "@/types/need-description";
 import type { useInterpretation } from "@/hooks/useInterpretation";
@@ -40,6 +41,7 @@ const InterpretationStep = ({
   downstreamStepNames,
 }: InterpretationStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
