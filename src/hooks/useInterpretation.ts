@@ -12,7 +12,11 @@ const PROCESSING_MESSAGES = [
   "Structuring results…",
 ];
 
-export function useInterpretation() {
+interface UseInterpretationProps {
+  sessionId: string | null;
+}
+
+export function useInterpretation({ sessionId }: UseInterpretationProps = { sessionId: null }) {
   const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
   const [clarificationPoints, setClarificationPoints] = useState<ClarificationPoint[]>([]);
   const [status, setStatus] = useState<A2Status>("not_started");
@@ -26,6 +30,28 @@ export function useInterpretation() {
   useEffect(() => {
     interpretationRef.current = interpretation;
   }, [interpretation]);
+
+  // Load existing locked state from DB on init
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("session_step_states")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("step", "A2")
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const output = data.locked_output as { interpretation?: Interpretation; clarificationPoints?: ClarificationPoint[] } | null;
+      if (data.status === "locked" && output?.interpretation) {
+        setInterpretation(output.interpretation);
+        setClarificationPoints(output.clarificationPoints || []);
+        setStatus("locked");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
   const runInterpretation = useCallback(async (needDescription: NeedDescription) => {
     setStatus("processing");
