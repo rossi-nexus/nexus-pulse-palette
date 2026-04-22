@@ -362,14 +362,45 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     });
   }, []);
 
-  // Lock / unlock
-  const lock = useCallback(() => {
+  // Lock / unlock — persists to session_step_states
+  const lock = useCallback(async () => {
+    if (sessionId && interpretation) {
+      const now = new Date().toISOString();
+      const lockedOutput = { interpretation, clarificationPoints };
+      const { data: existing } = await supabase
+        .from("session_step_states")
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("step", "A2")
+        .maybeSingle();
+      if (existing) {
+        await supabase
+          .from("session_step_states")
+          .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("session_step_states").insert([{
+          session_id: sessionId,
+          step: "A2",
+          status: "locked",
+          locked_output: lockedOutput as any,
+          locked_at: now,
+        }]);
+      }
+    }
     setStatus("locked");
-  }, []);
+  }, [sessionId, interpretation, clarificationPoints]);
 
-  const unlock = useCallback(() => {
+  const unlock = useCallback(async () => {
+    if (sessionId) {
+      await supabase
+        .from("session_step_states")
+        .update({ status: "editing", locked_output: null, locked_at: null })
+        .eq("session_id", sessionId)
+        .eq("step", "A2");
+    }
     setStatus("editing");
-  }, []);
+  }, [sessionId]);
 
   // Computed
   const pendingCount = useMemo(() => {
