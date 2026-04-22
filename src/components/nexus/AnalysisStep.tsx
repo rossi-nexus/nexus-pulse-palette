@@ -26,6 +26,12 @@ const matchCount = (analysis: ActorAnalysis | null | undefined): number => {
   );
 };
 
+/** Sort actors so reference (skipped) actors are grouped at the end of the list. */
+const sortReferenceLast = (actors: ActorAnalysisStatus[]): ActorAnalysisStatus[] => {
+  const rank = (a: ActorAnalysisStatus) => (a.status === "skipped" ? 1 : 0);
+  return [...actors].sort((a, b) => rank(a) - rank(b));
+};
+
 interface AnalysisStepProps {
   hook: ReturnType<typeof useAnalysis>;
   interpretation: Interpretation | null;
