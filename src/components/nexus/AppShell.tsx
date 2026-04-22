@@ -35,6 +35,7 @@ const AppShell = () => {
   const stepA2 = useInterpretation({ sessionId });
   const stepA3 = useSearch({ sessionId });
   const stepA4 = useAnalysis({ sessionId });
+  const stepA5 = useDatabaseCheck({ sessionId });
   const [showExamples, setShowExamples] = useState(false);
 
   // Locked downstream contract outputs — what downstream steps see.
@@ -113,6 +114,7 @@ const AppShell = () => {
       if (stepNumber <= 1) downstreamResets.push(stepA2.reset);
       if (stepNumber <= 2) downstreamResets.push(stepA3.reset);
       if (stepNumber <= 3) downstreamResets.push(stepA4.reset);
+      if (stepNumber <= 4) downstreamResets.push(stepA5.reset);
 
       // Clear cached locked output in AppShell — downstream steps must lose
       // their input contract immediately (they'll see null and collapse).
@@ -126,9 +128,10 @@ const AppShell = () => {
         case 2: await stepA2.unlock(); break;
         case 3: await stepA3.unlock(); break;
         case 4: await stepA4.unlock(); break;
+        case 5: await stepA5.unlock(); break;
       }
     },
-    [stepA1, stepA2, stepA3, stepA4]
+    [stepA1, stepA2, stepA3, stepA4, stepA5]
   );
 
   // For each step, compute the names of downstream steps that have data
@@ -137,13 +140,15 @@ const AppShell = () => {
     const a2Has = stepA2.status !== "not_started";
     const a3Has = stepA3.status !== "not_started";
     const a4Has = stepA4.status !== "not_started";
+    const a5Has = stepA5.status !== "not_started";
     return {
-      1: [a2Has && STEP_NAMES[2], a3Has && STEP_NAMES[3], a4Has && STEP_NAMES[4]].filter(Boolean) as string[],
-      2: [a3Has && STEP_NAMES[3], a4Has && STEP_NAMES[4]].filter(Boolean) as string[],
-      3: [a4Has && STEP_NAMES[4]].filter(Boolean) as string[],
-      4: [] as string[],
+      1: [a2Has && STEP_NAMES[2], a3Has && STEP_NAMES[3], a4Has && STEP_NAMES[4], a5Has && STEP_NAMES[5]].filter(Boolean) as string[],
+      2: [a3Has && STEP_NAMES[3], a4Has && STEP_NAMES[4], a5Has && STEP_NAMES[5]].filter(Boolean) as string[],
+      3: [a4Has && STEP_NAMES[4], a5Has && STEP_NAMES[5]].filter(Boolean) as string[],
+      4: [a5Has && STEP_NAMES[5]].filter(Boolean) as string[],
+      5: [] as string[],
     };
-  }, [stepA2.status, stepA3.status, stepA4.status]);
+  }, [stepA2.status, stepA3.status, stepA4.status, stepA5.status]);
 
   const devStep = typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("dev")
@@ -153,6 +158,7 @@ const AppShell = () => {
   const isStep1Locked = stepA1.status === "locked";
   const isStep2Locked = stepA2.status === "locked";
   const isStep3Locked = stepA3.status === "locked";
+  const isStep4Locked = stepA4.status === "locked";
 
   const isStep2Compact =
     stepA2.status === "not_started" && !isStep1Locked && !stepA2.error && devStep !== "step2";
@@ -160,6 +166,8 @@ const AppShell = () => {
     stepA3.status === "not_started" && !isStep2Locked && !stepA3.error && devStep !== "step3";
   const isStep4Compact =
     stepA4.status === "not_started" && !isStep3Locked && !stepA4.error && devStep !== "step4";
+  const isStep5Compact =
+    stepA5.status === "not_started" && !isStep4Locked && !stepA5.error && devStep !== "step5";
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -276,8 +284,19 @@ const AppShell = () => {
                   />
                 )}
 
-                {/* Database Check — compact indicator */}
-                <CompactStepIndicator title="Database Check" status="not_started" />
+                {/* Step 5 — database check */}
+                {isStep5Compact ? (
+                  <CompactStepIndicator stepNumber={5} title="Database Check" status="not_started" />
+                ) : (
+                  <DatabaseCheckStep
+                    hook={stepA5}
+                    analysisHook={stepA4}
+                    searchHook={stepA3}
+                    step4Locked={isStep4Locked}
+                    onUnlock={() => handleUnlockWithCascade(5)}
+                    downstreamStepNames={downstreamNamesForStep[5]}
+                  />
+                )}
               </div>
             </div>
 
