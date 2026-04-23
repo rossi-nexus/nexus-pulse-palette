@@ -10,11 +10,11 @@ import { SessionProvider } from "@/contexts/SessionContext";
 const AppLayout = () => {
   return (
     <SessionProvider>
-      <div className="h-screen flex bg-background overflow-hidden">
-        <SidebarNav />
-        <div className="flex-1 flex flex-col min-w-0">
-          <TopBar />
-          <div className="flex-1 overflow-hidden">
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <TopBar />
+        <div className="flex flex-1 overflow-hidden min-h-0">
+          <SidebarNav />
+          <div className="flex-1 overflow-hidden min-w-0">
             <Routes>
               <Route path="/" element={<Navigate to="/pipeline" replace />} />
               <Route path="/pipeline" element={<PipelineView />} />
