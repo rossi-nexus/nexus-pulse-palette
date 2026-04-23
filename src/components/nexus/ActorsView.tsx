@@ -69,7 +69,7 @@ interface UserInfo {
 const ACTOR_TYPE_VARIANT: Record<string, string> = {
   commercial: "bg-success/15 text-success border-success/30",
   government: "bg-info/15 text-info border-info/30",
-  academic: "bg-accent-purple/15 text-accent-purple border-accent-purple/30",
+  academic: "bg-accent-blue/15 text-accent-blue border-accent-blue/30",
   industry_body: "bg-warning/15 text-warning border-warning/30",
 };
 
