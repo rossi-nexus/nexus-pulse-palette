@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import TopBar from "./TopBar";
 import SidebarNav from "./SidebarNav";
 import PipelineView from "./PipelineView";
-import ActorsPlaceholder from "@/pages/ActorsPlaceholder";
+import ActorsView from "./ActorsView";
 import ActorProfilePlaceholder from "@/pages/ActorProfilePlaceholder";
 import AdminPlaceholder from "@/pages/AdminPlaceholder";
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -18,7 +18,7 @@ const AppLayout = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/pipeline" replace />} />
               <Route path="/pipeline" element={<PipelineView />} />
-              <Route path="/actors" element={<ActorsPlaceholder />} />
+              <Route path="/actors" element={<ActorsView />} />
               <Route path="/actors/:id" element={<ActorProfilePlaceholder />} />
               <Route path="/admin" element={<AdminPlaceholder />} />
             </Routes>
