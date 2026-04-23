@@ -164,7 +164,7 @@ const SidebarNav = () => {
                     })}
                     <button
                       onClick={handleNewSession}
-                      className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors"
+                      className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs font-medium text-accent-teal hover:bg-surface/50 transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       New session
@@ -178,8 +178,8 @@ const SidebarNav = () => {
 
         <button
           onClick={() => setExpanded(false)}
-          className="h-10 border-t border-border flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors shrink-0"
-          title="Collapse"
+          className="h-10 border-t border-border flex items-center justify-center bg-surface/40 text-foreground-secondary hover:bg-surface hover:text-foreground transition-colors shrink-0"
+          title="Collapse sidebar"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
