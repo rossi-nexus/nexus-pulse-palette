@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Zap, Database, Settings, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function formatSessionDate(iso: string): string {
   const d = new Date(iso);
