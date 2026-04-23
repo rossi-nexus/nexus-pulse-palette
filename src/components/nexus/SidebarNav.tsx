@@ -89,8 +89,8 @@ const SidebarNav = () => {
                     cn(
                       "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
                       isActive
-                        ? "bg-surface text-foreground font-medium"
-                        : "text-foreground-muted hover:text-foreground hover:bg-surface/60"
+                        ? "bg-surface text-foreground font-semibold"
+                        : "text-foreground hover:bg-surface/60"
                     )
                   }
                 >
@@ -101,7 +101,7 @@ const SidebarNav = () => {
                 {/* Session list under Pipeline */}
                 {item.to === "/pipeline" && (
                   <div className="mt-3 ml-2 mr-1 space-y-1">
-                    <div className="text-[10px] uppercase tracking-[0.15em] text-foreground-muted/70 px-2 mb-1">
+                    <div className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-secondary px-2 mb-1">
                       Sessions
                     </div>
                     {sessions.map((s) => {
