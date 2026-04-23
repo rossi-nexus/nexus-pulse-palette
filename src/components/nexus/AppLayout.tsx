@@ -1,0 +1,32 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import TopBar from "./TopBar";
+import SidebarNav from "./SidebarNav";
+import PipelineView from "./PipelineView";
+import ActorsPlaceholder from "@/pages/ActorsPlaceholder";
+import ActorProfilePlaceholder from "@/pages/ActorProfilePlaceholder";
+import AdminPlaceholder from "@/pages/AdminPlaceholder";
+import { SessionProvider } from "@/contexts/SessionContext";
+
+const AppLayout = () => {
+  return (
+    <SessionProvider>
+      <div className="h-screen flex bg-background overflow-hidden">
+        <SidebarNav />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopBar />
+          <div className="flex-1 overflow-hidden">
+            <Routes>
+              <Route path="/" element={<Navigate to="/pipeline" replace />} />
+              <Route path="/pipeline" element={<PipelineView />} />
+              <Route path="/actors" element={<ActorsPlaceholder />} />
+              <Route path="/actors/:id" element={<ActorProfilePlaceholder />} />
+              <Route path="/admin" element={<AdminPlaceholder />} />
+            </Routes>
+          </div>
+        </div>
+      </div>
+    </SessionProvider>
+  );
+};
+
+export default AppLayout;
