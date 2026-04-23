@@ -66,8 +66,8 @@ const SidebarNav = () => {
       <aside className="h-full w-8 bg-elevated border-r border-border flex flex-col shrink-0">
         <button
           onClick={() => setExpanded(true)}
-          className="h-10 flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors"
-          title="Expand"
+          className="h-10 flex items-center justify-center bg-surface/40 text-foreground-secondary hover:bg-surface hover:text-foreground transition-colors"
+          title="Expand sidebar"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
