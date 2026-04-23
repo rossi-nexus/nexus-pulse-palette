@@ -61,57 +61,45 @@ const SidebarNav = () => {
     ...(isAdmin ? [{ to: "/admin", icon: Settings, label: "Admin" }] : []),
   ];
 
+  if (!expanded) {
+    return (
+      <aside className="h-full w-8 bg-elevated border-r border-border flex flex-col shrink-0">
+        <button
+          onClick={() => setExpanded(true)}
+          className="h-10 flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors"
+          title="Expand"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <TooltipProvider delayDuration={300}>
-      <aside
-        className={cn(
-          "h-full bg-elevated border-r border-border flex flex-col shrink-0 transition-all duration-200",
-          expanded ? "w-[220px]" : "w-12"
-        )}
-      >
+      <aside className="h-full w-[220px] bg-elevated border-r border-border flex flex-col shrink-0 transition-all duration-200">
         <nav className="flex-1 overflow-y-auto py-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.to} className="px-2 mb-1">
-                {expanded ? (
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
-                        isActive
-                          ? "bg-surface text-foreground font-medium"
-                          : "text-foreground-muted hover:text-foreground hover:bg-surface/60"
-                      )
-                    }
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <NavLink
-                        to={item.to}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center justify-center w-8 h-8 rounded-md transition-colors",
-                            isActive
-                              ? "bg-surface text-foreground"
-                              : "text-foreground-muted hover:text-foreground hover:bg-surface/60"
-                          )
-                        }
-                      >
-                        <Icon className="w-4 h-4" />
-                      </NavLink>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{item.label}</TooltipContent>
-                  </Tooltip>
-                )}
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
+                      isActive
+                        ? "bg-surface text-foreground font-medium"
+                        : "text-foreground-muted hover:text-foreground hover:bg-surface/60"
+                    )
+                  }
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.label}</span>
+                </NavLink>
 
-                {/* Session list under Pipeline (expanded only) */}
-                {expanded && item.to === "/pipeline" && (
+                {/* Session list under Pipeline */}
+                {item.to === "/pipeline" && (
                   <div className="mt-3 ml-2 mr-1 space-y-1">
                     <div className="text-[10px] uppercase tracking-[0.15em] text-foreground-muted/70 px-2 mb-1">
                       Sessions
@@ -189,11 +177,11 @@ const SidebarNav = () => {
         </nav>
 
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setExpanded(false)}
           className="h-10 border-t border-border flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors shrink-0"
-          title={expanded ? "Collapse" : "Expand"}
+          title="Collapse"
         >
-          {expanded ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          <ChevronLeft className="w-4 h-4" />
         </button>
       </aside>
     </TooltipProvider>
