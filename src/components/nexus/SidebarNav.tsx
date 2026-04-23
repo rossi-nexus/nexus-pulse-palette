@@ -66,8 +66,8 @@ const SidebarNav = () => {
       <aside className="h-full w-8 bg-elevated border-r border-border flex flex-col shrink-0">
         <button
           onClick={() => setExpanded(true)}
-          className="h-10 flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors"
-          title="Expand"
+          className="h-10 flex items-center justify-center bg-surface/40 text-foreground-secondary hover:bg-surface hover:text-foreground transition-colors"
+          title="Expand sidebar"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -89,8 +89,8 @@ const SidebarNav = () => {
                     cn(
                       "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
                       isActive
-                        ? "bg-surface text-foreground font-medium"
-                        : "text-foreground-muted hover:text-foreground hover:bg-surface/60"
+                        ? "bg-surface text-foreground font-semibold"
+                        : "text-foreground hover:bg-surface/60"
                     )
                   }
                 >
@@ -101,7 +101,7 @@ const SidebarNav = () => {
                 {/* Session list under Pipeline */}
                 {item.to === "/pipeline" && (
                   <div className="mt-3 ml-2 mr-1 space-y-1">
-                    <div className="text-[10px] uppercase tracking-[0.15em] text-foreground-muted/70 px-2 mb-1">
+                    <div className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-secondary px-2 mb-1">
                       Sessions
                     </div>
                     {sessions.map((s) => {
@@ -164,7 +164,7 @@ const SidebarNav = () => {
                     })}
                     <button
                       onClick={handleNewSession}
-                      className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors"
+                      className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs font-medium text-accent-teal hover:bg-surface/50 transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       New session
@@ -178,8 +178,8 @@ const SidebarNav = () => {
 
         <button
           onClick={() => setExpanded(false)}
-          className="h-10 border-t border-border flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface/50 transition-colors shrink-0"
-          title="Collapse"
+          className="h-10 border-t border-border flex items-center justify-center bg-surface/40 text-foreground-secondary hover:bg-surface hover:text-foreground transition-colors shrink-0"
+          title="Collapse sidebar"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>

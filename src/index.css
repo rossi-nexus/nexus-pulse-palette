@@ -18,9 +18,9 @@
     --elevated: 240 11% 12%;            /* #1B1B24 — elevated */
 
     /* === Foreground / text === */
-    --foreground: 220 20% 93%;          /* #E8EBF0 — primary text */
-    --foreground-secondary: 220 12% 66%; /* #9CA3B0 — secondary text */
-    --foreground-muted: 220 8% 42%;     /* #636871 — muted text */
+    --foreground: 220 20% 95%;          /* primary text */
+    --foreground-secondary: 220 14% 78%; /* secondary text — readable */
+    --foreground-muted: 220 10% 56%;     /* muted text — still legible */
 
     /* === Logo gradient anchors === */
     --accent-blue: 214 38% 50%;         /* #4A7AB5 */
@@ -53,8 +53,8 @@
     --info: 214 38% 50%;               /* blue */
 
     /* === Borders === */
-    --border: 240 8% 16%;
-    --border-subtle: 240 6% 12%;
+    --border: 240 8% 22%;
+    --border-subtle: 240 6% 16%;
     --border-accent: 168 38% 50%;
     --input: 240 8% 16%;
     --ring: 168 38% 50%;
