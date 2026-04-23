@@ -18,9 +18,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
             <Route path="/design-system" element={<DesignSystem />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/404" element={<NotFound />} />
+            <Route path="*" element={<Index />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

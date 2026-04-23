@@ -1,4 +1,3 @@
-import TopBar from "./TopBar";
 import StepContainer from "./StepContainer";
 import AxisSidebar from "./AxisSidebar";
 import StatusBar from "./StatusBar";
@@ -10,7 +9,7 @@ import SearchStep from "./SearchStep";
 import AnalysisStep from "./AnalysisStep";
 import DatabaseCheckStep from "./DatabaseCheckStep";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { useSession } from "@/hooks/useSession";
+import { useSessionContext } from "@/contexts/SessionContext";
 import { useStepA1 } from "@/hooks/useStepA1";
 import { useInterpretation } from "@/hooks/useInterpretation";
 import { useSearch } from "@/hooks/useSearch";
@@ -20,7 +19,6 @@ import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Interpretation, ClarificationPoint } from "@/types/interpretation";
 
-// Step display names used by the unlock confirmation dialog
 const STEP_NAMES: Record<number, string> = {
   1: "Define Your Need",
   2: "Interpretation & Targets",
@@ -29,8 +27,19 @@ const STEP_NAMES: Record<number, string> = {
   5: "Database Check",
 };
 
-const AppShell = () => {
-  const { sessionId } = useSession();
+const PipelineView = () => {
+  const { sessionId, refreshSessions } = useSessionContext();
+  // Re-mount all step hooks when sessionId changes by keying the inner content.
+  // (Hooks already have useEffect on sessionId, but keying guarantees a clean reset of local UI state.)
+  return <PipelineInner key={sessionId ?? "no-session"} sessionId={sessionId} refreshSessions={refreshSessions} />;
+};
+
+interface PipelineInnerProps {
+  sessionId: string | null;
+  refreshSessions: () => Promise<void>;
+}
+
+const PipelineInner = ({ sessionId, refreshSessions }: PipelineInnerProps) => {
   const stepA1 = useStepA1({ sessionId });
   const stepA2 = useInterpretation({ sessionId });
   const stepA3 = useSearch({ sessionId });
@@ -38,8 +47,6 @@ const AppShell = () => {
   const stepA5 = useDatabaseCheck({ sessionId });
   const [showExamples, setShowExamples] = useState(false);
 
-  // Locked downstream contract outputs — what downstream steps see.
-  // These are populated from DB on init and refreshed when an upstream step locks.
   const [lockedA2Output, setLockedA2Output] = useState<{
     interpretation: Interpretation | null;
     clarificationPoints: ClarificationPoint[];
@@ -47,16 +54,38 @@ const AppShell = () => {
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
 
-  // Auto-collapse examples when textarea gets content
   useEffect(() => {
     if (hasContent) setShowExamples(false);
   }, [hasContent]);
 
-  // Track previous A2/A3 status to detect lock/unlock transitions
   const prevA2Status = useRef(stepA2.status);
   const prevA3Status = useRef(stepA3.status);
+  const prevA1Status = useRef(stepA1.status);
 
-  // On initial load: read locked A2 output from DB (so contract survives refresh)
+  // Auto-name session when A1 transitions to "locked"
+  useEffect(() => {
+    const justLocked = prevA1Status.current !== "locked" && stepA1.status === "locked";
+    if (justLocked && sessionId) {
+      const text = stepA1.contextText.trim();
+      if (text) {
+        (async () => {
+          const { supabase } = await import("@/integrations/supabase/client");
+          const { data: existing } = await supabase
+            .from("search_sessions")
+            .select("name")
+            .eq("id", sessionId)
+            .maybeSingle();
+          if (existing && (!existing.name || existing.name.trim() === "")) {
+            const name = text.substring(0, 50).trim();
+            await supabase.from("search_sessions").update({ name }).eq("id", sessionId);
+            await refreshSessions();
+          }
+        })();
+      }
+    }
+    prevA1Status.current = stepA1.status;
+  }, [stepA1.status, stepA1.contextText, sessionId, refreshSessions]);
+
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
@@ -83,7 +112,6 @@ const AppShell = () => {
     return () => { cancelled = true; };
   }, [sessionId]);
 
-  // Capture locked A2 output when A2 transitions to "locked"
   useEffect(() => {
     if (prevA2Status.current !== "locked" && stepA2.status === "locked" && stepA2.interpretation) {
       setLockedA2Output({
@@ -91,23 +119,16 @@ const AppShell = () => {
         clarificationPoints: stepA2.clarificationPoints,
       });
     }
-    // When A2 unlocks, clear its locked output so downstream steps lose their input contract
     if (prevA2Status.current === "locked" && stepA2.status !== "locked") {
       setLockedA2Output(null);
     }
     prevA2Status.current = stepA2.status;
   }, [stepA2.status, stepA2.interpretation, stepA2.clarificationPoints]);
 
-  // Track A3 lock transitions for unlock side-effects (data lives in stepA3 hook itself,
-  // and useSearch already restores its own locked roleResults from DB on init).
   useEffect(() => {
     prevA3Status.current = stepA3.status;
   }, [stepA3.status]);
 
-  // ── Unlock cascade ─────────────────────────────────────────────────────
-  // When step N is unlocked, every downstream step (>N) must be reset:
-  // its locked_output cleared from the DB and its hook returned to initial
-  // state. The step being unlocked itself runs its own unlock() last.
   const handleUnlockWithCascade = useCallback(
     async (stepNumber: number) => {
       const downstreamResets: Array<() => Promise<void>> = [];
@@ -116,11 +137,8 @@ const AppShell = () => {
       if (stepNumber <= 3) downstreamResets.push(stepA4.reset);
       if (stepNumber <= 4) downstreamResets.push(stepA5.reset);
 
-      // Clear cached locked output in AppShell — downstream steps must lose
-      // their input contract immediately (they'll see null and collapse).
       if (stepNumber <= 2) setLockedA2Output(null);
 
-      // Run all downstream resets in parallel, then unlock the step itself.
       await Promise.all(downstreamResets.map((fn) => fn()));
 
       switch (stepNumber) {
@@ -134,8 +152,6 @@ const AppShell = () => {
     [stepA1, stepA2, stepA3, stepA4, stepA5]
   );
 
-  // For each step, compute the names of downstream steps that have data
-  // (anything beyond "not_started"). Used to populate the confirmation dialog.
   const downstreamNamesForStep = useMemo(() => {
     const a2Has = stepA2.status !== "not_started";
     const a3Has = stepA3.status !== "not_started";
@@ -170,24 +186,18 @@ const AppShell = () => {
     stepA5.status === "not_started" && !isStep4Locked && !stepA5.error && devStep !== "step5";
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <TopBar />
-
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
-        {/* Main content area */}
         <ResizablePanel defaultSize={75} minSize={50}>
           <main className="h-full flex flex-col min-w-0">
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-4xl mx-auto px-8 py-8 space-y-4">
-
-                {/* Step 1 — always in container */}
                 <StepContainer
                   stepNumber={1}
                   title="Define Your Need"
                   status={stepA1.status}
                   isActive={isStep1Active}
                 >
-                  {/* Display heading inside container when editing */}
                   {isStep1Active && (
                     <div className="space-y-2 mb-6">
                       <h1 className="text-[2.125rem] font-light tracking-[0.03em] leading-[1.2] text-foreground">
@@ -215,7 +225,6 @@ const AppShell = () => {
                     downstreamStepNames={downstreamNamesForStep[1]}
                   />
 
-                  {/* Example searches toggle — only in editing state */}
                   {isStep1Active && (
                     <div className="mt-4">
                       <button
@@ -242,7 +251,6 @@ const AppShell = () => {
                   )}
                 </StepContainer>
 
-                {/* Step 2 — interpretation */}
                 {isStep2Compact ? (
                   <CompactStepIndicator stepNumber={2} title="Interpretation & Targets" status="not_started" />
                 ) : (
@@ -257,7 +265,6 @@ const AppShell = () => {
                   />
                 )}
 
-                {/* Step 3 — search */}
                 {isStep3Compact ? (
                   <CompactStepIndicator stepNumber={3} title="Search" status="not_started" />
                 ) : (
@@ -270,7 +277,6 @@ const AppShell = () => {
                   />
                 )}
 
-                {/* Step 4: deep analysis */}
                 {isStep4Compact ? (
                   <CompactStepIndicator stepNumber={4} title="Deep Analysis" status="not_started" />
                 ) : (
@@ -284,7 +290,6 @@ const AppShell = () => {
                   />
                 )}
 
-                {/* Step 5 — database check */}
                 {isStep5Compact ? (
                   <CompactStepIndicator stepNumber={5} title="Database Check" status="not_started" />
                 ) : (
@@ -308,10 +313,8 @@ const AppShell = () => {
           </main>
         </ResizablePanel>
 
-        {/* Resize handle */}
         <ResizableHandle className="w-px bg-transparent hover:bg-border-accent/30 transition-colors data-[resize-handle-active]:bg-border-accent/50" />
 
-        {/* Axis sidebar */}
         <ResizablePanel defaultSize={25} minSize={15} maxSize={50}>
           <AxisSidebar clarificationPoints={stepA2.clarificationPoints} />
         </ResizablePanel>
@@ -320,4 +323,4 @@ const AppShell = () => {
   );
 };
 
-export default AppShell;
+export default PipelineView;

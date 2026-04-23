@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
-import AppShell from "@/components/nexus/AppShell";
+import AppLayout from "@/components/nexus/AppLayout";
 import LoginPage from "@/components/nexus/LoginPage";
 
 const Index = () => {
@@ -15,7 +15,7 @@ const Index = () => {
 
   if (!user) return <LoginPage />;
 
-  return <AppShell />;
+  return <AppLayout />;
 };
 
 export default Index;
