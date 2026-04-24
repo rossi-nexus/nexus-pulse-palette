@@ -35,6 +35,7 @@ interface UrlEnrichmentPanelProps {
     actor_name: string;
     actor_description?: string | null;
     country?: string | null;
+    actor_website?: string | null;
   };
   existingItems: string[];
   /** Snapshot of analysis_data — used to safely merge writes without clobbering siblings. */
@@ -68,7 +69,9 @@ export const UrlEnrichmentPanel = ({
   onItemAccepted,
 }: UrlEnrichmentPanelProps) => {
   const [state, setState] = useState<PanelState>({ kind: "input" });
-  const [urlInput, setUrlInput] = useState("");
+  const [urlInput, setUrlInput] = useState<string>(
+    () => actorContext.actor_website?.trim() ?? "",
+  );
   const [acceptingIdx, setAcceptingIdx] = useState<number | null>(null);
   const [bulkAccepting, setBulkAccepting] = useState(false);
 

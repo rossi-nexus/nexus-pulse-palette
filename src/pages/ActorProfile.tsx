@@ -1248,6 +1248,7 @@ const ActorProfile = () => {
                     actor_name: personal.actor_name,
                     actor_description: personal.actor_description,
                     country: personal.country,
+                    actor_website: personal.actor_website,
                   }}
                   existingItems={items}
                   currentAnalysisData={personal.analysis_data}

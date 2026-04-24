@@ -77,7 +77,11 @@ export const WebSearchEnrichmentPanel = ({
   onItemAccepted,
 }: WebSearchEnrichmentPanelProps) => {
   const [state, setState] = useState<PanelState>({ kind: "input" });
-  const [queryInput, setQueryInput] = useState("");
+  const [queryInput, setQueryInput] = useState<string>(() => {
+    const name = actorContext.actor_name?.trim() ?? "";
+    const section = sectionTitle.toLowerCase();
+    return name && section ? `${name} ${section}` : name;
+  });
   const [acceptingIdx, setAcceptingIdx] = useState<number | null>(null);
   const [bulkAccepting, setBulkAccepting] = useState(false);
 

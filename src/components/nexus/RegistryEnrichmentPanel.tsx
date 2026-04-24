@@ -123,7 +123,9 @@ export const RegistryEnrichmentPanel = ({
 }: RegistryEnrichmentPanelProps) => {
   const [state, setState] = useState<PanelState>({ kind: "mode_select" });
   const [orgInput, setOrgInput] = useState("");
-  const [nameInput, setNameInput] = useState("");
+  const [nameInput, setNameInput] = useState<string>(
+    () => currentIdentity.actor_name?.trim() ?? "",
+  );
   const [acceptingField, setAcceptingField] = useState<ProposableField | null>(null);
   const [bulkAccepting, setBulkAccepting] = useState(false);
 
@@ -320,8 +322,8 @@ export const RegistryEnrichmentPanel = ({
   };
 
   const resetToModeSelect = () => {
-    setOrgInput("");
-    setNameInput("");
+    // Preserve orgInput / nameInput across mode switches within the same
+    // panel-open lifecycle — user may want to refine, not retype.
     setResolvedFields(new Set());
     setAcceptedCount(0);
     setSkippedCount(0);
