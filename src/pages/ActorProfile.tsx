@@ -856,7 +856,13 @@ const ActorProfile = () => {
       const beforeCount = Array.isArray(current[addingOntology])
         ? (current[addingOntology] as unknown[]).length
         : 0;
-      const merged = appendManualOntologyItems(current[addingOntology], cleaned);
+      const nowIso = new Date().toISOString();
+      const items: EnrichmentAcceptedItem[] = cleaned.map((entry_name) => ({
+        entry_name,
+        source: "manual",
+        accepted_at: nowIso,
+      }));
+      const merged = appendManualOntologyItems(current[addingOntology], items);
       const added = merged.length - beforeCount;
       const nextAnalysis = { ...current, [addingOntology]: merged };
 
