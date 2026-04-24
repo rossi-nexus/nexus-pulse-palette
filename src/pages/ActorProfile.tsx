@@ -889,33 +889,39 @@ const ActorProfile = () => {
         {hasIdentity && (
           <ProfileSection
             title="Identity"
-            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="identity" /> : undefined}
+            headerExtra={
+              isPersonal ? (
+                <EnrichmentToolbar
+                  sectionKey="identity"
+                  onManualClick={openIdentityEdit}
+                />
+              ) : undefined
+            }
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-              <IdentityRow label="Legal name" value={name} />
-              {dbActor?.trade_names && dbActor.trade_names.length > 0 && (
-                <IdentityRow
-                  label="Trade names"
-                  value={dbActor.trade_names.join(", ")}
-                />
-              )}
-              <IdentityRow label="Org number" value={dbActor?.org_number} />
-              <IdentityRow label="Country" value={country} />
-              {dbActor && (
-                <IdentityRow
-                  label="Address"
-                  value={
-                    [dbActor.street_address, dbActor.city, dbActor.region]
-                      .filter(Boolean)
-                      .join(", ") || null
-                  }
-                />
-              )}
-              {actorType && (
-                <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
-              )}
-              {website && <IdentityRow label="Website" value={website} />}
-            </div>
+            {editingIdentity && identityDraft ? (
+              <IdentityEditForm
+                draft={identityDraft}
+                onChange={setIdentityDraft}
+                errors={identityErrors}
+                onSave={saveIdentityEdit}
+                onCancel={cancelIdentityEdit}
+                saving={savingIdentity}
+              />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <IdentityRow label="Legal name" value={name} />
+                {tradeNames.length > 0 && (
+                  <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
+                )}
+                <IdentityRow label="Org number" value={orgNumber} />
+                <IdentityRow label="Country" value={country} />
+                <IdentityRow label="Address" value={addressComposed} />
+                {actorType && (
+                  <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
+                )}
+                {website && <IdentityRow label="Website" value={website} />}
+              </div>
+            )}
           </ProfileSection>
         )}
 
