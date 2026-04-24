@@ -521,6 +521,50 @@ const ActorsView = () => {
           </div>
         )}
       </div>
+
+      {/* Confirmation dialogs */}
+      {actionTarget && (
+        <>
+          <ConfirmActorActionDialog
+            open={suggestOpen}
+            onOpenChange={setSuggestOpen}
+            title={`Suggest ${actionTarget.actor_name} for the main database?`}
+            description="This is a one-way action. An administrator will review the suggestion and may approve or reject it. You won't be able to retract the suggestion, but it can be rejected."
+            confirmLabel="Suggest"
+            onConfirm={async () => {
+              const target = actionTarget;
+              const ok = await suggestForDb(target.id);
+              setSuggestOpen(false);
+              if (ok) {
+                const nowIso = new Date().toISOString();
+                setPersonal((prev) =>
+                  prev.map((a) =>
+                    a.id === target.id
+                      ? { ...a, status: "suggested", suggested_at: nowIso }
+                      : a,
+                  ),
+                );
+              }
+            }}
+          />
+          <ConfirmActorActionDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            title={`Delete ${actionTarget.actor_name} from your collection?`}
+            description="This can't be undone. The actor stays in any search sessions where it was originally found."
+            confirmLabel="Delete"
+            destructive
+            onConfirm={async () => {
+              const target = actionTarget;
+              const ok = await deleteFromCollection(target.id);
+              setDeleteOpen(false);
+              if (ok) {
+                setPersonal((prev) => prev.filter((a) => a.id !== target.id));
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };
