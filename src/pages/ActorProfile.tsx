@@ -310,6 +310,23 @@ const ActorProfile = () => {
   const [editingTags, setEditingTags] = useState(false);
   const [tagsDraft, setTagsDraft] = useState<string[]>([]);
 
+  // Identity edit mode
+  type IdentityDraft = {
+    actor_name: string;
+    trade_names: string[];
+    org_number: string;
+    street_address: string;
+    city: string;
+    region: string;
+    country: string;
+    actor_website: string;
+    actor_type: string;
+  };
+  const [editingIdentity, setEditingIdentity] = useState(false);
+  const [identityDraft, setIdentityDraft] = useState<IdentityDraft | null>(null);
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const [identityErrors, setIdentityErrors] = useState<{ actor_name?: string; actor_website?: string }>({});
+
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
   const [addingOntology, setAddingOntology] = useState<OntologyKey | null>(null);
