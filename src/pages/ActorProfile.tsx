@@ -1183,6 +1183,7 @@ const ActorProfile = () => {
           const isAdding = addingOntology === key;
           const isUrlScrape = urlScrapeSection === key;
           const isUploadDoc = uploadDocSection === key;
+          const isWebSearch = webSearchSection === key;
           return (
             <ProfileSection
               key={key}
@@ -1195,6 +1196,7 @@ const ActorProfile = () => {
                     onManualClick={() => openOntologyAdd(key)}
                     onUrlScrapeClick={() => openUrlScrape(key)}
                     onUploadDocClick={() => openUploadDoc(key)}
+                    onWebSearchClick={() => openWebSearch(key)}
                   />
                 ) : undefined
               }
@@ -1204,7 +1206,8 @@ const ActorProfile = () => {
               ) : (
                 !isAdding &&
                 !isUrlScrape &&
-                !isUploadDoc && (
+                !isUploadDoc &&
+                !isWebSearch && (
                   <p className="text-sm text-foreground-muted">
                     No items yet. Use the toolbar to add.
                   </p>
