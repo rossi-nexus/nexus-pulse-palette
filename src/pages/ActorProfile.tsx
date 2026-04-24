@@ -543,6 +543,40 @@ const ActorProfile = () => {
                 Matched to DB
               </Badge>
             )}
+            {personal?.status === "suggested" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-medium uppercase tracking-wider bg-warning/15 text-warning border-warning/30"
+                    >
+                      Pending review
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Suggested for main database — awaiting admin review
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {personal?.status === "merged" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-medium uppercase tracking-wider bg-success/15 text-success border-success/30"
+                    >
+                      In main database
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    This actor is now part of the main database
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           {website && (
             <a
