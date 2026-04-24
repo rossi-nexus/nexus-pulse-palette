@@ -7,19 +7,26 @@ import {
   Globe,
   ShieldCheck,
   AlertCircle,
+  Pencil,
+  Check,
+  X as XIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActorActions } from "@/hooks/useActorActions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TagInput } from "@/components/nexus/TagInput";
+import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
