@@ -154,32 +154,48 @@ interface SectionProps {
   title: string;
   count?: number;
   defaultOpen?: boolean;
+  /** Optional extra header content (e.g. EnrichmentToolbar) — placed between count and chevron. */
+  headerExtra?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function ProfileSection({ title, count, defaultOpen = true, children }: SectionProps) {
+function ProfileSection({
+  title,
+  count,
+  defaultOpen = true,
+  headerExtra,
+  children,
+}: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border-t border-border/60 py-4">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-left group"
-      >
-        <span className="text-xs font-medium uppercase tracking-wider text-foreground-secondary group-hover:text-foreground transition-colors">
-          {title}
-          {count != null && (
-            <span className="ml-2 text-foreground-muted normal-case font-normal">
-              ({count})
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          className={cn(
-            "w-4 h-4 text-foreground-muted transition-transform",
-            open && "rotate-180",
-          )}
-        />
-      </button>
+      <div className="flex w-full items-center justify-between gap-2 group">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex flex-1 items-center justify-between text-left"
+        >
+          <span className="text-xs font-medium uppercase tracking-wider text-foreground-secondary group-hover:text-foreground transition-colors">
+            {title}
+            {count != null && (
+              <span className="ml-2 text-foreground-muted normal-case font-normal">
+                ({count})
+              </span>
+            )}
+          </span>
+        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {headerExtra}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Collapse" : "Expand"}
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-foreground-muted hover:text-foreground transition-colors"
+          >
+            <ChevronDown
+              className={cn("w-4 h-4 transition-transform", open && "rotate-180")}
+            />
+          </button>
+        </div>
+      </div>
       {open && <div className="mt-4">{children}</div>}
     </div>
   );
