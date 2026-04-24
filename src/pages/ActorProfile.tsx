@@ -489,7 +489,7 @@ const ActorProfile = () => {
 
       const { error } = await supabase
         .from("user_personal_actors")
-        .update({ analysis_data: nextAnalysis })
+        .update({ analysis_data: nextAnalysis as never })
         .eq("id", personal.id);
       if (error) throw error;
 
