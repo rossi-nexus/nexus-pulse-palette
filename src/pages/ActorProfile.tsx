@@ -40,7 +40,13 @@ import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
 import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
 import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
+import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import {
+  readOntologyEntries,
+  type DisplayEntry,
+} from "@/lib/readOntologyEntries";
+import type { EnrichmentAcceptedItem } from "@/types/enrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
