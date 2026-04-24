@@ -28,6 +28,7 @@ import {
 import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
+import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -301,6 +302,9 @@ const ActorProfile = () => {
   const [addingOntology, setAddingOntology] = useState<OntologyKey | null>(null);
   const [ontologyDraft, setOntologyDraft] = useState<string[]>([]);
   const [savingOntology, setSavingOntology] = useState(false);
+
+  // URL-scrape mode — at most one section can host the panel at a time.
+  const [urlScrapeSection, setUrlScrapeSection] = useState<OntologyKey | null>(null);
 
   // Confirm dialogs
   const [suggestOpen, setSuggestOpen] = useState(false);
