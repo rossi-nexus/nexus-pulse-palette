@@ -21,7 +21,7 @@ export function useActorActions() {
       try {
         const { error } = await supabase
           .from("user_personal_actors")
-          .update({ notes, updated_at: new Date().toISOString() })
+          .update({ notes })
           .eq("id", actorId);
         if (error) throw error;
         toast.success("Notes saved");
@@ -42,7 +42,7 @@ export function useActorActions() {
       try {
         const { error } = await supabase
           .from("user_personal_actors")
-          .update({ tags, updated_at: new Date().toISOString() })
+          .update({ tags })
           .eq("id", actorId);
         if (error) throw error;
         toast.success("Tags saved");
@@ -75,7 +75,6 @@ export function useActorActions() {
           .update({
             status: "suggested",
             suggested_at: nowIso,
-            updated_at: nowIso,
           })
           .eq("id", actorId);
         if (upErr) throw upErr;
