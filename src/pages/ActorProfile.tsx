@@ -458,6 +458,7 @@ const ActorProfile = () => {
   const isPersonal = source === "personal" && Boolean(personal);
 
   const openOntologyAdd = (key: OntologyKey) => {
+    setUrlScrapeSection(null);
     setOntologyDraft([]);
     setAddingOntology(key);
   };
@@ -465,6 +466,12 @@ const ActorProfile = () => {
   const cancelOntologyAdd = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
+  };
+
+  const openUrlScrape = (key: OntologyKey) => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(key);
   };
 
   const saveOntologyAdd = async () => {
