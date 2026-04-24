@@ -613,16 +613,37 @@ const ActorProfile = () => {
     };
   }, [id, user]);
 
-  // Derive ontology lists per source
+  // Derive ontology lists per source.
+  // For personal actors we keep both: a flat string[] (for count + dedup)
+  // and a DisplayEntry[] (for click-to-expand metadata rendering).
+  const personalOntologyEntries = useMemo(() => {
+    if (source !== "personal" || !personal) {
+      return {
+        capabilities: [] as DisplayEntry[],
+        competences: [] as DisplayEntry[],
+        domains: [] as DisplayEntry[],
+        products: [] as DisplayEntry[],
+        services: [] as DisplayEntry[],
+      };
+    }
+    const ad = (personal.analysis_data ?? {}) as Record<string, unknown>;
+    return {
+      capabilities: readOntologyEntries(ad.capabilities),
+      competences: readOntologyEntries(ad.competences),
+      domains: readOntologyEntries(ad.domains),
+      products: readOntologyEntries(ad.products),
+      services: readOntologyEntries(ad.services),
+    };
+  }, [source, personal]);
+
   const ontology = useMemo(() => {
     if (source === "personal" && personal) {
-      const ad = (personal.analysis_data ?? {}) as Record<string, unknown>;
       return {
-        capabilities: flattenOntologyArray(ad.capabilities),
-        competences: flattenOntologyArray(ad.competences),
-        domains: flattenOntologyArray(ad.domains),
-        products: flattenOntologyArray(ad.products),
-        services: flattenOntologyArray(ad.services),
+        capabilities: personalOntologyEntries.capabilities.map((e) => e.name),
+        competences: personalOntologyEntries.competences.map((e) => e.name),
+        domains: personalOntologyEntries.domains.map((e) => e.name),
+        products: personalOntologyEntries.products.map((e) => e.name),
+        services: personalOntologyEntries.services.map((e) => e.name),
       };
     }
     if (source === "database") {
@@ -640,7 +661,7 @@ const ActorProfile = () => {
       };
     }
     return { capabilities: [], competences: [], domains: [], products: [], services: [] };
-  }, [source, personal, ontologyTags]);
+  }, [source, personal, personalOntologyEntries, ontologyTags]);
 
   // Derive classification / standards / customers from JSONB for personal
   const personalDerived = useMemo(() => {
