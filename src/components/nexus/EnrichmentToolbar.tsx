@@ -56,14 +56,16 @@ interface EnrichmentToolbarProps {
    * the icon is enabled. When omitted, it renders disabled with "Coming soon".
    */
   onUploadDocClick?: () => void;
+  /**
+   * Optional handler for the Web-search (Search) icon. When provided, the
+   * icon is enabled. When omitted, it renders disabled with "Coming soon".
+   */
+  onWebSearchClick?: () => void;
 }
 
 /**
  * Per-section enrichment toolbar shown in the right edge of a section header.
  * Renders one icon per allowed method (per ENRICHMENT_MATRIX).
- *
- * Only "Manual" is wired in this prompt (Phase 6B.7 part 1). All other icons
- * render disabled with a "Coming soon" tooltip.
  *
  * Click events stop propagation so they don't toggle the section open/closed.
  */
@@ -73,6 +75,7 @@ export const EnrichmentToolbar = ({
   onUrlScrapeClick,
   onRegistryClick,
   onUploadDocClick,
+  onWebSearchClick,
 }: EnrichmentToolbarProps) => {
   const methods = ENRICHMENT_MATRIX[sectionKey] ?? [];
 
