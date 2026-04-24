@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  REGISTRIES,
+  getRegistryById,
+  getRegistryByCountry,
+  type RegistryId,
+  type RegistryInfo,
+} from "@/config/registries";
 
 type LookupMode = "org_number" | "name";
 
@@ -66,11 +73,23 @@ const FIELD_ORDER: ProposableField[] = [
 ];
 
 type PanelState =
-  | { kind: "mode_select" }
-  | { kind: "input"; mode: LookupMode }
-  | { kind: "fetching"; mode: LookupMode }
-  | { kind: "candidates"; candidates: Candidate[]; totalHits: number; query: string }
-  | { kind: "reviewing"; proposal: Proposal; sourceUrl: string }
+  | { kind: "registry_picker" }
+  | { kind: "mode_select"; registryId: RegistryId }
+  | { kind: "input"; registryId: RegistryId; mode: LookupMode }
+  | { kind: "fetching"; registryId: RegistryId; mode: LookupMode }
+  | {
+      kind: "candidates";
+      registryId: RegistryId;
+      candidates: Candidate[];
+      totalHits: number;
+      query: string;
+    }
+  | {
+      kind: "reviewing";
+      registryId: RegistryId;
+      proposal: Proposal;
+      sourceUrl: string;
+    }
   | { kind: "done"; accepted: number; skipped: number }
   | { kind: "error"; message: string; previous?: PanelState };
 
@@ -115,13 +134,32 @@ function displayValue(
   return value;
 }
 
+function getStateRegistryId(state: PanelState): RegistryId | null {
+  if (
+    state.kind === "mode_select" ||
+    state.kind === "input" ||
+    state.kind === "fetching" ||
+    state.kind === "candidates" ||
+    state.kind === "reviewing"
+  ) {
+    return state.registryId;
+  }
+  return null;
+}
+
 export const RegistryEnrichmentPanel = ({
   actorId,
   currentIdentity,
   onClose,
   onFieldAccepted,
 }: RegistryEnrichmentPanelProps) => {
-  const [state, setState] = useState<PanelState>({ kind: "mode_select" });
+  // Initial state: auto-route by country, else show picker
+  const [state, setState] = useState<PanelState>(() => {
+    const matched = getRegistryByCountry(currentIdentity.country);
+    return matched
+      ? { kind: "mode_select", registryId: matched.id }
+      : { kind: "registry_picker" };
+  });
   const [orgInput, setOrgInput] = useState("");
   const [nameInput, setNameInput] = useState<string>(
     () => currentIdentity.actor_name?.trim() ?? "",
@@ -129,23 +167,28 @@ export const RegistryEnrichmentPanel = ({
   const [acceptingField, setAcceptingField] = useState<ProposableField | null>(null);
   const [bulkAccepting, setBulkAccepting] = useState(false);
 
-  // Fields that have been resolved (accepted or kept). Drives which rows still show buttons.
   const [resolvedFields, setResolvedFields] = useState<Set<ProposableField>>(
     new Set(),
   );
   const [acceptedCount, setAcceptedCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
 
-  // Local snapshot of the current identity — updated as fields are accepted, so
-  // re-rendering reflects new values immediately.
   const [localCurrent, setLocalCurrent] = useState(currentIdentity);
 
+  const activeRegistryId = getStateRegistryId(state);
+  const activeRegistry: RegistryInfo | null = activeRegistryId
+    ? getRegistryById(activeRegistryId)
+    : null;
+
   const callRegistry = async (
-    body: { mode: "org_number"; org_number: string } | { mode: "name"; name: string },
+    body:
+      | { mode: "org_number"; org_number: string }
+      | { mode: "name"; name: string },
+    registryId: RegistryId,
   ) => {
     const { data, error } = await supabase.functions.invoke(
       "enrich-from-registry",
-      { body },
+      { body: { ...body, registry: registryId } },
     );
     if (error) {
       let msg = error.message;
@@ -163,19 +206,26 @@ export const RegistryEnrichmentPanel = ({
     return data;
   };
 
-  const lookupByOrgNumber = async (orgNumber: string) => {
+  const lookupByOrgNumber = async (orgNumber: string, registryId: RegistryId) => {
+    const reg = getRegistryById(registryId);
+    const expectedDigits = reg?.orgNumberDigits ?? 9;
     const digits = orgNumber.replace(/\D/g, "");
-    if (digits.length !== 9) {
+    if (digits.length !== expectedDigits) {
       setState({
         kind: "error",
-        message: "Norwegian org numbers must be exactly 9 digits.",
-        previous: { kind: "input", mode: "org_number" },
+        message:
+          reg?.orgNumberHint ??
+          `Org numbers must be exactly ${expectedDigits} digits.`,
+        previous: { kind: "input", registryId, mode: "org_number" },
       });
       return;
     }
-    setState({ kind: "fetching", mode: "org_number" });
+    setState({ kind: "fetching", registryId, mode: "org_number" });
     try {
-      const data = await callRegistry({ mode: "org_number", org_number: digits });
+      const data = await callRegistry(
+        { mode: "org_number", org_number: digits },
+        registryId,
+      );
       if (data?.mode !== "single" || !data?.proposal) {
         throw new Error("Unexpected response from registry.");
       }
@@ -184,6 +234,7 @@ export const RegistryEnrichmentPanel = ({
       setSkippedCount(0);
       setState({
         kind: "reviewing",
+        registryId,
         proposal: data.proposal as Proposal,
         sourceUrl: data.source?.source_url ?? "",
       });
@@ -191,29 +242,30 @@ export const RegistryEnrichmentPanel = ({
       setState({
         kind: "error",
         message: e instanceof Error ? e.message : "Registry lookup failed.",
-        previous: { kind: "input", mode: "org_number" },
+        previous: { kind: "input", registryId, mode: "org_number" },
       });
     }
   };
 
-  const lookupByName = async (name: string) => {
+  const lookupByName = async (name: string, registryId: RegistryId) => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
       setState({
         kind: "error",
         message: "Name must be at least 2 characters.",
-        previous: { kind: "input", mode: "name" },
+        previous: { kind: "input", registryId, mode: "name" },
       });
       return;
     }
-    setState({ kind: "fetching", mode: "name" });
+    setState({ kind: "fetching", registryId, mode: "name" });
     try {
-      const data = await callRegistry({ mode: "name", name: trimmed });
+      const data = await callRegistry({ mode: "name", name: trimmed }, registryId);
       if (data?.mode !== "candidates") {
         throw new Error("Unexpected response from registry.");
       }
       setState({
         kind: "candidates",
+        registryId,
         candidates: (data.candidates ?? []) as Candidate[],
         totalHits: typeof data.total_hits === "number" ? data.total_hits : 0,
         query: trimmed,
@@ -222,13 +274,13 @@ export const RegistryEnrichmentPanel = ({
       setState({
         kind: "error",
         message: e instanceof Error ? e.message : "Registry lookup failed.",
-        previous: { kind: "input", mode: "name" },
+        previous: { kind: "input", registryId, mode: "name" },
       });
     }
   };
 
-  const selectCandidate = async (candidate: Candidate) => {
-    await lookupByOrgNumber(candidate.org_number);
+  const selectCandidate = async (candidate: Candidate, registryId: RegistryId) => {
+    await lookupByOrgNumber(candidate.org_number, registryId);
   };
 
   const acceptField = async (
@@ -236,7 +288,6 @@ export const RegistryEnrichmentPanel = ({
     proposal: Proposal,
   ): Promise<void> => {
     const value = proposal[field] as string | null;
-    // Per spec: never accept null/empty over a current value (that would clear the field).
     if (!value) return;
     const update: Record<string, unknown> = { [field]: value };
     const { error } = await supabase
@@ -276,12 +327,10 @@ export const RegistryEnrichmentPanel = ({
   };
 
   const handleAcceptAll = async (proposal: Proposal) => {
-    // Snapshot pending fields once — closure-safe (per 26c lessons).
     const pending: ProposableField[] = FIELD_ORDER.filter((f) => {
       if (resolvedFields.has(f)) return false;
       const proposed = proposal[f] as string | null;
       const current = localCurrent[f];
-      // Skip auto-matched and skip null-proposed (never let registry clear)
       if (!proposed) return false;
       if (valuesMatch(f, current, proposed)) return false;
       return true;
@@ -322,24 +371,41 @@ export const RegistryEnrichmentPanel = ({
   };
 
   const resetToModeSelect = () => {
-    // Preserve orgInput / nameInput across mode switches within the same
-    // panel-open lifecycle — user may want to refine, not retype.
+    // Within the same registry — preserve inputs.
     setResolvedFields(new Set());
     setAcceptedCount(0);
     setSkippedCount(0);
-    setState({ kind: "mode_select" });
-  };
-
-  const handleOrgKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (orgInput.trim()) lookupByOrgNumber(orgInput);
+    if (activeRegistryId) {
+      setState({ kind: "mode_select", registryId: activeRegistryId });
+    } else {
+      setState({ kind: "registry_picker" });
     }
   };
-  const handleNameKey = (e: KeyboardEvent<HTMLInputElement>) => {
+
+  const resetToRegistryPicker = () => {
+    // Full reset — switching registry invalidates cached inputs.
+    setOrgInput("");
+    setNameInput(currentIdentity.actor_name?.trim() ?? "");
+    setResolvedFields(new Set());
+    setAcceptedCount(0);
+    setSkippedCount(0);
+    setState({ kind: "registry_picker" });
+  };
+
+  const pickRegistry = (registryId: RegistryId) => {
+    setState({ kind: "mode_select", registryId });
+  };
+
+  const handleOrgKey = (e: KeyboardEvent<HTMLInputElement>, registryId: RegistryId) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (nameInput.trim().length >= 2) lookupByName(nameInput);
+      if (orgInput.trim()) lookupByOrgNumber(orgInput, registryId);
+    }
+  };
+  const handleNameKey = (e: KeyboardEvent<HTMLInputElement>, registryId: RegistryId) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (nameInput.trim().length >= 2) lookupByName(nameInput, registryId);
     }
   };
 
@@ -355,6 +421,17 @@ export const RegistryEnrichmentPanel = ({
     return null;
   })();
 
+  const headerLabel = activeRegistry
+    ? `Registry · ${activeRegistry.name}`
+    : "Registry lookup";
+
+  const showChangeRegistry =
+    activeRegistryId !== null &&
+    (state.kind === "mode_select" ||
+      state.kind === "input" ||
+      state.kind === "candidates" ||
+      state.kind === "reviewing");
+
   return (
     <div className="mt-4 bg-elevated border border-border rounded-md overflow-hidden">
       {/* Header */}
@@ -362,8 +439,17 @@ export const RegistryEnrichmentPanel = ({
         <div className="flex items-center gap-2 min-w-0">
           <Building2 className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
           <span className="text-xs font-medium uppercase tracking-wider text-foreground-secondary">
-            Registry · BRREG
+            {headerLabel}
           </span>
+          {showChangeRegistry && (
+            <button
+              type="button"
+              onClick={resetToRegistryPicker}
+              className="text-[10px] uppercase tracking-wider text-foreground-muted hover:text-accent-teal transition-colors ml-1"
+            >
+              Change
+            </button>
+          )}
           {headerSubtitle && (
             <>
               <ChevronRight className="w-3 h-3 text-foreground-muted shrink-0" />
@@ -385,23 +471,61 @@ export const RegistryEnrichmentPanel = ({
 
       {/* Body */}
       <div className="p-3">
-        {state.kind === "mode_select" && (
+        {state.kind === "registry_picker" && (
           <div className="space-y-3">
             <p className="text-sm text-foreground-secondary">
-              Look up this company in the Norwegian registry (Brønnøysundregistrene).
+              {currentIdentity.country
+                ? `No registry adapter is available for "${currentIdentity.country}". Pick one to search:`
+                : "This actor has no country set. Pick a registry to search:"}
+            </p>
+            <ul className="space-y-2">
+              {REGISTRIES.map((reg) => (
+                <li key={reg.id}>
+                  <button
+                    type="button"
+                    onClick={() => pickRegistry(reg.id)}
+                    className="w-full text-left bg-surface/40 border border-border/60 hover:border-accent-teal/60 rounded-md px-3 py-2 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-foreground">{reg.name}</div>
+                    <div className="text-xs text-foreground-muted mt-0.5">
+                      {reg.description}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {state.kind === "mode_select" && activeRegistry && (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground-secondary">
+              Look up this company in {activeRegistry.name}.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setState({ kind: "input", mode: "name" })}
+                onClick={() =>
+                  setState({
+                    kind: "input",
+                    registryId: state.registryId,
+                    mode: "name",
+                  })
+                }
               >
                 <Search className="w-3.5 h-3.5" /> Search by name
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setState({ kind: "input", mode: "org_number" })}
+                onClick={() =>
+                  setState({
+                    kind: "input",
+                    registryId: state.registryId,
+                    mode: "org_number",
+                  })
+                }
               >
                 <Hash className="w-3.5 h-3.5" /> Look up by org number
               </Button>
@@ -409,7 +533,7 @@ export const RegistryEnrichmentPanel = ({
           </div>
         )}
 
-        {state.kind === "input" && (
+        {state.kind === "input" && activeRegistry && (
           <div className="space-y-3">
             <button
               type="button"
@@ -421,26 +545,32 @@ export const RegistryEnrichmentPanel = ({
             {state.mode === "org_number" ? (
               <div className="space-y-1.5">
                 <label className="block text-[11px] uppercase tracking-wider text-foreground-muted">
-                  Org number (9 digits)
+                  Org number ({activeRegistry.orgNumberDigits} digits)
                 </label>
                 <div className="flex items-center gap-2">
                   <Input
                     value={orgInput}
                     onChange={(e) => setOrgInput(e.target.value)}
-                    onKeyDown={handleOrgKey}
-                    placeholder="123 456 789"
+                    onKeyDown={(e) => handleOrgKey(e, state.registryId)}
+                    placeholder={activeRegistry.orgNumberPlaceholder}
                     inputMode="numeric"
                     className="h-9 text-sm font-mono"
                     autoFocus
                   />
                   <Button
                     size="sm"
-                    onClick={() => lookupByOrgNumber(orgInput)}
-                    disabled={orgInput.replace(/\D/g, "").length !== 9}
+                    onClick={() => lookupByOrgNumber(orgInput, state.registryId)}
+                    disabled={
+                      orgInput.replace(/\D/g, "").length !==
+                      activeRegistry.orgNumberDigits
+                    }
                   >
                     Fetch
                   </Button>
                 </div>
+                <p className="text-[10px] text-foreground-muted">
+                  {activeRegistry.orgNumberHint}
+                </p>
               </div>
             ) : (
               <div className="space-y-1.5">
@@ -451,14 +581,14 @@ export const RegistryEnrichmentPanel = ({
                   <Input
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    onKeyDown={handleNameKey}
+                    onKeyDown={(e) => handleNameKey(e, state.registryId)}
                     placeholder="Kongsberg Discovery"
                     className="h-9 text-sm"
                     autoFocus
                   />
                   <Button
                     size="sm"
-                    onClick={() => lookupByName(nameInput)}
+                    onClick={() => lookupByName(nameInput, state.registryId)}
                     disabled={nameInput.trim().length < 2}
                   >
                     Search
@@ -469,10 +599,10 @@ export const RegistryEnrichmentPanel = ({
           </div>
         )}
 
-        {state.kind === "fetching" && (
+        {state.kind === "fetching" && activeRegistry && (
           <div className="flex items-center gap-2 py-2 text-sm text-foreground-secondary">
             <Loader2 className="w-4 h-4 animate-spin text-accent-teal" />
-            <span>Looking up in BRREG…</span>
+            <span>Looking up in {activeRegistry.name}…</span>
           </div>
         )}
 
@@ -486,7 +616,13 @@ export const RegistryEnrichmentPanel = ({
               </span>
               <button
                 type="button"
-                onClick={() => setState({ kind: "input", mode: "name" })}
+                onClick={() =>
+                  setState({
+                    kind: "input",
+                    registryId: state.registryId,
+                    mode: "name",
+                  })
+                }
                 className="inline-flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="w-3 h-3" /> Refine search
@@ -517,7 +653,7 @@ export const RegistryEnrichmentPanel = ({
                       size="sm"
                       variant="outline"
                       className="h-7 px-2 border-accent-teal/40 text-accent-teal hover:bg-accent-teal/10 hover:text-accent-teal"
-                      onClick={() => selectCandidate(c)}
+                      onClick={() => selectCandidate(c, state.registryId)}
                     >
                       Select
                     </Button>
@@ -528,8 +664,9 @@ export const RegistryEnrichmentPanel = ({
           </div>
         )}
 
-        {state.kind === "reviewing" && (
+        {state.kind === "reviewing" && activeRegistry && (
           <ReviewBody
+            registryName={activeRegistry.name}
             proposal={state.proposal}
             sourceUrl={state.sourceUrl}
             localCurrent={localCurrent}
@@ -569,7 +706,14 @@ export const RegistryEnrichmentPanel = ({
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setState(state.previous ?? { kind: "mode_select" })}
+                onClick={() =>
+                  setState(
+                    state.previous ??
+                      (activeRegistryId
+                        ? { kind: "mode_select", registryId: activeRegistryId }
+                        : { kind: "registry_picker" }),
+                  )
+                }
               >
                 Try again
               </Button>
@@ -585,6 +729,7 @@ export const RegistryEnrichmentPanel = ({
 };
 
 interface ReviewBodyProps {
+  registryName: string;
   proposal: Proposal;
   sourceUrl: string;
   localCurrent: RegistryEnrichmentPanelProps["currentIdentity"];
@@ -600,6 +745,7 @@ interface ReviewBodyProps {
 }
 
 function ReviewBody({
+  registryName,
   proposal,
   sourceUrl,
   localCurrent,
@@ -625,7 +771,7 @@ function ReviewBody({
   return (
     <div className="space-y-3">
       <div className="text-xs text-foreground-muted">
-        Proposed from BRREG
+        Proposed from {registryName}
         {orgDisplay && (
           <>
             {" · org "}
