@@ -77,10 +77,10 @@ interface OntologyTagRow {
 }
 
 const TYPE_BADGE: Record<string, string> = {
-  commercial: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  government: "bg-sky-500/15 text-sky-300 border-sky-500/30",
-  academic: "bg-purple-500/15 text-purple-300 border-purple-500/30",
-  industry_body: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  commercial: "bg-success/15 text-success border-success/30",
+  government: "bg-info/15 text-info border-info/30",
+  academic: "bg-accent-blue/15 text-accent-blue border-accent-blue/30",
+  industry_body: "bg-warning/15 text-warning border-warning/30",
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -500,11 +500,11 @@ const ActorProfile = () => {
                 className={cn(
                   "text-[10px] font-medium uppercase tracking-wider gap-1",
                   verification === "admin_verified" &&
-                    "bg-sky-500/15 text-sky-300 border-sky-500/30",
+                    "bg-info/15 text-info border-info/30",
                   verification === "verified" &&
-                    "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+                    "bg-success/15 text-success border-success/30",
                   verification === "unverified" &&
-                    "bg-amber-500/15 text-amber-300 border-amber-500/30",
+                    "bg-warning/15 text-warning border-warning/30",
                 )}
               >
                 <ShieldCheck className="w-3 h-3" />
@@ -516,7 +516,7 @@ const ActorProfile = () => {
               </Badge>
             )}
             {personal?.matched_main_db_actor_id && (
-              <Badge variant="outline" className="text-[10px] bg-sky-500/10 text-sky-300 border-sky-500/30">
+              <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30">
                 Matched to DB
               </Badge>
             )}
