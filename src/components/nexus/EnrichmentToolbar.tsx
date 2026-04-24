@@ -91,7 +91,8 @@ export const EnrichmentToolbar = ({
             (method === "manual" && Boolean(onManualClick)) ||
             (method === "scrape_url" && Boolean(onUrlScrapeClick)) ||
             (method === "registry" && Boolean(onRegistryClick)) ||
-            (method === "upload_doc" && Boolean(onUploadDocClick));
+            (method === "upload_doc" && Boolean(onUploadDocClick)) ||
+            (method === "web_search" && Boolean(onWebSearchClick));
           const label = ENRICHMENT_METHOD_LABEL[method];
           const tooltip = enabled ? label : "Coming soon";
 
@@ -112,6 +113,8 @@ export const EnrichmentToolbar = ({
                       onRegistryClick();
                     else if (method === "upload_doc" && onUploadDocClick)
                       onUploadDocClick();
+                    else if (method === "web_search" && onWebSearchClick)
+                      onWebSearchClick();
                   }}
                   className={cn(
                     "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
