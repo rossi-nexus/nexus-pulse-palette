@@ -1273,6 +1273,24 @@ const ActorProfile = () => {
                   }}
                 />
               )}
+              {isWebSearch && personal && (
+                <WebSearchEnrichmentPanel
+                  actorId={personal.id}
+                  sectionKey={key}
+                  sectionTitle={titles[key]}
+                  actorContext={{
+                    actor_name: personal.actor_name,
+                    actor_description: personal.actor_description,
+                    country: personal.country,
+                  }}
+                  existingItems={items}
+                  currentAnalysisData={personal.analysis_data}
+                  onClose={() => setWebSearchSection(null)}
+                  onItemAccepted={(_item, nextAnalysis) => {
+                    setPersonal({ ...personal, analysis_data: nextAnalysis });
+                  }}
+                />
+              )}
             </ProfileSection>
           );
         })}
