@@ -1,7 +1,7 @@
 // Shared types for registry adapters
 
 export interface RegistryAdapter {
-  id: "brreg" | "cvr";
+  id: "brreg" | "cvr" | "prh";
   name: string;
   country_codes: string[]; // lowercase
   validateOrgNumber(raw: string): { ok: true; digits: string } | { ok: false; error: string };
