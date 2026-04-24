@@ -1159,6 +1159,7 @@ const ActorProfile = () => {
 
           const isAdding = addingOntology === key;
           const isUrlScrape = urlScrapeSection === key;
+          const isUploadDoc = uploadDocSection === key;
           return (
             <ProfileSection
               key={key}
@@ -1170,6 +1171,7 @@ const ActorProfile = () => {
                     sectionKey={key as SectionKey}
                     onManualClick={() => openOntologyAdd(key)}
                     onUrlScrapeClick={() => openUrlScrape(key)}
+                    onUploadDocClick={() => openUploadDoc(key)}
                   />
                 ) : undefined
               }
@@ -1178,7 +1180,8 @@ const ActorProfile = () => {
                 <TagList items={items} />
               ) : (
                 !isAdding &&
-                !isUrlScrape && (
+                !isUrlScrape &&
+                !isUploadDoc && (
                   <p className="text-sm text-foreground-muted">
                     No items yet. Use the toolbar to add.
                   </p>
@@ -1221,6 +1224,24 @@ const ActorProfile = () => {
                   existingItems={items}
                   currentAnalysisData={personal.analysis_data}
                   onClose={() => setUrlScrapeSection(null)}
+                  onItemAccepted={(_item, nextAnalysis) => {
+                    setPersonal({ ...personal, analysis_data: nextAnalysis });
+                  }}
+                />
+              )}
+              {isUploadDoc && personal && (
+                <DocumentEnrichmentPanel
+                  actorId={personal.id}
+                  sectionKey={key}
+                  sectionTitle={titles[key]}
+                  actorContext={{
+                    actor_name: personal.actor_name,
+                    actor_description: personal.actor_description,
+                    country: personal.country,
+                  }}
+                  existingItems={items}
+                  currentAnalysisData={personal.analysis_data}
+                  onClose={() => setUploadDocSection(null)}
                   onItemAccepted={(_item, nextAnalysis) => {
                     setPersonal({ ...personal, analysis_data: nextAnalysis });
                   }}
