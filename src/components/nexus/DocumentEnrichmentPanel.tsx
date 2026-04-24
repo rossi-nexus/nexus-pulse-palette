@@ -2,7 +2,6 @@ import { useRef, useState, type ChangeEvent } from "react";
 import {
   Loader2,
   X as XIcon,
-  Check,
   FileText,
   ChevronRight,
   Upload,
@@ -10,7 +9,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
-import { cn } from "@/lib/utils";
+import {
+  ProposalReviewList,
+  type ReviewProposal,
+} from "@/components/nexus/ProposalReviewList";
 import { toast } from "sonner";
 
 export type OntologyKey =
@@ -20,11 +22,7 @@ export type OntologyKey =
   | "products"
   | "services";
 
-interface Proposal {
-  entry_name: string;
-  evidence: string;
-  confidence: "high" | "medium" | "low";
-}
+type Proposal = ReviewProposal;
 
 type PanelState =
   | { kind: "input" }
