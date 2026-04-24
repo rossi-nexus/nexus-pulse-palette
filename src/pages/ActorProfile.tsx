@@ -267,6 +267,178 @@ function IdentityRow({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
+function IdentityRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (value === null || value === undefined || value === "" ||
+      (Array.isArray(value) && value.length === 0)) return null;
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-foreground-muted mb-1">
+        {label}
+      </div>
+      <div className="text-sm text-foreground break-words">{value}</div>
+    </div>
+  );
+}
+
+interface IdentityEditFormProps {
+  draft: {
+    actor_name: string;
+    trade_names: string[];
+    org_number: string;
+    street_address: string;
+    city: string;
+    region: string;
+    country: string;
+    actor_website: string;
+    actor_type: string;
+  };
+  onChange: React.Dispatch<
+    React.SetStateAction<IdentityEditFormProps["draft"] | null>
+  >;
+  errors: { actor_name?: string; actor_website?: string };
+  onSave: () => void | Promise<void>;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-[11px] uppercase tracking-wider text-foreground-muted mb-1.5">
+      {children}
+    </label>
+  );
+}
+
+function IdentityEditForm({
+  draft,
+  onChange,
+  errors,
+  onSave,
+  onCancel,
+  saving,
+}: IdentityEditFormProps) {
+  const update = <K extends keyof IdentityEditFormProps["draft"]>(
+    key: K,
+    value: IdentityEditFormProps["draft"][K],
+  ) => {
+    onChange((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <FieldLabel>Legal name *</FieldLabel>
+        <Input
+          value={draft.actor_name}
+          onChange={(e) => update("actor_name", e.target.value)}
+          placeholder="Acme Corporation AS"
+          aria-invalid={Boolean(errors.actor_name)}
+        />
+        {errors.actor_name && (
+          <p className="text-xs text-destructive mt-1">{errors.actor_name}</p>
+        )}
+      </div>
+
+      <div>
+        <FieldLabel>Trade names</FieldLabel>
+        <div className="bg-elevated border border-border rounded-md p-2">
+          <TagInput
+            tags={draft.trade_names}
+            onChange={(t) => update("trade_names", t)}
+            placeholder="Add trade name and press Enter…"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <FieldLabel>Org number</FieldLabel>
+          <Input
+            value={draft.org_number}
+            onChange={(e) => update("org_number", e.target.value)}
+            placeholder="e.g. 123 456 789"
+          />
+        </div>
+        <div>
+          <FieldLabel>Type</FieldLabel>
+          <Select
+            value={draft.actor_type}
+            onValueChange={(v) => update("actor_type", v)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="commercial">Commercial</SelectItem>
+              <SelectItem value="government">Government</SelectItem>
+              <SelectItem value="academic">Academic</SelectItem>
+              <SelectItem value="industry_body">Industry Body</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel>Street address</FieldLabel>
+        <Input
+          value={draft.street_address}
+          onChange={(e) => update("street_address", e.target.value)}
+          placeholder="Storgata 1"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <FieldLabel>City</FieldLabel>
+          <Input
+            value={draft.city}
+            onChange={(e) => update("city", e.target.value)}
+            placeholder="Oslo"
+          />
+        </div>
+        <div>
+          <FieldLabel>Region</FieldLabel>
+          <Input
+            value={draft.region}
+            onChange={(e) => update("region", e.target.value)}
+            placeholder="Oslo"
+          />
+        </div>
+        <div>
+          <FieldLabel>Country</FieldLabel>
+          <Input
+            value={draft.country}
+            onChange={(e) => update("country", e.target.value)}
+            placeholder="Norway"
+          />
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel>Website</FieldLabel>
+        <Input
+          value={draft.actor_website}
+          onChange={(e) => update("actor_website", e.target.value)}
+          placeholder="https://example.com"
+          aria-invalid={Boolean(errors.actor_website)}
+        />
+        {errors.actor_website && (
+          <p className="text-xs text-destructive mt-1">{errors.actor_website}</p>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+          <XIcon className="w-3.5 h-3.5" /> Cancel
+        </Button>
+        <Button size="sm" onClick={onSave} disabled={saving}>
+          <Check className="w-3.5 h-3.5" /> {saving ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function DisabledAction({ label, tip = "Coming soon" }: { label: string; tip?: string }) {
   return (
     <TooltipProvider>
