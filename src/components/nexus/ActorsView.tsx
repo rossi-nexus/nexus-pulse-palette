@@ -4,6 +4,7 @@ import { Database, FolderOpen, CheckCircle2, Search, ArrowRight, X } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionContext } from "@/contexts/SessionContext";
+import { useActorActions } from "@/hooks/useActorActions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { cn } from "@/lib/utils";
 
 type TabKey = "collection" | "database" | "queue";
