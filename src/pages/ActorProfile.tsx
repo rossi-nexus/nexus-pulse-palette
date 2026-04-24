@@ -658,6 +658,7 @@ const ActorProfile = () => {
 
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
+    setUploadDocSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
@@ -674,11 +675,23 @@ const ActorProfile = () => {
   const openUrlScrape = (key: OntologyKey) => {
     setAddingOntology(null);
     setOntologyDraft([]);
+    setUploadDocSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
     setUrlScrapeSection(key);
+  };
+
+  const openUploadDoc = (key: OntologyKey) => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setRegistrySectionOpen(false);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+    setUploadDocSection(key);
   };
 
   // ---------- Identity edit ----------
@@ -687,6 +700,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setUploadDocSection(null);
     setRegistrySectionOpen(false);
     setIdentityErrors({});
     setIdentityDraft({
@@ -709,6 +723,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setUploadDocSection(null);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
