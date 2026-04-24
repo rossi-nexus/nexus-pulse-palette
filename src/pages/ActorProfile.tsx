@@ -27,6 +27,10 @@ import {
 } from "@/components/ui/tooltip";
 import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
+import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import type { SectionKey } from "@/config/enrichmentMethods";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
