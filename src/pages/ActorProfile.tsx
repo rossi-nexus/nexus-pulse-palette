@@ -895,6 +895,7 @@ const ActorProfile = () => {
           <ProfileSection
             title="Standards & Certifications"
             count={(source === "database" ? standards : personalDerived.standards).length}
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="standards" /> : undefined}
           >
             <div className="space-y-2">
               {(source === "database" ? standards : personalDerived.standards).map(
@@ -935,6 +936,7 @@ const ActorProfile = () => {
           <ProfileSection
             title="Customer History"
             count={(source === "database" ? customers : personalDerived.customers).length}
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="customers" /> : undefined}
           >
             <div className="space-y-2">
               {(source === "database" ? customers : personalDerived.customers).map(
