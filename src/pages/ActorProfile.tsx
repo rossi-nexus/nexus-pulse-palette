@@ -450,6 +450,63 @@ const ActorProfile = () => {
     return { classification, standards, customers };
   }, [personal]);
 
+  // ---------- Manual ontology entry ----------
+  const isPersonal = source === "personal" && Boolean(personal);
+
+  const openOntologyAdd = (key: OntologyKey) => {
+    setOntologyDraft([]);
+    setAddingOntology(key);
+  };
+
+  const cancelOntologyAdd = () => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+  };
+
+  const saveOntologyAdd = async () => {
+    if (!personal || !addingOntology) return;
+    const sectionLabel: Record<OntologyKey, string> = {
+      capabilities: "Capabilities",
+      competences: "Competences",
+      domains: "Domains",
+      products: "Products",
+      services: "Services",
+    };
+    const cleaned = ontologyDraft.map((s) => s.trim()).filter(Boolean);
+    if (cleaned.length === 0) {
+      cancelOntologyAdd();
+      return;
+    }
+    setSavingOntology(true);
+    try {
+      const current = (personal.analysis_data ?? {}) as Record<string, unknown>;
+      const beforeCount = Array.isArray(current[addingOntology])
+        ? (current[addingOntology] as unknown[]).length
+        : 0;
+      const merged = appendManualOntologyItems(current[addingOntology], cleaned);
+      const added = merged.length - beforeCount;
+      const nextAnalysis = { ...current, [addingOntology]: merged };
+
+      const { error } = await supabase
+        .from("user_personal_actors")
+        .update({ analysis_data: nextAnalysis })
+        .eq("id", personal.id);
+      if (error) throw error;
+
+      setPersonal({ ...personal, analysis_data: nextAnalysis });
+      toast.success(
+        added > 0
+          ? `Added ${added} item${added === 1 ? "" : "s"} to ${sectionLabel[addingOntology]}`
+          : "No new items added (duplicates skipped)",
+      );
+      cancelOntologyAdd();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to save items");
+    } finally {
+      setSavingOntology(false);
+    }
+  };
+
   // ---------- Loading state ----------
   if (loading) {
     return (
