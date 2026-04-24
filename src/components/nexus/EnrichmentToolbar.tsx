@@ -46,6 +46,11 @@ interface EnrichmentToolbarProps {
    * "Coming soon" tooltip.
    */
   onUrlScrapeClick?: () => void;
+  /**
+   * Optional handler for the Registry (Building2) icon. When provided, the
+   * icon is enabled. When omitted, it renders disabled with "Coming soon".
+   */
+  onRegistryClick?: () => void;
 }
 
 /**
@@ -61,6 +66,7 @@ export const EnrichmentToolbar = ({
   sectionKey,
   onManualClick,
   onUrlScrapeClick,
+  onRegistryClick,
 }: EnrichmentToolbarProps) => {
   const methods = ENRICHMENT_MATRIX[sectionKey] ?? [];
 
@@ -74,7 +80,8 @@ export const EnrichmentToolbar = ({
           const Icon = METHOD_ICON[method];
           const enabled =
             (method === "manual" && Boolean(onManualClick)) ||
-            (method === "scrape_url" && Boolean(onUrlScrapeClick));
+            (method === "scrape_url" && Boolean(onUrlScrapeClick)) ||
+            (method === "registry" && Boolean(onRegistryClick));
           const label = ENRICHMENT_METHOD_LABEL[method];
           const tooltip = enabled ? label : "Coming soon";
 
@@ -91,6 +98,8 @@ export const EnrichmentToolbar = ({
                     if (method === "manual" && onManualClick) onManualClick();
                     else if (method === "scrape_url" && onUrlScrapeClick)
                       onUrlScrapeClick();
+                    else if (method === "registry" && onRegistryClick)
+                      onRegistryClick();
                   }}
                   className={cn(
                     "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
