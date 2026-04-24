@@ -4,6 +4,7 @@ import { Database, FolderOpen, CheckCircle2, Search, ArrowRight, X } from "lucid
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionContext } from "@/contexts/SessionContext";
+import { useActorActions } from "@/hooks/useActorActions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { cn } from "@/lib/utils";
 
 type TabKey = "collection" | "database" | "queue";
@@ -108,6 +110,21 @@ const ActorsView = () => {
   const [queue, setQueue] = useState<PersonalActor[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, UserInfo>>(new Map());
+
+  // Action dialogs (personal actors)
+  const [actionTarget, setActionTarget] = useState<PersonalActor | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const { busy, suggestForDb, deleteFromCollection } = useActorActions();
+
+  const openSuggest = (a: PersonalActor) => {
+    setActionTarget(a);
+    setSuggestOpen(true);
+  };
+  const openDelete = (a: PersonalActor) => {
+    setActionTarget(a);
+    setDeleteOpen(true);
+  };
 
   // Filters
   const [search, setSearch] = useState("");
@@ -460,6 +477,9 @@ const ActorsView = () => {
                   actor={a}
                   session={a.source_session_id ? sessionMap.get(a.source_session_id) : undefined}
                   onClick={() => navigate(`/actors/${a.id}`)}
+                  onSuggest={() => openSuggest(a)}
+                  onDelete={() => openDelete(a)}
+                  busy={busy}
                 />
               ))}
             </div>
@@ -501,6 +521,50 @@ const ActorsView = () => {
           </div>
         )}
       </div>
+
+      {/* Confirmation dialogs */}
+      {actionTarget && (
+        <>
+          <ConfirmActorActionDialog
+            open={suggestOpen}
+            onOpenChange={setSuggestOpen}
+            title={`Suggest ${actionTarget.actor_name} for the main database?`}
+            description="This is a one-way action. An administrator will review the suggestion and may approve or reject it. You won't be able to retract the suggestion, but it can be rejected."
+            confirmLabel="Suggest"
+            onConfirm={async () => {
+              const target = actionTarget;
+              const ok = await suggestForDb(target.id);
+              setSuggestOpen(false);
+              if (ok) {
+                const nowIso = new Date().toISOString();
+                setPersonal((prev) =>
+                  prev.map((a) =>
+                    a.id === target.id
+                      ? { ...a, status: "suggested", suggested_at: nowIso }
+                      : a,
+                  ),
+                );
+              }
+            }}
+          />
+          <ConfirmActorActionDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            title={`Delete ${actionTarget.actor_name} from your collection?`}
+            description="This can't be undone. The actor stays in any search sessions where it was originally found."
+            confirmLabel="Delete"
+            destructive
+            onConfirm={async () => {
+              const target = actionTarget;
+              const ok = await deleteFromCollection(target.id);
+              setDeleteOpen(false);
+              if (ok) {
+                setPersonal((prev) => prev.filter((a) => a.id !== target.id));
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };
@@ -563,16 +627,24 @@ const PersonalActorCard = ({
   actor,
   session,
   onClick,
+  onSuggest,
+  onDelete,
+  busy,
 }: {
   actor: PersonalActor;
   session?: SessionInfo;
   onClick: () => void;
+  onSuggest: () => void;
+  onDelete: () => void;
+  busy: string | null;
 }) => {
   const ad = (actor.analysis_data ?? {}) as Record<string, unknown>;
   const capCount = arrayLen(ad.capabilities);
   const domainCount = arrayLen(ad.domains);
   const isAnalyzed = actor.source_step === "analysis" || capCount > 0 || domainCount > 0;
   const completeness = actor.profile_completeness ?? 0;
+  const isSuggested = actor.status === "suggested";
+  const isMerged = actor.status === "merged";
 
   return (
     <div
@@ -580,9 +652,35 @@ const PersonalActorCard = ({
       className="group relative bg-surface border border-border rounded-lg p-4 cursor-pointer hover:border-border-accent hover:shadow-md transition-all"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="font-semibold text-foreground text-base leading-tight">
-          {actor.actor_name || "Unnamed actor"}
-        </h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="font-semibold text-foreground text-base leading-tight truncate">
+            {actor.actor_name || "Unnamed actor"}
+          </h3>
+          {isSuggested && (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-warning/15 text-warning border border-warning/30">
+                    Pending review
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Suggested for main database — awaiting admin review</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {isMerged && (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-success/15 text-success border border-success/30">
+                    In main database
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>This actor is now part of the main database</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         {actor.country && (
           <span className="text-xs text-foreground-muted whitespace-nowrap">{actor.country}</span>
         )}
@@ -613,15 +711,73 @@ const PersonalActorCard = ({
         <span className="text-xs text-foreground-muted font-mono">{completeness}%</span>
       </div>
 
-      <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div onClick={(e) => e.stopPropagation()}>
-          <ActionButton>Suggest for DB</ActionButton>
-        </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <ActionButton>Delete</ActionButton>
-        </div>
+      <div
+        className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CardActionButton
+          label="Suggest for DB"
+          onClick={onSuggest}
+          disabled={isSuggested || isMerged || busy === "suggest"}
+          tip={
+            isSuggested
+              ? "Already suggested — awaiting admin review"
+              : isMerged
+                ? "Already in main database"
+                : undefined
+          }
+        />
+        <CardActionButton
+          label="Delete"
+          onClick={onDelete}
+          disabled={isMerged || busy === "delete"}
+          destructive
+          tip={isMerged ? "Cannot delete — this actor is in the main database" : undefined}
+        />
       </div>
     </div>
+  );
+};
+
+const CardActionButton = ({
+  label,
+  onClick,
+  disabled,
+  tip,
+  destructive,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  tip?: string;
+  destructive?: boolean;
+}) => {
+  const btn = (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "h-7 text-xs",
+        destructive &&
+          !disabled &&
+          "text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive",
+      )}
+    >
+      {label}
+    </Button>
+  );
+  if (!tip) return btn;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>{btn}</span>
+        </TooltipTrigger>
+        <TooltipContent>{tip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

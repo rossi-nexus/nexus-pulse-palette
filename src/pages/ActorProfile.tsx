@@ -7,19 +7,26 @@ import {
   Globe,
   ShieldCheck,
   AlertCircle,
+  Pencil,
+  Check,
+  X as XIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActorActions } from "@/hooks/useActorActions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TagInput } from "@/components/nexus/TagInput";
+import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -41,6 +48,9 @@ interface PersonalActor {
   analysis_data: Record<string, unknown> | null;
   search_data: Record<string, unknown> | null;
   status: string;
+  notes: string | null;
+  tags: string[] | null;
+  suggested_at: string | null;
   created_at: string;
 }
 
@@ -259,6 +269,19 @@ const ActorProfile = () => {
   const [standards, setStandards] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [descriptions, setDescriptions] = useState<any[]>([]);
+
+  // Inline editors
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
+
+  // Confirm dialogs
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { busy, updateNotes, updateTags, suggestForDb, deleteFromCollection } =
+    useActorActions();
 
   useEffect(() => {
     if (!id || !user) return;
@@ -520,6 +543,40 @@ const ActorProfile = () => {
                 Matched to DB
               </Badge>
             )}
+            {personal?.status === "suggested" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-medium uppercase tracking-wider bg-warning/15 text-warning border-warning/30"
+                    >
+                      Pending review
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Suggested for main database — awaiting admin review
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {personal?.status === "merged" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-medium uppercase tracking-wider bg-success/15 text-success border-success/30"
+                    >
+                      In main database
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    This actor is now part of the main database
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           {website && (
             <a
@@ -534,6 +591,83 @@ const ActorProfile = () => {
             </a>
           )}
         </div>
+
+        {/* Tags (personal actors only) */}
+        {source === "personal" && personal && (
+          <ProfileSection title="Tags">
+            {editingTags ? (
+              <div className="space-y-3">
+                <div className="bg-elevated border border-border rounded-md p-2">
+                  <TagInput
+                    tags={tagsDraft}
+                    onChange={setTagsDraft}
+                    placeholder="Add tag and press Enter…"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await updateTags(personal.id, tagsDraft);
+                      if (ok) {
+                        setPersonal({ ...personal, tags: tagsDraft });
+                        setEditingTags(false);
+                      }
+                    }}
+                    disabled={busy === "tags"}
+                  >
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingTags(false)}
+                  >
+                    <XIcon className="w-3.5 h-3.5" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                {personal.tags && personal.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {personal.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-surface border border-border/60 text-foreground"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setTagsDraft([]);
+                      setEditingTags(true);
+                    }}
+                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    Add tags
+                  </button>
+                )}
+                {personal.tags && personal.tags.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => {
+                      setTagsDraft(personal.tags ?? []);
+                      setEditingTags(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </ProfileSection>
+        )}
 
         {/* Sections */}
         {hasIdentity && (
@@ -749,6 +883,76 @@ const ActorProfile = () => {
           </ProfileSection>
         )}
 
+        {/* Notes (personal actors only) */}
+        {source === "personal" && personal && (
+          <ProfileSection title="Notes">
+            {editingNotes ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  placeholder="Add notes about this actor…"
+                  className="min-h-[120px]"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await updateNotes(personal.id, notesDraft);
+                      if (ok) {
+                        setPersonal({ ...personal, notes: notesDraft });
+                        setEditingNotes(false);
+                      }
+                    }}
+                    disabled={busy === "notes"}
+                  >
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingNotes(false)}
+                  >
+                    <XIcon className="w-3.5 h-3.5" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                {personal.notes && personal.notes.trim().length > 0 ? (
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed flex-1">
+                    {personal.notes}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNotesDraft("");
+                      setEditingNotes(true);
+                    }}
+                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    Add notes
+                  </button>
+                )}
+                {personal.notes && personal.notes.trim().length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => {
+                      setNotesDraft(personal.notes ?? "");
+                      setEditingNotes(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </ProfileSection>
+        )}
+
         {/* Source & Provenance */}
         <ProfileSection title="Source & Provenance">
           <div className="space-y-3 text-sm">
@@ -841,12 +1045,44 @@ const ActorProfile = () => {
         {/* Actions */}
         <ProfileSection title="Actions">
           <div className="flex flex-wrap gap-2">
-            {source === "personal" && (
+            {source === "personal" && personal && (
               <>
-                <DisabledAction label="Suggest for main database" />
-                <DisabledAction label="Edit notes" />
-                <DisabledAction label="Add tags" />
-                <DisabledAction label="Delete" />
+                {personal.status === "suggested" ? (
+                  <DisabledAction
+                    label="Suggest for main database"
+                    tip="Already suggested — awaiting admin review"
+                  />
+                ) : personal.status === "merged" ? (
+                  <DisabledAction
+                    label="Suggest for main database"
+                    tip="Already in main database"
+                  />
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setSuggestOpen(true)}
+                    disabled={busy === "suggest"}
+                  >
+                    Suggest for main database
+                  </Button>
+                )}
+                {personal.status === "merged" ? (
+                  <DisabledAction
+                    label="Delete"
+                    tip="Cannot delete — this actor is in the main database"
+                  />
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDeleteOpen(true)}
+                    disabled={busy === "delete"}
+                    className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    Delete
+                  </Button>
+                )}
               </>
             )}
             {source === "database" && isAdmin && (
@@ -865,6 +1101,43 @@ const ActorProfile = () => {
           </div>
         </ProfileSection>
       </div>
+
+      {/* Confirmation dialogs (personal actors) */}
+      {source === "personal" && personal && (
+        <>
+          <ConfirmActorActionDialog
+            open={suggestOpen}
+            onOpenChange={setSuggestOpen}
+            title={`Suggest ${personal.actor_name} for the main database?`}
+            description="This is a one-way action. An administrator will review the suggestion and may approve or reject it. You won't be able to retract the suggestion, but it can be rejected."
+            confirmLabel="Suggest"
+            onConfirm={async () => {
+              const ok = await suggestForDb(personal.id);
+              setSuggestOpen(false);
+              if (ok) {
+                setPersonal({
+                  ...personal,
+                  status: "suggested",
+                  suggested_at: new Date().toISOString(),
+                });
+              }
+            }}
+          />
+          <ConfirmActorActionDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            title={`Delete ${personal.actor_name} from your collection?`}
+            description="This can't be undone. The actor stays in any search sessions where it was originally found."
+            confirmLabel="Delete"
+            destructive
+            onConfirm={async () => {
+              const ok = await deleteFromCollection(personal.id);
+              setDeleteOpen(false);
+              if (ok) navigate("/actors");
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Constraints } from "@/types/interpretation";
+import { TagInput } from "@/components/nexus/TagInput";
 
 interface ConstraintsSectionProps {
   constraints: Constraints;
@@ -35,48 +36,8 @@ const CLASSIFICATION_OPTIONS: { value: string; label: string }[] = [
   { value: "nato_secret", label: "NATO Secret" },
 ];
 
-const TagInput = ({
-  tags,
-  onChange,
-  placeholder,
-  renderTag,
-}: {
-  tags: string[];
-  onChange: (tags: string[]) => void;
-  placeholder?: string;
-  renderTag?: (tag: string) => string;
-}) => {
-  const [input, setInput] = useState("");
+// TagInput moved to @/components/nexus/TagInput for reuse across the app.
 
-  const handleAdd = () => {
-    const val = input.trim();
-    if (val && !tags.includes(val)) {
-      onChange([...tags, val]);
-      setInput("");
-    }
-  };
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {tags.map((tag) => (
-        <Badge key={tag} variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-          {renderTag ? renderTag(tag) : tag}
-          <button onClick={() => onChange(tags.filter(t => t !== tag))} className="hover:text-destructive">
-            <X className="w-2.5 h-2.5" />
-          </button>
-        </Badge>
-      ))}
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAdd())}
-        placeholder={placeholder}
-        className="h-7 px-2 min-w-[120px] bg-transparent text-body-sm text-foreground placeholder:text-foreground-muted outline-none"
-      />
-    </div>
-  );
-};
 
 const ConstraintRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="flex items-start gap-4 py-2">
