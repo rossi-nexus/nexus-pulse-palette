@@ -181,13 +181,33 @@ export const prhAdapter: RegistryAdapter = {
 
   async lookupByName(name: string): Promise<Response> {
     const url = `https://avoindata.prh.fi/bis/v1?name=${encodeURIComponent(name)}&maxResults=10`;
-    const resp = await fetchPrh(url);
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { Accept: "application/json", "User-Agent": UA },
+      });
+    } catch {
+      return jsonResponse(
+        { error: "Could not reach PRH. Try again later." },
+        502,
+      );
+    }
 
-    if (
-      resp.headers.get("Content-Type")?.includes("application/json") &&
-      resp.status !== 200
-    ) {
-      return resp;
+    // Name search: 404 means "no matches" — return empty candidates, not an error.
+    if (resp.status === 404) {
+      return jsonResponse({ mode: "candidates", candidates: [], total_hits: 0 });
+    }
+    if (resp.status === 429) {
+      return jsonResponse(
+        { error: "PRH rate limit reached. Please wait a moment and try again." },
+        429,
+      );
+    }
+    if (!resp.ok) {
+      return jsonResponse(
+        { error: `PRH error (HTTP ${resp.status}). Try again later.` },
+        502,
+      );
     }
 
     let body: PrhResponse;
