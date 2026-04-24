@@ -55,11 +55,7 @@ interface DocumentEnrichmentPanelProps {
   ) => void;
 }
 
-const CONFIDENCE_BADGE: Record<Proposal["confidence"], string> = {
-  high: "bg-success/15 text-success",
-  medium: "bg-info/15 text-info",
-  low: "bg-warning/15 text-warning",
-};
+// (Proposal display styling moved to ProposalReviewList.)
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ACCEPTED_EXT = [".pdf", ".docx", ".txt"];
