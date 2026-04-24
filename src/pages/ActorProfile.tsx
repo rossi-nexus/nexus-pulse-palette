@@ -783,31 +783,69 @@ const ActorProfile = () => {
           </ProfileSection>
         )}
 
-        {ontology.capabilities.length > 0 && (
-          <ProfileSection title="Capabilities" count={ontology.capabilities.length}>
-            <TagList items={ontology.capabilities} />
-          </ProfileSection>
-        )}
-        {ontology.competences.length > 0 && (
-          <ProfileSection title="Competences" count={ontology.competences.length}>
-            <TagList items={ontology.competences} />
-          </ProfileSection>
-        )}
-        {ontology.domains.length > 0 && (
-          <ProfileSection title="Domains" count={ontology.domains.length}>
-            <TagList items={ontology.domains} />
-          </ProfileSection>
-        )}
-        {ontology.products.length > 0 && (
-          <ProfileSection title="Products" count={ontology.products.length}>
-            <TagList items={ontology.products} />
-          </ProfileSection>
-        )}
-        {ontology.services.length > 0 && (
-          <ProfileSection title="Services" count={ontology.services.length}>
-            <TagList items={ontology.services} />
-          </ProfileSection>
-        )}
+        {/* Ontology sections — always render for personal actors (with toolbar). DB actors only render when populated. */}
+        {(["capabilities", "competences", "domains", "products", "services"] as const).map((key) => {
+          const items = ontology[key];
+          const titles: Record<typeof key, string> = {
+            capabilities: "Capabilities",
+            competences: "Competences",
+            domains: "Domains",
+            products: "Products",
+            services: "Services",
+          };
+          if (!isPersonal && items.length === 0) return null;
+
+          const isAdding = addingOntology === key;
+          return (
+            <ProfileSection
+              key={key}
+              title={titles[key]}
+              count={items.length > 0 ? items.length : undefined}
+              headerExtra={
+                isPersonal ? (
+                  <EnrichmentToolbar
+                    sectionKey={key as SectionKey}
+                    onManualClick={() => openOntologyAdd(key)}
+                  />
+                ) : undefined
+              }
+            >
+              {items.length > 0 ? (
+                <TagList items={items} />
+              ) : (
+                !isAdding && (
+                  <p className="text-sm text-foreground-muted">
+                    No items yet. Click the pencil to add.
+                  </p>
+                )
+              )}
+              {isAdding && (
+                <div className="mt-3 space-y-3">
+                  <div className="bg-elevated border border-border rounded-md p-2">
+                    <TagInput
+                      tags={ontologyDraft}
+                      onChange={setOntologyDraft}
+                      placeholder={`Add ${titles[key].toLowerCase()} and press Enter…`}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveOntologyAdd} disabled={savingOntology}>
+                      <Check className="w-3.5 h-3.5" /> Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelOntologyAdd}
+                      disabled={savingOntology}
+                    >
+                      <XIcon className="w-3.5 h-3.5" /> Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </ProfileSection>
+          );
+        })}
 
         {/* Classification */}
         {(source === "database" ? classifications : personalDerived.classification).length > 0 && (
