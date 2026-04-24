@@ -145,11 +145,8 @@ export const UrlEnrichmentPanel = ({
     }
   };
 
-  const acceptProposal = async (idx: number) => {
-    if (state.kind !== "reviewing") return;
-    const proposal = state.proposals[idx];
-    if (!proposal) return;
-
+  const acceptProposal = async (proposal: Proposal) => {
+    // Compute next analysis from the latest local snapshot — not closure-captured state.
     const merged = appendManualOntologyItems(
       localAnalysis[sectionKey],
       [proposal.entry_name],
@@ -168,15 +165,22 @@ export const UrlEnrichmentPanel = ({
     setLocalAnalysis(nextAnalysis);
     onItemAccepted(proposal.entry_name, nextAnalysis);
 
-    // Remove from review list
-    const remaining = state.proposals.filter((_, i) => i !== idx);
-    setState({ ...state, proposals: remaining });
+    // Functional setState — apply against the latest state, not the closure.
+    // Filter by reference identity (proposals are unique objects per review session).
+    setState((prev) => {
+      if (prev.kind !== "reviewing") return prev;
+      return {
+        ...prev,
+        proposals: prev.proposals.filter((p) => p !== proposal),
+      };
+    });
   };
 
-  const handleAcceptOne = async (idx: number) => {
-    setAcceptingIdx(idx);
+  const handleAcceptOne = async (proposal: Proposal) => {
+    if (state.kind !== "reviewing") return;
+    setAcceptingIdx(state.proposals.indexOf(proposal));
     try {
-      await acceptProposal(idx);
+      await acceptProposal(proposal);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to accept item");
     } finally {
@@ -192,11 +196,12 @@ export const UrlEnrichmentPanel = ({
 
   const handleAcceptAll = async () => {
     if (state.kind !== "reviewing") return;
+    // Snapshot the queue once — iteration is stable across await boundaries.
+    const queue = [...state.proposals];
     setBulkAccepting(true);
     try {
-      // Sequential — accept first item repeatedly (list shrinks each time).
-      while (state.kind === "reviewing" && state.proposals.length > 0) {
-        await acceptProposal(0);
+      for (const proposal of queue) {
+        await acceptProposal(proposal);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed during bulk accept");
