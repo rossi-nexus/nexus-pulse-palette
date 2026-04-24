@@ -44,6 +44,11 @@ interface PersonalActor {
   actor_description: string | null;
   actor_website: string | null;
   country: string | null;
+  org_number: string | null;
+  trade_names: string[];
+  street_address: string | null;
+  city: string | null;
+  region: string | null;
   source_step: string | null;
   source_session_id: string | null;
   source_urls: string[] | null;
