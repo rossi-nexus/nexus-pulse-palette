@@ -322,8 +322,8 @@ export const RegistryEnrichmentPanel = ({
   };
 
   const resetToModeSelect = () => {
-    setOrgInput("");
-    setNameInput("");
+    // Preserve orgInput / nameInput across mode switches within the same
+    // panel-open lifecycle — user may want to refine, not retype.
     setResolvedFields(new Set());
     setAcceptedCount(0);
     setSkippedCount(0);
