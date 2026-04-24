@@ -147,6 +147,15 @@ function getStateRegistryId(state: PanelState): RegistryId | null {
   return null;
 }
 
+function isOrgNumberValid(input: string, registry: RegistryInfo): boolean {
+  const normalized = input.trim().toUpperCase().replace(/\s/g, "");
+  if (registry.orgNumberPattern) {
+    return registry.orgNumberPattern.test(normalized);
+  }
+  const digits = input.replace(/\D/g, "");
+  return digits.length === registry.orgNumberDigits;
+}
+
 export const RegistryEnrichmentPanel = ({
   actorId,
   currentIdentity,
@@ -208,22 +217,19 @@ export const RegistryEnrichmentPanel = ({
 
   const lookupByOrgNumber = async (orgNumber: string, registryId: RegistryId) => {
     const reg = getRegistryById(registryId);
-    const expectedDigits = reg?.orgNumberDigits ?? 9;
-    const digits = orgNumber.replace(/\D/g, "");
-    if (digits.length !== expectedDigits) {
+    if (!reg || !isOrgNumberValid(orgNumber, reg)) {
       setState({
         kind: "error",
-        message:
-          reg?.orgNumberHint ??
-          `Org numbers must be exactly ${expectedDigits} digits.`,
+        message: reg?.orgNumberHint ?? "Invalid org number format.",
         previous: { kind: "input", registryId, mode: "org_number" },
       });
       return;
     }
     setState({ kind: "fetching", registryId, mode: "org_number" });
     try {
+      // Pass raw user input — adapter normalizes (e.g. PRH re-adds the hyphen).
       const data = await callRegistry(
-        { mode: "org_number", org_number: digits },
+        { mode: "org_number", org_number: orgNumber.trim() },
         registryId,
       );
       if (data?.mode !== "single" || !data?.proposal) {
@@ -560,10 +566,7 @@ export const RegistryEnrichmentPanel = ({
                   <Button
                     size="sm"
                     onClick={() => lookupByOrgNumber(orgInput, state.registryId)}
-                    disabled={
-                      orgInput.replace(/\D/g, "").length !==
-                      activeRegistry.orgNumberDigits
-                    }
+                    disabled={!isOrgNumberValid(orgInput, activeRegistry)}
                   >
                     Fetch
                   </Button>
