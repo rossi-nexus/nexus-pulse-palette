@@ -652,6 +652,7 @@ const ActorProfile = () => {
 
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
+    setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
@@ -667,6 +668,7 @@ const ActorProfile = () => {
   const openUrlScrape = (key: OntologyKey) => {
     setAddingOntology(null);
     setOntologyDraft([]);
+    setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
@@ -679,6 +681,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setRegistrySectionOpen(false);
     setIdentityErrors({});
     setIdentityDraft({
       actor_name: personal.actor_name ?? "",
@@ -692,6 +695,18 @@ const ActorProfile = () => {
       actor_type: personal.actor_type ?? "commercial",
     });
     setEditingIdentity(true);
+  };
+
+  // ---------- Registry lookup ----------
+  const openRegistryLookup = () => {
+    if (!personal) return;
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+    setRegistrySectionOpen(true);
   };
 
   const cancelIdentityEdit = () => {
