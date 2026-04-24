@@ -123,7 +123,9 @@ export const RegistryEnrichmentPanel = ({
 }: RegistryEnrichmentPanelProps) => {
   const [state, setState] = useState<PanelState>({ kind: "mode_select" });
   const [orgInput, setOrgInput] = useState("");
-  const [nameInput, setNameInput] = useState("");
+  const [nameInput, setNameInput] = useState<string>(
+    () => currentIdentity.actor_name?.trim() ?? "",
+  );
   const [acceptingField, setAcceptingField] = useState<ProposableField | null>(null);
   const [bulkAccepting, setBulkAccepting] = useState(false);
 
