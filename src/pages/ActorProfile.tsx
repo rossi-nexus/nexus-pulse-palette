@@ -1235,7 +1235,11 @@ const ActorProfile = () => {
               }
             >
               {items.length > 0 ? (
-                <TagList items={items} />
+                isPersonal ? (
+                  <OntologyEntryList entries={personalOntologyEntries[key]} />
+                ) : (
+                  <TagList items={items} />
+                )
               ) : (
                 !isAdding &&
                 !isUrlScrape &&
