@@ -338,7 +338,7 @@ export const UrlEnrichmentPanel = ({
                             size="sm"
                             variant="outline"
                             className="h-7 px-2 border-accent-teal/40 text-accent-teal hover:bg-accent-teal/10 hover:text-accent-teal"
-                            onClick={() => handleAcceptOne(i)}
+                            onClick={() => handleAcceptOne(p)}
                             disabled={
                               acceptingIdx !== null || bulkAccepting
                             }
