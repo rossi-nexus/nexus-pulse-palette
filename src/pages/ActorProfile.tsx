@@ -37,6 +37,7 @@ import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
+import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -495,6 +496,9 @@ const ActorProfile = () => {
   // URL-scrape mode — at most one section can host the panel at a time.
   const [urlScrapeSection, setUrlScrapeSection] = useState<OntologyKey | null>(null);
 
+  // Registry lookup — Identity-only, so a boolean suffices.
+  const [registrySectionOpen, setRegistrySectionOpen] = useState(false);
+
   // Confirm dialogs
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -648,6 +652,7 @@ const ActorProfile = () => {
 
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
+    setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
@@ -663,6 +668,7 @@ const ActorProfile = () => {
   const openUrlScrape = (key: OntologyKey) => {
     setAddingOntology(null);
     setOntologyDraft([]);
+    setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
@@ -675,6 +681,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setRegistrySectionOpen(false);
     setIdentityErrors({});
     setIdentityDraft({
       actor_name: personal.actor_name ?? "",
@@ -688,6 +695,18 @@ const ActorProfile = () => {
       actor_type: personal.actor_type ?? "commercial",
     });
     setEditingIdentity(true);
+  };
+
+  // ---------- Registry lookup ----------
+  const openRegistryLookup = () => {
+    if (!personal) return;
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+    setRegistrySectionOpen(true);
   };
 
   const cancelIdentityEdit = () => {
@@ -1053,6 +1072,7 @@ const ActorProfile = () => {
                 <EnrichmentToolbar
                   sectionKey="identity"
                   onManualClick={openIdentityEdit}
+                  onRegistryClick={openRegistryLookup}
                 />
               ) : undefined
             }
@@ -1080,6 +1100,26 @@ const ActorProfile = () => {
                 )}
                 {website && <IdentityRow label="Website" value={website} />}
               </div>
+            )}
+            {registrySectionOpen && isPersonal && personal && (
+              <RegistryEnrichmentPanel
+                actorId={personal.id}
+                currentIdentity={{
+                  actor_name: personal.actor_name ?? null,
+                  org_number: personal.org_number ?? null,
+                  street_address: personal.street_address ?? null,
+                  city: personal.city ?? null,
+                  region: personal.region ?? null,
+                  country: personal.country ?? null,
+                  actor_website: personal.actor_website ?? null,
+                }}
+                onClose={() => setRegistrySectionOpen(false)}
+                onFieldAccepted={(field, value) => {
+                  setPersonal((prev) =>
+                    prev ? { ...prev, [field]: value } : prev,
+                  );
+                }}
+              />
             )}
           </ProfileSection>
         )}
