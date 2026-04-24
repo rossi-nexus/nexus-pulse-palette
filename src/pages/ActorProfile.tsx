@@ -267,19 +267,6 @@ function IdentityRow({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function IdentityRow({ label, value }: { label: string; value: React.ReactNode }) {
-  if (value === null || value === undefined || value === "" ||
-      (Array.isArray(value) && value.length === 0)) return null;
-  return (
-    <div>
-      <div className="text-[11px] uppercase tracking-wider text-foreground-muted mb-1">
-        {label}
-      </div>
-      <div className="text-sm text-foreground break-words">{value}</div>
-    </div>
-  );
-}
-
 interface IdentityEditFormProps {
   draft: {
     actor_name: string;
