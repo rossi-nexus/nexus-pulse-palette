@@ -40,7 +40,13 @@ import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
 import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
 import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
+import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import {
+  readOntologyEntries,
+  type DisplayEntry,
+} from "@/lib/readOntologyEntries";
+import type { EnrichmentAcceptedItem } from "@/types/enrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -134,42 +140,7 @@ function formatDate(s?: string | null) {
   }
 }
 
-/** Normalize various ontology shapes from analysis_data JSONB into flat strings. */
-function flattenOntologyArray(arr: unknown): string[] {
-  if (!Array.isArray(arr)) return [];
-  const out: string[] = [];
-  for (const item of arr) {
-    if (typeof item === "string") {
-      out.push(item);
-      continue;
-    }
-    if (item && typeof item === "object") {
-      const o = item as Record<string, unknown>;
-      // Category-with-entries shape
-      if (Array.isArray(o.entries)) {
-        for (const e of o.entries) {
-          if (typeof e === "string") out.push(e);
-          else if (e && typeof e === "object") {
-            const eo = e as Record<string, unknown>;
-            const name = eo.entryName ?? eo.name ?? eo.rawName;
-            if (typeof name === "string") out.push(name);
-          }
-        }
-        continue;
-      }
-      const name =
-        o.entryName ??
-        o.categoryName ??
-        o.domainName ??
-        o.productName ??
-        o.serviceName ??
-        o.name ??
-        o.rawName;
-      if (typeof name === "string") out.push(name);
-    }
-  }
-  return out;
-}
+// (Ontology JSONB normalization moved to src/lib/readOntologyEntries.ts.)
 
 interface SectionProps {
   title: string;
@@ -607,16 +578,37 @@ const ActorProfile = () => {
     };
   }, [id, user]);
 
-  // Derive ontology lists per source
+  // Derive ontology lists per source.
+  // For personal actors we keep both: a flat string[] (for count + dedup)
+  // and a DisplayEntry[] (for click-to-expand metadata rendering).
+  const personalOntologyEntries = useMemo(() => {
+    if (source !== "personal" || !personal) {
+      return {
+        capabilities: [] as DisplayEntry[],
+        competences: [] as DisplayEntry[],
+        domains: [] as DisplayEntry[],
+        products: [] as DisplayEntry[],
+        services: [] as DisplayEntry[],
+      };
+    }
+    const ad = (personal.analysis_data ?? {}) as Record<string, unknown>;
+    return {
+      capabilities: readOntologyEntries(ad.capabilities),
+      competences: readOntologyEntries(ad.competences),
+      domains: readOntologyEntries(ad.domains),
+      products: readOntologyEntries(ad.products),
+      services: readOntologyEntries(ad.services),
+    };
+  }, [source, personal]);
+
   const ontology = useMemo(() => {
     if (source === "personal" && personal) {
-      const ad = (personal.analysis_data ?? {}) as Record<string, unknown>;
       return {
-        capabilities: flattenOntologyArray(ad.capabilities),
-        competences: flattenOntologyArray(ad.competences),
-        domains: flattenOntologyArray(ad.domains),
-        products: flattenOntologyArray(ad.products),
-        services: flattenOntologyArray(ad.services),
+        capabilities: personalOntologyEntries.capabilities.map((e) => e.name),
+        competences: personalOntologyEntries.competences.map((e) => e.name),
+        domains: personalOntologyEntries.domains.map((e) => e.name),
+        products: personalOntologyEntries.products.map((e) => e.name),
+        services: personalOntologyEntries.services.map((e) => e.name),
       };
     }
     if (source === "database") {
@@ -634,7 +626,7 @@ const ActorProfile = () => {
       };
     }
     return { capabilities: [], competences: [], domains: [], products: [], services: [] };
-  }, [source, personal, ontologyTags]);
+  }, [source, personal, personalOntologyEntries, ontologyTags]);
 
   // Derive classification / standards / customers from JSONB for personal
   const personalDerived = useMemo(() => {
@@ -829,7 +821,13 @@ const ActorProfile = () => {
       const beforeCount = Array.isArray(current[addingOntology])
         ? (current[addingOntology] as unknown[]).length
         : 0;
-      const merged = appendManualOntologyItems(current[addingOntology], cleaned);
+      const nowIso = new Date().toISOString();
+      const items: EnrichmentAcceptedItem[] = cleaned.map((entry_name) => ({
+        entry_name,
+        source: "manual",
+        accepted_at: nowIso,
+      }));
+      const merged = appendManualOntologyItems(current[addingOntology], items);
       const added = merged.length - beforeCount;
       const nextAnalysis = { ...current, [addingOntology]: merged };
 
@@ -1202,7 +1200,11 @@ const ActorProfile = () => {
               }
             >
               {items.length > 0 ? (
-                <TagList items={items} />
+                isPersonal ? (
+                  <OntologyEntryList entries={personalOntologyEntries[key]} />
+                ) : (
+                  <TagList items={items} />
+                )
               ) : (
                 !isAdding &&
                 !isUrlScrape &&
