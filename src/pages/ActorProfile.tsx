@@ -1072,6 +1072,7 @@ const ActorProfile = () => {
                 <EnrichmentToolbar
                   sectionKey="identity"
                   onManualClick={openIdentityEdit}
+                  onRegistryClick={openRegistryLookup}
                 />
               ) : undefined
             }
@@ -1099,6 +1100,26 @@ const ActorProfile = () => {
                 )}
                 {website && <IdentityRow label="Website" value={website} />}
               </div>
+            )}
+            {registrySectionOpen && isPersonal && personal && (
+              <RegistryEnrichmentPanel
+                actorId={personal.id}
+                currentIdentity={{
+                  actor_name: personal.actor_name ?? null,
+                  org_number: personal.org_number ?? null,
+                  street_address: personal.street_address ?? null,
+                  city: personal.city ?? null,
+                  region: personal.region ?? null,
+                  country: personal.country ?? null,
+                  actor_website: personal.actor_website ?? null,
+                }}
+                onClose={() => setRegistrySectionOpen(false)}
+                onFieldAccepted={(field, value) => {
+                  setPersonal((prev) =>
+                    prev ? { ...prev, [field]: value } : prev,
+                  );
+                }}
+              />
             )}
           </ProfileSection>
         )}
