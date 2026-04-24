@@ -140,8 +140,8 @@ function formatDate(s?: string | null) {
   }
 }
 
-/** Normalize various ontology shapes from analysis_data JSONB into flat strings. */
-function flattenOntologyArray(arr: unknown): string[] {
+// (Ontology JSONB normalization moved to src/lib/readOntologyEntries.ts.)
+function flattenOntologyArray_UNUSED(arr: unknown): string[] {
   if (!Array.isArray(arr)) return [];
   const out: string[] = [];
   for (const item of arr) {
