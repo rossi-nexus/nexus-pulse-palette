@@ -754,7 +754,10 @@ const ActorProfile = () => {
 
         {/* Sections */}
         {hasIdentity && (
-          <ProfileSection title="Identity">
+          <ProfileSection
+            title="Identity"
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="identity" /> : undefined}
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <IdentityRow label="Legal name" value={name} />
               {dbActor?.trade_names && dbActor.trade_names.length > 0 && (
@@ -849,7 +852,10 @@ const ActorProfile = () => {
 
         {/* Classification */}
         {(source === "database" ? classifications : personalDerived.classification).length > 0 && (
-          <ProfileSection title="Security Classification">
+          <ProfileSection
+            title="Security Classification"
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="classification" /> : undefined}
+          >
             <div className="space-y-3">
               {(source === "database" ? classifications : personalDerived.classification).map(
                 (c: any, i: number) => (
