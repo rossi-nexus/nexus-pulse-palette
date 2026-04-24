@@ -854,6 +854,7 @@ export type Database = {
           actor_type: string | null
           actor_website: string | null
           analysis_data: Json | null
+          city: string | null
           country: string | null
           created_at: string
           id: string
@@ -861,7 +862,9 @@ export type Database = {
           matched_main_db_actor_id: string | null
           merged_actor_id: string | null
           notes: string | null
+          org_number: string | null
           profile_completeness: number | null
+          region: string | null
           role_names: string[] | null
           search_data: Json | null
           sharing_level: string | null
@@ -869,8 +872,10 @@ export type Database = {
           source_step: string | null
           source_urls: string[] | null
           status: string
+          street_address: string | null
           suggested_at: string | null
           tags: string[] | null
+          trade_names: string[]
           user_id: string
         }
         Insert: {
@@ -879,6 +884,7 @@ export type Database = {
           actor_type?: string | null
           actor_website?: string | null
           analysis_data?: Json | null
+          city?: string | null
           country?: string | null
           created_at?: string
           id?: string
@@ -886,7 +892,9 @@ export type Database = {
           matched_main_db_actor_id?: string | null
           merged_actor_id?: string | null
           notes?: string | null
+          org_number?: string | null
           profile_completeness?: number | null
+          region?: string | null
           role_names?: string[] | null
           search_data?: Json | null
           sharing_level?: string | null
@@ -894,8 +902,10 @@ export type Database = {
           source_step?: string | null
           source_urls?: string[] | null
           status?: string
+          street_address?: string | null
           suggested_at?: string | null
           tags?: string[] | null
+          trade_names?: string[]
           user_id: string
         }
         Update: {
@@ -904,6 +914,7 @@ export type Database = {
           actor_type?: string | null
           actor_website?: string | null
           analysis_data?: Json | null
+          city?: string | null
           country?: string | null
           created_at?: string
           id?: string
@@ -911,7 +922,9 @@ export type Database = {
           matched_main_db_actor_id?: string | null
           merged_actor_id?: string | null
           notes?: string | null
+          org_number?: string | null
           profile_completeness?: number | null
+          region?: string | null
           role_names?: string[] | null
           search_data?: Json | null
           sharing_level?: string | null
@@ -919,8 +932,10 @@ export type Database = {
           source_step?: string | null
           source_urls?: string[] | null
           status?: string
+          street_address?: string | null
           suggested_at?: string | null
           tags?: string[] | null
+          trade_names?: string[]
           user_id?: string
         }
         Relationships: [

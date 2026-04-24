@@ -19,6 +19,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +52,11 @@ interface PersonalActor {
   actor_description: string | null;
   actor_website: string | null;
   country: string | null;
+  org_number: string | null;
+  trade_names: string[];
+  street_address: string | null;
+  city: string | null;
+  region: string | null;
   source_step: string | null;
   source_session_id: string | null;
   source_urls: string[] | null;
@@ -254,6 +267,165 @@ function IdentityRow({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
+interface IdentityEditFormProps {
+  draft: {
+    actor_name: string;
+    trade_names: string[];
+    org_number: string;
+    street_address: string;
+    city: string;
+    region: string;
+    country: string;
+    actor_website: string;
+    actor_type: string;
+  };
+  onChange: React.Dispatch<
+    React.SetStateAction<IdentityEditFormProps["draft"] | null>
+  >;
+  errors: { actor_name?: string; actor_website?: string };
+  onSave: () => void | Promise<void>;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-[11px] uppercase tracking-wider text-foreground-muted mb-1.5">
+      {children}
+    </label>
+  );
+}
+
+function IdentityEditForm({
+  draft,
+  onChange,
+  errors,
+  onSave,
+  onCancel,
+  saving,
+}: IdentityEditFormProps) {
+  const update = <K extends keyof IdentityEditFormProps["draft"]>(
+    key: K,
+    value: IdentityEditFormProps["draft"][K],
+  ) => {
+    onChange((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <FieldLabel>Legal name *</FieldLabel>
+        <Input
+          value={draft.actor_name}
+          onChange={(e) => update("actor_name", e.target.value)}
+          placeholder="Acme Corporation AS"
+          aria-invalid={Boolean(errors.actor_name)}
+        />
+        {errors.actor_name && (
+          <p className="text-xs text-destructive mt-1">{errors.actor_name}</p>
+        )}
+      </div>
+
+      <div>
+        <FieldLabel>Trade names</FieldLabel>
+        <div className="bg-elevated border border-border rounded-md p-2">
+          <TagInput
+            tags={draft.trade_names}
+            onChange={(t) => update("trade_names", t)}
+            placeholder="Add trade name and press Enter…"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <FieldLabel>Org number</FieldLabel>
+          <Input
+            value={draft.org_number}
+            onChange={(e) => update("org_number", e.target.value)}
+            placeholder="e.g. 123 456 789"
+          />
+        </div>
+        <div>
+          <FieldLabel>Type</FieldLabel>
+          <Select
+            value={draft.actor_type}
+            onValueChange={(v) => update("actor_type", v)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="commercial">Commercial</SelectItem>
+              <SelectItem value="government">Government</SelectItem>
+              <SelectItem value="academic">Academic</SelectItem>
+              <SelectItem value="industry_body">Industry Body</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel>Street address</FieldLabel>
+        <Input
+          value={draft.street_address}
+          onChange={(e) => update("street_address", e.target.value)}
+          placeholder="Storgata 1"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <FieldLabel>City</FieldLabel>
+          <Input
+            value={draft.city}
+            onChange={(e) => update("city", e.target.value)}
+            placeholder="Oslo"
+          />
+        </div>
+        <div>
+          <FieldLabel>Region</FieldLabel>
+          <Input
+            value={draft.region}
+            onChange={(e) => update("region", e.target.value)}
+            placeholder="Oslo"
+          />
+        </div>
+        <div>
+          <FieldLabel>Country</FieldLabel>
+          <Input
+            value={draft.country}
+            onChange={(e) => update("country", e.target.value)}
+            placeholder="Norway"
+          />
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel>Website</FieldLabel>
+        <Input
+          value={draft.actor_website}
+          onChange={(e) => update("actor_website", e.target.value)}
+          placeholder="https://example.com"
+          aria-invalid={Boolean(errors.actor_website)}
+        />
+        {errors.actor_website && (
+          <p className="text-xs text-destructive mt-1">{errors.actor_website}</p>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+          <XIcon className="w-3.5 h-3.5" /> Cancel
+        </Button>
+        <Button size="sm" onClick={onSave} disabled={saving}>
+          <Check className="w-3.5 h-3.5" /> {saving ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function DisabledAction({ label, tip = "Coming soon" }: { label: string; tip?: string }) {
   return (
     <TooltipProvider>
@@ -296,6 +468,23 @@ const ActorProfile = () => {
   const [notesDraft, setNotesDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
   const [tagsDraft, setTagsDraft] = useState<string[]>([]);
+
+  // Identity edit mode
+  type IdentityDraft = {
+    actor_name: string;
+    trade_names: string[];
+    org_number: string;
+    street_address: string;
+    city: string;
+    region: string;
+    country: string;
+    actor_website: string;
+    actor_type: string;
+  };
+  const [editingIdentity, setEditingIdentity] = useState(false);
+  const [identityDraft, setIdentityDraft] = useState<IdentityDraft | null>(null);
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const [identityErrors, setIdentityErrors] = useState<{ actor_name?: string; actor_website?: string }>({});
 
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
@@ -459,6 +648,9 @@ const ActorProfile = () => {
 
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
     setOntologyDraft([]);
     setAddingOntology(key);
   };
@@ -471,7 +663,87 @@ const ActorProfile = () => {
   const openUrlScrape = (key: OntologyKey) => {
     setAddingOntology(null);
     setOntologyDraft([]);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
     setUrlScrapeSection(key);
+  };
+
+  // ---------- Identity edit ----------
+  const openIdentityEdit = () => {
+    if (!personal) return;
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setIdentityErrors({});
+    setIdentityDraft({
+      actor_name: personal.actor_name ?? "",
+      trade_names: personal.trade_names ?? [],
+      org_number: personal.org_number ?? "",
+      street_address: personal.street_address ?? "",
+      city: personal.city ?? "",
+      region: personal.region ?? "",
+      country: personal.country ?? "",
+      actor_website: personal.actor_website ?? "",
+      actor_type: personal.actor_type ?? "commercial",
+    });
+    setEditingIdentity(true);
+  };
+
+  const cancelIdentityEdit = () => {
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+  };
+
+  const saveIdentityEdit = async () => {
+    if (!personal || !identityDraft) return;
+    const draft = identityDraft;
+    const errors: { actor_name?: string; actor_website?: string } = {};
+    const name = draft.actor_name.trim();
+    if (!name) errors.actor_name = "Legal name is required";
+    const website = draft.actor_website.trim();
+    if (website && !/^https?:\/\//i.test(website)) {
+      errors.actor_website = "Must start with http:// or https://";
+    }
+    if (Object.keys(errors).length > 0) {
+      setIdentityErrors(errors);
+      return;
+    }
+    setIdentityErrors({});
+
+    const trimOrNull = (s: string) => {
+      const v = s.trim();
+      return v === "" ? null : v;
+    };
+    const update = {
+      actor_name: name,
+      trade_names: draft.trade_names.map((t) => t.trim()).filter(Boolean),
+      org_number: trimOrNull(draft.org_number),
+      street_address: trimOrNull(draft.street_address),
+      city: trimOrNull(draft.city),
+      region: trimOrNull(draft.region),
+      country: trimOrNull(draft.country),
+      actor_website: trimOrNull(draft.actor_website),
+      actor_type: draft.actor_type,
+    };
+
+    setSavingIdentity(true);
+    try {
+      const { error } = await supabase
+        .from("user_personal_actors")
+        .update(update)
+        .eq("id", personal.id);
+      if (error) throw error;
+      setPersonal((prev) => (prev ? { ...prev, ...update } : prev));
+      toast.success("Identity updated");
+      setEditingIdentity(false);
+      setIdentityDraft(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update identity");
+    } finally {
+      setSavingIdentity(false);
+    }
   };
 
   const saveOntologyAdd = async () => {
@@ -564,12 +836,21 @@ const ActorProfile = () => {
   const website = personal?.actor_website ?? dbActor?.websites?.[0] ?? null;
   const verification = dbActor?.verification_status ?? null;
 
+  const tradeNames = personal?.trade_names?.length
+    ? personal.trade_names
+    : dbActor?.trade_names ?? [];
+  const orgNumber = personal?.org_number ?? dbActor?.org_number ?? null;
+  const streetAddress = personal?.street_address ?? dbActor?.street_address ?? null;
+  const city = personal?.city ?? dbActor?.city ?? null;
+  const region = personal?.region ?? dbActor?.region ?? null;
+  const addressComposed = [streetAddress, city, region].filter(Boolean).join(", ") || null;
+
   const hasIdentity = Boolean(
     name ||
       country ||
-      dbActor?.org_number ||
-      dbActor?.trade_names?.length ||
-      dbActor?.street_address ||
+      orgNumber ||
+      tradeNames.length ||
+      addressComposed ||
       website ||
       actorType,
   );
@@ -767,33 +1048,39 @@ const ActorProfile = () => {
         {hasIdentity && (
           <ProfileSection
             title="Identity"
-            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="identity" /> : undefined}
+            headerExtra={
+              isPersonal ? (
+                <EnrichmentToolbar
+                  sectionKey="identity"
+                  onManualClick={openIdentityEdit}
+                />
+              ) : undefined
+            }
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-              <IdentityRow label="Legal name" value={name} />
-              {dbActor?.trade_names && dbActor.trade_names.length > 0 && (
-                <IdentityRow
-                  label="Trade names"
-                  value={dbActor.trade_names.join(", ")}
-                />
-              )}
-              <IdentityRow label="Org number" value={dbActor?.org_number} />
-              <IdentityRow label="Country" value={country} />
-              {dbActor && (
-                <IdentityRow
-                  label="Address"
-                  value={
-                    [dbActor.street_address, dbActor.city, dbActor.region]
-                      .filter(Boolean)
-                      .join(", ") || null
-                  }
-                />
-              )}
-              {actorType && (
-                <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
-              )}
-              {website && <IdentityRow label="Website" value={website} />}
-            </div>
+            {editingIdentity && identityDraft ? (
+              <IdentityEditForm
+                draft={identityDraft}
+                onChange={setIdentityDraft}
+                errors={identityErrors}
+                onSave={saveIdentityEdit}
+                onCancel={cancelIdentityEdit}
+                saving={savingIdentity}
+              />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <IdentityRow label="Legal name" value={name} />
+                {tradeNames.length > 0 && (
+                  <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
+                )}
+                <IdentityRow label="Org number" value={orgNumber} />
+                <IdentityRow label="Country" value={country} />
+                <IdentityRow label="Address" value={addressComposed} />
+                {actorType && (
+                  <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
+                )}
+                {website && <IdentityRow label="Website" value={website} />}
+              </div>
+            )}
           </ProfileSection>
         )}
 
