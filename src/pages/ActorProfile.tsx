@@ -38,6 +38,7 @@ import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionD
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
+import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -496,6 +497,11 @@ const ActorProfile = () => {
   // URL-scrape mode — at most one section can host the panel at a time.
   const [urlScrapeSection, setUrlScrapeSection] = useState<OntologyKey | null>(null);
 
+  // Document upload mode — at most one section can host the panel at a time.
+  const [uploadDocSection, setUploadDocSection] = useState<OntologyKey | null>(
+    null,
+  );
+
   // Registry lookup — Identity-only, so a boolean suffices.
   const [registrySectionOpen, setRegistrySectionOpen] = useState(false);
 
@@ -652,6 +658,7 @@ const ActorProfile = () => {
 
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
+    setUploadDocSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
@@ -668,11 +675,23 @@ const ActorProfile = () => {
   const openUrlScrape = (key: OntologyKey) => {
     setAddingOntology(null);
     setOntologyDraft([]);
+    setUploadDocSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
     setUrlScrapeSection(key);
+  };
+
+  const openUploadDoc = (key: OntologyKey) => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setRegistrySectionOpen(false);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+    setUploadDocSection(key);
   };
 
   // ---------- Identity edit ----------
@@ -681,6 +700,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setUploadDocSection(null);
     setRegistrySectionOpen(false);
     setIdentityErrors({});
     setIdentityDraft({
@@ -703,6 +723,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setUploadDocSection(null);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
@@ -1138,6 +1159,7 @@ const ActorProfile = () => {
 
           const isAdding = addingOntology === key;
           const isUrlScrape = urlScrapeSection === key;
+          const isUploadDoc = uploadDocSection === key;
           return (
             <ProfileSection
               key={key}
@@ -1149,6 +1171,7 @@ const ActorProfile = () => {
                     sectionKey={key as SectionKey}
                     onManualClick={() => openOntologyAdd(key)}
                     onUrlScrapeClick={() => openUrlScrape(key)}
+                    onUploadDocClick={() => openUploadDoc(key)}
                   />
                 ) : undefined
               }
@@ -1157,7 +1180,8 @@ const ActorProfile = () => {
                 <TagList items={items} />
               ) : (
                 !isAdding &&
-                !isUrlScrape && (
+                !isUrlScrape &&
+                !isUploadDoc && (
                   <p className="text-sm text-foreground-muted">
                     No items yet. Use the toolbar to add.
                   </p>
@@ -1200,6 +1224,24 @@ const ActorProfile = () => {
                   existingItems={items}
                   currentAnalysisData={personal.analysis_data}
                   onClose={() => setUrlScrapeSection(null)}
+                  onItemAccepted={(_item, nextAnalysis) => {
+                    setPersonal({ ...personal, analysis_data: nextAnalysis });
+                  }}
+                />
+              )}
+              {isUploadDoc && personal && (
+                <DocumentEnrichmentPanel
+                  actorId={personal.id}
+                  sectionKey={key}
+                  sectionTitle={titles[key]}
+                  actorContext={{
+                    actor_name: personal.actor_name,
+                    actor_description: personal.actor_description,
+                    country: personal.country,
+                  }}
+                  existingItems={items}
+                  currentAnalysisData={personal.analysis_data}
+                  onClose={() => setUploadDocSection(null)}
                   onItemAccepted={(_item, nextAnalysis) => {
                     setPersonal({ ...personal, analysis_data: nextAnalysis });
                   }}

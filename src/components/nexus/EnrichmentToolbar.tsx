@@ -51,6 +51,11 @@ interface EnrichmentToolbarProps {
    * icon is enabled. When omitted, it renders disabled with "Coming soon".
    */
   onRegistryClick?: () => void;
+  /**
+   * Optional handler for the Upload-document (FileText) icon. When provided,
+   * the icon is enabled. When omitted, it renders disabled with "Coming soon".
+   */
+  onUploadDocClick?: () => void;
 }
 
 /**
@@ -67,6 +72,7 @@ export const EnrichmentToolbar = ({
   onManualClick,
   onUrlScrapeClick,
   onRegistryClick,
+  onUploadDocClick,
 }: EnrichmentToolbarProps) => {
   const methods = ENRICHMENT_MATRIX[sectionKey] ?? [];
 
@@ -81,7 +87,8 @@ export const EnrichmentToolbar = ({
           const enabled =
             (method === "manual" && Boolean(onManualClick)) ||
             (method === "scrape_url" && Boolean(onUrlScrapeClick)) ||
-            (method === "registry" && Boolean(onRegistryClick));
+            (method === "registry" && Boolean(onRegistryClick)) ||
+            (method === "upload_doc" && Boolean(onUploadDocClick));
           const label = ENRICHMENT_METHOD_LABEL[method];
           const tooltip = enabled ? label : "Coming soon";
 
@@ -100,6 +107,8 @@ export const EnrichmentToolbar = ({
                       onUrlScrapeClick();
                     else if (method === "registry" && onRegistryClick)
                       onRegistryClick();
+                    else if (method === "upload_doc" && onUploadDocClick)
+                      onUploadDocClick();
                   }}
                   className={cn(
                     "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
