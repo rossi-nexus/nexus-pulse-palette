@@ -28,6 +28,7 @@ import {
 import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
+import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -302,6 +303,9 @@ const ActorProfile = () => {
   const [ontologyDraft, setOntologyDraft] = useState<string[]>([]);
   const [savingOntology, setSavingOntology] = useState(false);
 
+  // URL-scrape mode — at most one section can host the panel at a time.
+  const [urlScrapeSection, setUrlScrapeSection] = useState<OntologyKey | null>(null);
+
   // Confirm dialogs
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -454,6 +458,7 @@ const ActorProfile = () => {
   const isPersonal = source === "personal" && Boolean(personal);
 
   const openOntologyAdd = (key: OntologyKey) => {
+    setUrlScrapeSection(null);
     setOntologyDraft([]);
     setAddingOntology(key);
   };
@@ -461,6 +466,12 @@ const ActorProfile = () => {
   const cancelOntologyAdd = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
+  };
+
+  const openUrlScrape = (key: OntologyKey) => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(key);
   };
 
   const saveOntologyAdd = async () => {
@@ -799,6 +810,7 @@ const ActorProfile = () => {
           if (!isPersonal && items.length === 0) return null;
 
           const isAdding = addingOntology === key;
+          const isUrlScrape = urlScrapeSection === key;
           return (
             <ProfileSection
               key={key}
@@ -809,6 +821,7 @@ const ActorProfile = () => {
                   <EnrichmentToolbar
                     sectionKey={key as SectionKey}
                     onManualClick={() => openOntologyAdd(key)}
+                    onUrlScrapeClick={() => openUrlScrape(key)}
                   />
                 ) : undefined
               }
@@ -816,9 +829,10 @@ const ActorProfile = () => {
               {items.length > 0 ? (
                 <TagList items={items} />
               ) : (
-                !isAdding && (
+                !isAdding &&
+                !isUrlScrape && (
                   <p className="text-sm text-foreground-muted">
-                    No items yet. Click the pencil to add.
+                    No items yet. Use the toolbar to add.
                   </p>
                 )
               )}
@@ -845,6 +859,24 @@ const ActorProfile = () => {
                     </Button>
                   </div>
                 </div>
+              )}
+              {isUrlScrape && personal && (
+                <UrlEnrichmentPanel
+                  actorId={personal.id}
+                  sectionKey={key}
+                  sectionTitle={titles[key]}
+                  actorContext={{
+                    actor_name: personal.actor_name,
+                    actor_description: personal.actor_description,
+                    country: personal.country,
+                  }}
+                  existingItems={items}
+                  currentAnalysisData={personal.analysis_data}
+                  onClose={() => setUrlScrapeSection(null)}
+                  onItemAccepted={(_item, nextAnalysis) => {
+                    setPersonal({ ...personal, analysis_data: nextAnalysis });
+                  }}
+                />
               )}
             </ProfileSection>
           );

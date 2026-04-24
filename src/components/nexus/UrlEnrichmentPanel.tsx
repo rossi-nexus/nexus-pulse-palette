@@ -1,0 +1,433 @@
+import { useState, type KeyboardEvent } from "react";
+import { Loader2, X as XIcon, Check, Link2, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+export type OntologyKey =
+  | "capabilities"
+  | "competences"
+  | "domains"
+  | "products"
+  | "services";
+
+interface Proposal {
+  entry_name: string;
+  evidence: string;
+  confidence: "high" | "medium" | "low";
+}
+
+type PanelState =
+  | { kind: "input" }
+  | { kind: "fetching"; url: string }
+  | { kind: "reviewing"; url: string; proposals: Proposal[]; summary?: string }
+  | { kind: "empty"; url: string; message: string }
+  | { kind: "error"; message: string };
+
+interface UrlEnrichmentPanelProps {
+  actorId: string;
+  sectionKey: OntologyKey;
+  sectionTitle: string;
+  actorContext: {
+    actor_name: string;
+    actor_description?: string | null;
+    country?: string | null;
+  };
+  existingItems: string[];
+  /** Snapshot of analysis_data — used to safely merge writes without clobbering siblings. */
+  currentAnalysisData: Record<string, unknown> | null;
+  onClose: () => void;
+  onItemAccepted: (item: string, nextAnalysisData: Record<string, unknown>) => void;
+}
+
+const CONFIDENCE_BADGE: Record<Proposal["confidence"], string> = {
+  high: "bg-success/15 text-success",
+  medium: "bg-info/15 text-info",
+  low: "bg-warning/15 text-warning",
+};
+
+function hostnameOf(url: string): { host: string; path: string } {
+  try {
+    const u = new URL(url);
+    return {
+      host: u.hostname.replace(/^www\./, ""),
+      path: u.pathname === "/" ? "" : u.pathname,
+    };
+  } catch {
+    return { host: url, path: "" };
+  }
+}
+
+export const UrlEnrichmentPanel = ({
+  actorId,
+  sectionKey,
+  sectionTitle,
+  actorContext,
+  existingItems,
+  currentAnalysisData,
+  onClose,
+  onItemAccepted,
+}: UrlEnrichmentPanelProps) => {
+  const [state, setState] = useState<PanelState>({ kind: "input" });
+  const [urlInput, setUrlInput] = useState("");
+  const [acceptingIdx, setAcceptingIdx] = useState<number | null>(null);
+  const [bulkAccepting, setBulkAccepting] = useState(false);
+
+  // Local mutable snapshot of analysis_data — updated on each accept so
+  // the next write merges correctly without re-fetching.
+  const [localAnalysis, setLocalAnalysis] = useState<Record<string, unknown>>(
+    () => ({ ...(currentAnalysisData ?? {}) }),
+  );
+
+  const startFetch = async (rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      setState({
+        kind: "error",
+        message: "Please enter a valid URL starting with http:// or https://",
+      });
+      return;
+    }
+    setState({ kind: "fetching", url });
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "enrich-from-url",
+        {
+          body: {
+            url,
+            section_key: sectionKey,
+            actor_context: actorContext,
+            existing_items: existingItems,
+          },
+        },
+      );
+      if (error) {
+        // supabase.functions.invoke wraps non-2xx in an error.
+        // Try to surface the body's error message if present.
+        let msg = error.message;
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const body = await ctx.json();
+            if (body?.error) msg = body.error;
+          } catch {
+            /* ignore */
+          }
+        }
+        setState({ kind: "error", message: msg });
+        return;
+      }
+      const proposals = (data?.proposals ?? []) as Proposal[];
+      if (proposals.length === 0) {
+        setState({
+          kind: "empty",
+          url,
+          message:
+            data?.extraction_summary ||
+            `No new ${sectionTitle.toLowerCase()} found on this URL.`,
+        });
+        return;
+      }
+      setState({
+        kind: "reviewing",
+        url,
+        proposals,
+        summary: data?.extraction_summary,
+      });
+    } catch (e) {
+      setState({
+        kind: "error",
+        message: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  };
+
+  const acceptProposal = async (idx: number) => {
+    if (state.kind !== "reviewing") return;
+    const proposal = state.proposals[idx];
+    if (!proposal) return;
+
+    const merged = appendManualOntologyItems(
+      localAnalysis[sectionKey],
+      [proposal.entry_name],
+    );
+    const nextAnalysis = { ...localAnalysis, [sectionKey]: merged };
+
+    const { error } = await supabase
+      .from("user_personal_actors")
+      .update({ analysis_data: nextAnalysis as never })
+      .eq("id", actorId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    setLocalAnalysis(nextAnalysis);
+    onItemAccepted(proposal.entry_name, nextAnalysis);
+
+    // Remove from review list
+    const remaining = state.proposals.filter((_, i) => i !== idx);
+    setState({ ...state, proposals: remaining });
+  };
+
+  const handleAcceptOne = async (idx: number) => {
+    setAcceptingIdx(idx);
+    try {
+      await acceptProposal(idx);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to accept item");
+    } finally {
+      setAcceptingIdx(null);
+    }
+  };
+
+  const handleDismissOne = (idx: number) => {
+    if (state.kind !== "reviewing") return;
+    const remaining = state.proposals.filter((_, i) => i !== idx);
+    setState({ ...state, proposals: remaining });
+  };
+
+  const handleAcceptAll = async () => {
+    if (state.kind !== "reviewing") return;
+    setBulkAccepting(true);
+    try {
+      // Sequential — accept first item repeatedly (list shrinks each time).
+      while (state.kind === "reviewing" && state.proposals.length > 0) {
+        await acceptProposal(0);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed during bulk accept");
+    } finally {
+      setBulkAccepting(false);
+    }
+  };
+
+  const handleDismissAll = () => {
+    if (state.kind !== "reviewing") return;
+    setState({ ...state, proposals: [] });
+  };
+
+  const handleInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (urlInput.trim()) startFetch(urlInput);
+    }
+  };
+
+  return (
+    <div className="mt-4 bg-elevated border border-border rounded-md overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/60 bg-surface/50">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link2 className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
+          <span className="text-xs font-medium uppercase tracking-wider text-foreground-secondary">
+            URL scrape
+          </span>
+          {state.kind !== "input" && state.kind !== "error" && (
+            <>
+              <ChevronRight className="w-3 h-3 text-foreground-muted shrink-0" />
+              <span className="text-xs text-foreground-muted truncate min-w-0">
+                <span className="text-foreground">{hostnameOf(state.url).host}</span>
+                <span>{hostnameOf(state.url).path}</span>
+              </span>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close URL scrape"
+          className="inline-flex h-6 w-6 items-center justify-center rounded text-foreground-muted hover:text-foreground hover:bg-elevated transition-colors"
+        >
+          <XIcon className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="p-3">
+        {state.kind === "input" && (
+          <div className="flex items-center gap-2">
+            <Input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={handleInputKey}
+              placeholder="https://example.com/about"
+              className="h-9 text-sm"
+              autoFocus
+            />
+            <Button
+              size="sm"
+              onClick={() => startFetch(urlInput)}
+              disabled={!urlInput.trim()}
+            >
+              Fetch
+            </Button>
+          </div>
+        )}
+
+        {state.kind === "fetching" && (
+          <div className="flex items-center gap-2 py-2 text-sm text-foreground-secondary">
+            <Loader2 className="w-4 h-4 animate-spin text-accent-teal" />
+            <span>
+              Extracting from{" "}
+              <span className="text-foreground font-medium">
+                {hostnameOf(state.url).host}
+              </span>
+              …
+            </span>
+          </div>
+        )}
+
+        {state.kind === "reviewing" && (
+          <div className="space-y-3">
+            {state.summary && (
+              <p className="text-xs text-foreground-muted italic leading-relaxed">
+                "{state.summary}"
+              </p>
+            )}
+
+            {state.proposals.length === 0 ? (
+              <div className="flex items-center justify-between gap-2 py-2">
+                <span className="text-sm text-foreground-secondary">
+                  All proposals reviewed.
+                </span>
+                <Button size="sm" variant="ghost" onClick={onClose}>
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {state.proposals.map((p, i) => (
+                    <li
+                      key={`${p.entry_name}-${i}`}
+                      className="border-l-2 border-accent-teal/60 border-dashed bg-surface/40 rounded-r-md pl-3 pr-2 py-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-mono text-foreground">
+                              {p.entry_name}
+                            </span>
+                            <span
+                              className={cn(
+                                "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-medium",
+                                CONFIDENCE_BADGE[p.confidence],
+                              )}
+                            >
+                              {p.confidence}
+                            </span>
+                          </div>
+                          {p.evidence && (
+                            <p className="text-xs italic text-foreground-muted mt-1 leading-relaxed">
+                              {p.evidence}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 border-accent-teal/40 text-accent-teal hover:bg-accent-teal/10 hover:text-accent-teal"
+                            onClick={() => handleAcceptOne(i)}
+                            disabled={
+                              acceptingIdx !== null || bulkAccepting
+                            }
+                            aria-label={`Accept ${p.entry_name}`}
+                          >
+                            {acceptingIdx === i ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2"
+                            onClick={() => handleDismissOne(i)}
+                            disabled={
+                              acceptingIdx !== null || bulkAccepting
+                            }
+                            aria-label={`Dismiss ${p.entry_name}`}
+                          >
+                            <XIcon className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleAcceptAll}
+                    disabled={bulkAccepting || acceptingIdx !== null}
+                  >
+                    {bulkAccepting && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    )}
+                    Accept all visible ({state.proposals.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleDismissAll}
+                    disabled={bulkAccepting || acceptingIdx !== null}
+                  >
+                    Dismiss all
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {state.kind === "empty" && (
+          <div className="space-y-3 py-1">
+            <p className="text-sm text-foreground-secondary">{state.message}</p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setUrlInput("");
+                  setState({ kind: "input" });
+                }}
+              >
+                Try another URL
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {state.kind === "error" && (
+          <div className="space-y-3 py-1">
+            <p className="text-sm text-destructive">{state.message}</p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setState({ kind: "input" })}
+              >
+                Try again
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
