@@ -39,6 +39,7 @@ import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
 import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
+import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -502,6 +503,11 @@ const ActorProfile = () => {
     null,
   );
 
+  // Web search mode — at most one section can host the panel at a time.
+  const [webSearchSection, setWebSearchSection] = useState<OntologyKey | null>(
+    null,
+  );
+
   // Registry lookup — Identity-only, so a boolean suffices.
   const [registrySectionOpen, setRegistrySectionOpen] = useState(false);
 
@@ -659,6 +665,7 @@ const ActorProfile = () => {
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
     setUploadDocSection(null);
+    setWebSearchSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
@@ -676,6 +683,7 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUploadDocSection(null);
+    setWebSearchSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
@@ -687,11 +695,24 @@ const ActorProfile = () => {
     setAddingOntology(null);
     setOntologyDraft([]);
     setUrlScrapeSection(null);
+    setWebSearchSection(null);
     setRegistrySectionOpen(false);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
     setUploadDocSection(key);
+  };
+
+  const openWebSearch = (key: OntologyKey) => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setUploadDocSection(null);
+    setRegistrySectionOpen(false);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+    setWebSearchSection(key);
   };
 
   // ---------- Identity edit ----------
@@ -701,6 +722,7 @@ const ActorProfile = () => {
     setOntologyDraft([]);
     setUrlScrapeSection(null);
     setUploadDocSection(null);
+    setWebSearchSection(null);
     setRegistrySectionOpen(false);
     setIdentityErrors({});
     setIdentityDraft({
@@ -724,6 +746,7 @@ const ActorProfile = () => {
     setOntologyDraft([]);
     setUrlScrapeSection(null);
     setUploadDocSection(null);
+    setWebSearchSection(null);
     setEditingIdentity(false);
     setIdentityDraft(null);
     setIdentityErrors({});
@@ -1160,6 +1183,7 @@ const ActorProfile = () => {
           const isAdding = addingOntology === key;
           const isUrlScrape = urlScrapeSection === key;
           const isUploadDoc = uploadDocSection === key;
+          const isWebSearch = webSearchSection === key;
           return (
             <ProfileSection
               key={key}
@@ -1172,6 +1196,7 @@ const ActorProfile = () => {
                     onManualClick={() => openOntologyAdd(key)}
                     onUrlScrapeClick={() => openUrlScrape(key)}
                     onUploadDocClick={() => openUploadDoc(key)}
+                    onWebSearchClick={() => openWebSearch(key)}
                   />
                 ) : undefined
               }
@@ -1181,7 +1206,8 @@ const ActorProfile = () => {
               ) : (
                 !isAdding &&
                 !isUrlScrape &&
-                !isUploadDoc && (
+                !isUploadDoc &&
+                !isWebSearch && (
                   <p className="text-sm text-foreground-muted">
                     No items yet. Use the toolbar to add.
                   </p>

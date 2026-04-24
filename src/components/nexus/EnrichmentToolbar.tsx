@@ -56,14 +56,16 @@ interface EnrichmentToolbarProps {
    * the icon is enabled. When omitted, it renders disabled with "Coming soon".
    */
   onUploadDocClick?: () => void;
+  /**
+   * Optional handler for the Web-search (Search) icon. When provided, the
+   * icon is enabled. When omitted, it renders disabled with "Coming soon".
+   */
+  onWebSearchClick?: () => void;
 }
 
 /**
  * Per-section enrichment toolbar shown in the right edge of a section header.
  * Renders one icon per allowed method (per ENRICHMENT_MATRIX).
- *
- * Only "Manual" is wired in this prompt (Phase 6B.7 part 1). All other icons
- * render disabled with a "Coming soon" tooltip.
  *
  * Click events stop propagation so they don't toggle the section open/closed.
  */
@@ -73,6 +75,7 @@ export const EnrichmentToolbar = ({
   onUrlScrapeClick,
   onRegistryClick,
   onUploadDocClick,
+  onWebSearchClick,
 }: EnrichmentToolbarProps) => {
   const methods = ENRICHMENT_MATRIX[sectionKey] ?? [];
 
@@ -88,7 +91,8 @@ export const EnrichmentToolbar = ({
             (method === "manual" && Boolean(onManualClick)) ||
             (method === "scrape_url" && Boolean(onUrlScrapeClick)) ||
             (method === "registry" && Boolean(onRegistryClick)) ||
-            (method === "upload_doc" && Boolean(onUploadDocClick));
+            (method === "upload_doc" && Boolean(onUploadDocClick)) ||
+            (method === "web_search" && Boolean(onWebSearchClick));
           const label = ENRICHMENT_METHOD_LABEL[method];
           const tooltip = enabled ? label : "Coming soon";
 
@@ -109,6 +113,8 @@ export const EnrichmentToolbar = ({
                       onRegistryClick();
                     else if (method === "upload_doc" && onUploadDocClick)
                       onUploadDocClick();
+                    else if (method === "web_search" && onWebSearchClick)
+                      onWebSearchClick();
                   }}
                   className={cn(
                     "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
