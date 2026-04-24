@@ -710,8 +710,10 @@ const PersonalActorCard = ({
         <span className="text-xs text-foreground-muted font-mono">{completeness}%</span>
       </div>
 
+      {/* Action row — reserved height so the card doesn't jump on hover.
+          Hidden by default, revealed on group-hover or focus-within. */}
       <div
-        className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="mt-3 h-7 flex justify-end gap-1.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         <CardActionButton
