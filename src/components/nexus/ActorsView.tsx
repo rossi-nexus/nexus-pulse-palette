@@ -477,6 +477,9 @@ const ActorsView = () => {
                   actor={a}
                   session={a.source_session_id ? sessionMap.get(a.source_session_id) : undefined}
                   onClick={() => navigate(`/actors/${a.id}`)}
+                  onSuggest={() => openSuggest(a)}
+                  onDelete={() => openDelete(a)}
+                  busy={busy}
                 />
               ))}
             </div>
