@@ -143,9 +143,22 @@ export const UrlEnrichmentPanel = ({
 
   const acceptProposal = async (proposal: Proposal) => {
     // Compute next analysis from the latest local snapshot — not closure-captured state.
+    const sourceUrl =
+      proposal.source_url ??
+      (state.kind === "reviewing" || state.kind === "fetching"
+        ? state.url
+        : null);
+    const item: EnrichmentAcceptedItem = {
+      entry_name: proposal.entry_name,
+      source: "url_scrape",
+      source_url: sourceUrl,
+      evidence: proposal.evidence,
+      confidence: proposal.confidence,
+      accepted_at: new Date().toISOString(),
+    };
     const merged = appendManualOntologyItems(
       localAnalysis[sectionKey],
-      [proposal.entry_name],
+      [item],
     );
     const nextAnalysis = { ...localAnalysis, [sectionKey]: merged };
 
