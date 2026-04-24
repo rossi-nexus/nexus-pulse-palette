@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 import type { Constraints } from "@/types/interpretation";
 import { TagInput } from "@/components/nexus/TagInput";
 
