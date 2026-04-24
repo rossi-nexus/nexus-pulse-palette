@@ -1,10 +1,13 @@
 import { useState, type KeyboardEvent } from "react";
-import { Loader2, X as XIcon, Check, Link2, ChevronRight } from "lucide-react";
+import { Loader2, X as XIcon, Link2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
-import { cn } from "@/lib/utils";
+import {
+  ProposalReviewList,
+  type ReviewProposal,
+} from "@/components/nexus/ProposalReviewList";
 import { toast } from "sonner";
 
 export type OntologyKey =
@@ -14,11 +17,7 @@ export type OntologyKey =
   | "products"
   | "services";
 
-interface Proposal {
-  entry_name: string;
-  evidence: string;
-  confidence: "high" | "medium" | "low";
-}
+type Proposal = ReviewProposal;
 
 type PanelState =
   | { kind: "input" }
