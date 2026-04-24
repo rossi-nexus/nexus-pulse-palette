@@ -111,6 +111,21 @@ const ActorsView = () => {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, UserInfo>>(new Map());
 
+  // Action dialogs (personal actors)
+  const [actionTarget, setActionTarget] = useState<PersonalActor | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const { busy, suggestForDb, deleteFromCollection } = useActorActions();
+
+  const openSuggest = (a: PersonalActor) => {
+    setActionTarget(a);
+    setSuggestOpen(true);
+  };
+  const openDelete = (a: PersonalActor) => {
+    setActionTarget(a);
+    setDeleteOpen(true);
+  };
+
   // Filters
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
