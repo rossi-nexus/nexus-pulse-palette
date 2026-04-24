@@ -202,9 +202,20 @@ export const DocumentEnrichmentPanel = ({
   };
 
   const acceptProposal = async (proposal: Proposal) => {
+    // Capture the filename from the active reviewing state for source attribution.
+    const filename = state.kind === "reviewing" ? state.filename : null;
+    const item: EnrichmentAcceptedItem = {
+      entry_name: proposal.entry_name,
+      source: "document",
+      source_url: null,
+      source_description: filename,
+      evidence: proposal.evidence,
+      confidence: proposal.confidence,
+      accepted_at: new Date().toISOString(),
+    };
     const merged = appendManualOntologyItems(
       localAnalysis[sectionKey],
-      [proposal.entry_name],
+      [item],
     );
     const nextAnalysis = { ...localAnalysis, [sectionKey]: merged };
 
