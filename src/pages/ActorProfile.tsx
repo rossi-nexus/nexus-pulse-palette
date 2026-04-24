@@ -592,6 +592,83 @@ const ActorProfile = () => {
           )}
         </div>
 
+        {/* Tags (personal actors only) */}
+        {source === "personal" && personal && (
+          <ProfileSection title="Tags">
+            {editingTags ? (
+              <div className="space-y-3">
+                <div className="bg-elevated border border-border rounded-md p-2">
+                  <TagInput
+                    tags={tagsDraft}
+                    onChange={setTagsDraft}
+                    placeholder="Add tag and press Enter…"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await updateTags(personal.id, tagsDraft);
+                      if (ok) {
+                        setPersonal({ ...personal, tags: tagsDraft });
+                        setEditingTags(false);
+                      }
+                    }}
+                    disabled={busy === "tags"}
+                  >
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingTags(false)}
+                  >
+                    <XIcon className="w-3.5 h-3.5" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                {personal.tags && personal.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {personal.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-surface border border-border/60 text-foreground"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setTagsDraft([]);
+                      setEditingTags(true);
+                    }}
+                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    Add tags
+                  </button>
+                )}
+                {personal.tags && personal.tags.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => {
+                      setTagsDraft(personal.tags ?? []);
+                      setEditingTags(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </ProfileSection>
+        )}
+
         {/* Sections */}
         {hasIdentity && (
           <ProfileSection title="Identity">
