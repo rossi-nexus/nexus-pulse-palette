@@ -149,9 +149,17 @@ export const WebSearchEnrichmentPanel = ({
   };
 
   const acceptProposal = async (proposal: Proposal) => {
+    const item: EnrichmentAcceptedItem = {
+      entry_name: proposal.entry_name,
+      source: "web_search",
+      source_url: proposal.source_url ?? null,
+      evidence: proposal.evidence,
+      confidence: proposal.confidence,
+      accepted_at: new Date().toISOString(),
+    };
     const merged = appendManualOntologyItems(
       localAnalysis[sectionKey],
-      [proposal.entry_name],
+      [item],
     );
     const nextAnalysis = { ...localAnalysis, [sectionKey]: merged };
 
