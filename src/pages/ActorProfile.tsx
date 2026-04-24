@@ -270,6 +270,19 @@ const ActorProfile = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [descriptions, setDescriptions] = useState<any[]>([]);
 
+  // Inline editors
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
+
+  // Confirm dialogs
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { busy, updateNotes, updateTags, suggestForDb, deleteFromCollection } =
+    useActorActions();
+
   useEffect(() => {
     if (!id || !user) return;
     let cancelled = false;
