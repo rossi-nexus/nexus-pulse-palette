@@ -141,41 +141,6 @@ function formatDate(s?: string | null) {
 }
 
 // (Ontology JSONB normalization moved to src/lib/readOntologyEntries.ts.)
-function flattenOntologyArray_UNUSED(arr: unknown): string[] {
-  if (!Array.isArray(arr)) return [];
-  const out: string[] = [];
-  for (const item of arr) {
-    if (typeof item === "string") {
-      out.push(item);
-      continue;
-    }
-    if (item && typeof item === "object") {
-      const o = item as Record<string, unknown>;
-      // Category-with-entries shape
-      if (Array.isArray(o.entries)) {
-        for (const e of o.entries) {
-          if (typeof e === "string") out.push(e);
-          else if (e && typeof e === "object") {
-            const eo = e as Record<string, unknown>;
-            const name = eo.entryName ?? eo.name ?? eo.rawName;
-            if (typeof name === "string") out.push(name);
-          }
-        }
-        continue;
-      }
-      const name =
-        o.entryName ??
-        o.categoryName ??
-        o.domainName ??
-        o.productName ??
-        o.serviceName ??
-        o.name ??
-        o.rawName;
-      if (typeof name === "string") out.push(name);
-    }
-  }
-  return out;
-}
 
 interface SectionProps {
   title: string;
