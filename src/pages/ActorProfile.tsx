@@ -489,6 +489,9 @@ const ActorProfile = () => {
 
   const openOntologyAdd = (key: OntologyKey) => {
     setUrlScrapeSection(null);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
     setOntologyDraft([]);
     setAddingOntology(key);
   };
@@ -501,7 +504,87 @@ const ActorProfile = () => {
   const openUrlScrape = (key: OntologyKey) => {
     setAddingOntology(null);
     setOntologyDraft([]);
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
     setUrlScrapeSection(key);
+  };
+
+  // ---------- Identity edit ----------
+  const openIdentityEdit = () => {
+    if (!personal) return;
+    setAddingOntology(null);
+    setOntologyDraft([]);
+    setUrlScrapeSection(null);
+    setIdentityErrors({});
+    setIdentityDraft({
+      actor_name: personal.actor_name ?? "",
+      trade_names: personal.trade_names ?? [],
+      org_number: personal.org_number ?? "",
+      street_address: personal.street_address ?? "",
+      city: personal.city ?? "",
+      region: personal.region ?? "",
+      country: personal.country ?? "",
+      actor_website: personal.actor_website ?? "",
+      actor_type: personal.actor_type ?? "commercial",
+    });
+    setEditingIdentity(true);
+  };
+
+  const cancelIdentityEdit = () => {
+    setEditingIdentity(false);
+    setIdentityDraft(null);
+    setIdentityErrors({});
+  };
+
+  const saveIdentityEdit = async () => {
+    if (!personal || !identityDraft) return;
+    const draft = identityDraft;
+    const errors: { actor_name?: string; actor_website?: string } = {};
+    const name = draft.actor_name.trim();
+    if (!name) errors.actor_name = "Legal name is required";
+    const website = draft.actor_website.trim();
+    if (website && !/^https?:\/\//i.test(website)) {
+      errors.actor_website = "Must start with http:// or https://";
+    }
+    if (Object.keys(errors).length > 0) {
+      setIdentityErrors(errors);
+      return;
+    }
+    setIdentityErrors({});
+
+    const trimOrNull = (s: string) => {
+      const v = s.trim();
+      return v === "" ? null : v;
+    };
+    const update = {
+      actor_name: name,
+      trade_names: draft.trade_names.map((t) => t.trim()).filter(Boolean),
+      org_number: trimOrNull(draft.org_number),
+      street_address: trimOrNull(draft.street_address),
+      city: trimOrNull(draft.city),
+      region: trimOrNull(draft.region),
+      country: trimOrNull(draft.country),
+      actor_website: trimOrNull(draft.actor_website),
+      actor_type: draft.actor_type,
+    };
+
+    setSavingIdentity(true);
+    try {
+      const { error } = await supabase
+        .from("user_personal_actors")
+        .update(update)
+        .eq("id", personal.id);
+      if (error) throw error;
+      setPersonal((prev) => (prev ? { ...prev, ...update } : prev));
+      toast.success("Identity updated");
+      setEditingIdentity(false);
+      setIdentityDraft(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update identity");
+    } finally {
+      setSavingIdentity(false);
+    }
   };
 
   const saveOntologyAdd = async () => {
