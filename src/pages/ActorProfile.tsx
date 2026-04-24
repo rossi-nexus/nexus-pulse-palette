@@ -38,6 +38,7 @@ import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionD
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
+import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -495,6 +496,11 @@ const ActorProfile = () => {
 
   // URL-scrape mode — at most one section can host the panel at a time.
   const [urlScrapeSection, setUrlScrapeSection] = useState<OntologyKey | null>(null);
+
+  // Document upload mode — at most one section can host the panel at a time.
+  const [uploadDocSection, setUploadDocSection] = useState<OntologyKey | null>(
+    null,
+  );
 
   // Registry lookup — Identity-only, so a boolean suffices.
   const [registrySectionOpen, setRegistrySectionOpen] = useState(false);
