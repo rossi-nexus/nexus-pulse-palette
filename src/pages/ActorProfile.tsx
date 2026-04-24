@@ -39,6 +39,7 @@ import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
 import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
+import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import { toast } from "sonner";
@@ -499,6 +500,11 @@ const ActorProfile = () => {
 
   // Document upload mode — at most one section can host the panel at a time.
   const [uploadDocSection, setUploadDocSection] = useState<OntologyKey | null>(
+    null,
+  );
+
+  // Web search mode — at most one section can host the panel at a time.
+  const [webSearchSection, setWebSearchSection] = useState<OntologyKey | null>(
     null,
   );
 
