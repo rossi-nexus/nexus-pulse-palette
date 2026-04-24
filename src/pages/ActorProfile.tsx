@@ -677,12 +677,21 @@ const ActorProfile = () => {
   const website = personal?.actor_website ?? dbActor?.websites?.[0] ?? null;
   const verification = dbActor?.verification_status ?? null;
 
+  const tradeNames = personal?.trade_names?.length
+    ? personal.trade_names
+    : dbActor?.trade_names ?? [];
+  const orgNumber = personal?.org_number ?? dbActor?.org_number ?? null;
+  const streetAddress = personal?.street_address ?? dbActor?.street_address ?? null;
+  const city = personal?.city ?? dbActor?.city ?? null;
+  const region = personal?.region ?? dbActor?.region ?? null;
+  const addressComposed = [streetAddress, city, region].filter(Boolean).join(", ") || null;
+
   const hasIdentity = Boolean(
     name ||
       country ||
-      dbActor?.org_number ||
-      dbActor?.trade_names?.length ||
-      dbActor?.street_address ||
+      orgNumber ||
+      tradeNames.length ||
+      addressComposed ||
       website ||
       actorType,
   );
