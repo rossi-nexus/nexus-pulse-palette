@@ -42,11 +42,7 @@ interface UrlEnrichmentPanelProps {
   onItemAccepted: (item: string, nextAnalysisData: Record<string, unknown>) => void;
 }
 
-const CONFIDENCE_BADGE: Record<Proposal["confidence"], string> = {
-  high: "bg-success/15 text-success",
-  medium: "bg-info/15 text-info",
-  low: "bg-warning/15 text-warning",
-};
+// (Proposal display styling moved to ProposalReviewList.)
 
 function hostnameOf(url: string): { host: string; path: string } {
   try {
@@ -287,110 +283,17 @@ export const UrlEnrichmentPanel = ({
         )}
 
         {state.kind === "reviewing" && (
-          <div className="space-y-3">
-            {state.summary && (
-              <p className="text-xs text-foreground-muted italic leading-relaxed">
-                "{state.summary}"
-              </p>
-            )}
-
-            {state.proposals.length === 0 ? (
-              <div className="flex items-center justify-between gap-2 py-2">
-                <span className="text-sm text-foreground-secondary">
-                  All proposals reviewed.
-                </span>
-                <Button size="sm" variant="ghost" onClick={onClose}>
-                  Close
-                </Button>
-              </div>
-            ) : (
-              <>
-                <ul className="space-y-2">
-                  {state.proposals.map((p, i) => (
-                    <li
-                      key={`${p.entry_name}-${i}`}
-                      className="border-l-2 border-accent-teal/60 border-dashed bg-surface/40 rounded-r-md pl-3 pr-2 py-2"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-mono text-foreground">
-                              {p.entry_name}
-                            </span>
-                            <span
-                              className={cn(
-                                "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-medium",
-                                CONFIDENCE_BADGE[p.confidence],
-                              )}
-                            >
-                              {p.confidence}
-                            </span>
-                          </div>
-                          {p.evidence && (
-                            <p className="text-xs italic text-foreground-muted mt-1 leading-relaxed">
-                              {p.evidence}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 border-accent-teal/40 text-accent-teal hover:bg-accent-teal/10 hover:text-accent-teal"
-                            onClick={() => handleAcceptOne(p)}
-                            disabled={
-                              acceptingIdx !== null || bulkAccepting
-                            }
-                            aria-label={`Accept ${p.entry_name}`}
-                          >
-                            {acceptingIdx === i ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5" />
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2"
-                            onClick={() => handleDismissOne(i)}
-                            disabled={
-                              acceptingIdx !== null || bulkAccepting
-                            }
-                            aria-label={`Dismiss ${p.entry_name}`}
-                          >
-                            <XIcon className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleAcceptAll}
-                    disabled={bulkAccepting || acceptingIdx !== null}
-                  >
-                    {bulkAccepting && (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    )}
-                    Accept all visible ({state.proposals.length})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleDismissAll}
-                    disabled={bulkAccepting || acceptingIdx !== null}
-                  >
-                    Dismiss all
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+          <ProposalReviewList
+            proposals={state.proposals}
+            summary={state.summary}
+            acceptingIdx={acceptingIdx}
+            bulkAccepting={bulkAccepting}
+            onAcceptOne={handleAcceptOne}
+            onDismissOne={handleDismissOne}
+            onAcceptAll={handleAcceptAll}
+            onDismissAll={handleDismissAll}
+            onClose={onClose}
+          />
         )}
 
         {state.kind === "empty" && (
