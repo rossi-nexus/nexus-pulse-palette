@@ -296,6 +296,12 @@ const ActorProfile = () => {
   const [editingTags, setEditingTags] = useState(false);
   const [tagsDraft, setTagsDraft] = useState<string[]>([]);
 
+  // Manual ontology entry — which ontology section is in add mode + the draft
+  type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
+  const [addingOntology, setAddingOntology] = useState<OntologyKey | null>(null);
+  const [ontologyDraft, setOntologyDraft] = useState<string[]>([]);
+  const [savingOntology, setSavingOntology] = useState(false);
+
   // Confirm dialogs
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
