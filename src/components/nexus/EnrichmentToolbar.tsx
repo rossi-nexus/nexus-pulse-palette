@@ -40,6 +40,12 @@ interface EnrichmentToolbarProps {
    * with a "Coming soon" tooltip — same as every other (not-yet-wired) method.
    */
   onManualClick?: () => void;
+  /**
+   * Optional handler for the Scrape-from-URL icon. When provided, the icon is
+   * enabled for this section. When omitted, it renders disabled with a
+   * "Coming soon" tooltip.
+   */
+  onUrlScrapeClick?: () => void;
 }
 
 /**
@@ -54,6 +60,7 @@ interface EnrichmentToolbarProps {
 export const EnrichmentToolbar = ({
   sectionKey,
   onManualClick,
+  onUrlScrapeClick,
 }: EnrichmentToolbarProps) => {
   const methods = ENRICHMENT_MATRIX[sectionKey] ?? [];
 
@@ -65,7 +72,9 @@ export const EnrichmentToolbar = ({
       >
         {methods.map((method) => {
           const Icon = METHOD_ICON[method];
-          const enabled = method === "manual" && Boolean(onManualClick);
+          const enabled =
+            (method === "manual" && Boolean(onManualClick)) ||
+            (method === "scrape_url" && Boolean(onUrlScrapeClick));
           const label = ENRICHMENT_METHOD_LABEL[method];
           const tooltip = enabled ? label : "Coming soon";
 
@@ -78,7 +87,10 @@ export const EnrichmentToolbar = ({
                   disabled={!enabled}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (enabled && onManualClick) onManualClick();
+                    if (!enabled) return;
+                    if (method === "manual" && onManualClick) onManualClick();
+                    else if (method === "scrape_url" && onUrlScrapeClick)
+                      onUrlScrapeClick();
                   }}
                   className={cn(
                     "inline-flex h-6 w-6 items-center justify-center rounded transition-colors",
