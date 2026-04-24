@@ -48,6 +48,9 @@ interface PersonalActor {
   analysis_data: Record<string, unknown> | null;
   search_data: Record<string, unknown> | null;
   status: string;
+  notes: string | null;
+  tags: string[] | null;
+  suggested_at: string | null;
   created_at: string;
 }
 
