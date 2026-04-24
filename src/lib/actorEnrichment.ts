@@ -5,65 +5,111 @@
  * No DB access here — callers run the supabase client themselves.
  */
 
+import {
+  isEnrichmentAcceptedItem,
+  type EnrichmentAcceptedItem,
+} from "@/types/enrichment";
+
+export type NewItem = string | EnrichmentAcceptedItem;
+
 /**
- * Merge new string items into an existing ontology-shape JSONB array.
+ * Walk the existing JSONB shapes and collect every entry-name string that's
+ * already present (case-folded). Covers:
+ *   - plain strings
+ *   - `EnrichmentAcceptedItem` objects (new write shape)
+ *   - older `{entryName | name | rawName | categoryName | …}` variants
+ *   - pipeline `{categoryName, entries: [...]}` shape (entries can be
+ *     strings or any of the object variants above)
+ */
+function collectExistingNames(existing: unknown[]): Set<string> {
+  const seen = new Set<string>();
+  const add = (s: unknown) => {
+    if (typeof s === "string") {
+      const v = s.trim().toLowerCase();
+      if (v) seen.add(v);
+    }
+  };
+
+  const visitObject = (o: Record<string, unknown>) => {
+    add(
+      (o.entry_name as string | undefined) ??
+        (o.entryName as string | undefined) ??
+        (o.categoryName as string | undefined) ??
+        (o.domainName as string | undefined) ??
+        (o.productName as string | undefined) ??
+        (o.serviceName as string | undefined) ??
+        (o.name as string | undefined) ??
+        (o.rawName as string | undefined),
+    );
+    if (Array.isArray(o.entries)) {
+      for (const e of o.entries) {
+        if (typeof e === "string") add(e);
+        else if (e && typeof e === "object")
+          visitObject(e as Record<string, unknown>);
+      }
+    }
+  };
+
+  for (const item of existing) {
+    if (typeof item === "string") add(item);
+    else if (item && typeof item === "object")
+      visitObject(item as Record<string, unknown>);
+  }
+  return seen;
+}
+
+/**
+ * Merge new items into an existing ontology-shape JSONB array.
  *
- * - Case-insensitive dedup against both existing string entries AND any
- *   nested entry names found inside category-with-entries objects.
+ * Accepts either bare strings (legacy convenience) or full
+ * `EnrichmentAcceptedItem` objects. Bare strings are normalized to manual
+ * accepts with an `accepted_at` timestamp.
+ *
+ * - Case-insensitive dedup against every name extractable from existing
+ *   entries (string, enriched object, pipeline category-with-entries,
+ *   older shape variants).
  * - Preserves any non-string entries already present (e.g. AI-generated
- *   `{categoryName, entries: [...]}` objects) untouched.
- * - Appended manual items are written as plain strings — `flattenOntologyArray`
- *   on the read side already handles mixed string + object shapes.
+ *   `{categoryName, entries: [...]}` objects) untouched in place.
+ * - Appended items are written as `EnrichmentAcceptedItem` objects so the
+ *   read side can surface their metadata in the UI.
  *
  * @param existing  current value at analysis_data.<sectionKey> (may be undefined)
- * @param newItems  raw user-entered strings (will be trimmed; empty dropped)
+ * @param newItems  array of strings and/or EnrichmentAcceptedItem
  * @returns the merged array suitable for writing back
  */
 export function appendManualOntologyItems(
   existing: unknown,
-  newItems: string[],
+  newItems: NewItem[],
 ): unknown[] {
   const base: unknown[] = Array.isArray(existing) ? [...existing] : [];
-
-  // Build a lowercase set of every name already present so we don't add
-  // a duplicate of something the AI already produced inside a nested shape.
-  const seen = new Set<string>();
-  for (const item of base) {
-    if (typeof item === "string") {
-      seen.add(item.trim().toLowerCase());
-      continue;
-    }
-    if (item && typeof item === "object") {
-      const o = item as Record<string, unknown>;
-      const name =
-        (o.entryName as string | undefined) ??
-        (o.categoryName as string | undefined) ??
-        (o.name as string | undefined) ??
-        (o.rawName as string | undefined);
-      if (typeof name === "string") seen.add(name.trim().toLowerCase());
-      if (Array.isArray(o.entries)) {
-        for (const e of o.entries) {
-          if (typeof e === "string") seen.add(e.trim().toLowerCase());
-          else if (e && typeof e === "object") {
-            const eo = e as Record<string, unknown>;
-            const ename =
-              (eo.entryName as string | undefined) ??
-              (eo.name as string | undefined) ??
-              (eo.rawName as string | undefined);
-            if (typeof ename === "string") seen.add(ename.trim().toLowerCase());
-          }
-        }
-      }
-    }
-  }
+  const seen = collectExistingNames(base);
+  const nowIso = new Date().toISOString();
 
   for (const raw of newItems) {
-    const trimmed = raw.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
+    let item: EnrichmentAcceptedItem;
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      item = {
+        entry_name: trimmed,
+        source: "manual",
+        accepted_at: nowIso,
+      };
+    } else if (isEnrichmentAcceptedItem(raw)) {
+      const trimmed = raw.entry_name.trim();
+      if (!trimmed) continue;
+      item = {
+        ...raw,
+        entry_name: trimmed,
+        accepted_at: raw.accepted_at ?? nowIso,
+      };
+    } else {
+      continue;
+    }
+    const key = item.entry_name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    base.push(trimmed);
+    base.push(item);
   }
 
   return base;
