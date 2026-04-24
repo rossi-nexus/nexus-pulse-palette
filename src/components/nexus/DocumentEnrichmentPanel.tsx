@@ -9,6 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import type { EnrichmentAcceptedItem } from "@/types/enrichment";
 import {
   ProposalReviewList,
   type ReviewProposal,
