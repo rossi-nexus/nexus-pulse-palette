@@ -27,6 +27,10 @@ import {
 } from "@/components/ui/tooltip";
 import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
+import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import type { SectionKey } from "@/config/enrichmentMethods";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -154,32 +158,48 @@ interface SectionProps {
   title: string;
   count?: number;
   defaultOpen?: boolean;
+  /** Optional extra header content (e.g. EnrichmentToolbar) — placed between count and chevron. */
+  headerExtra?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function ProfileSection({ title, count, defaultOpen = true, children }: SectionProps) {
+function ProfileSection({
+  title,
+  count,
+  defaultOpen = true,
+  headerExtra,
+  children,
+}: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border-t border-border/60 py-4">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-left group"
-      >
-        <span className="text-xs font-medium uppercase tracking-wider text-foreground-secondary group-hover:text-foreground transition-colors">
-          {title}
-          {count != null && (
-            <span className="ml-2 text-foreground-muted normal-case font-normal">
-              ({count})
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          className={cn(
-            "w-4 h-4 text-foreground-muted transition-transform",
-            open && "rotate-180",
-          )}
-        />
-      </button>
+      <div className="flex w-full items-center justify-between gap-2 group">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex flex-1 items-center justify-between text-left"
+        >
+          <span className="text-xs font-medium uppercase tracking-wider text-foreground-secondary group-hover:text-foreground transition-colors">
+            {title}
+            {count != null && (
+              <span className="ml-2 text-foreground-muted normal-case font-normal">
+                ({count})
+              </span>
+            )}
+          </span>
+        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {headerExtra}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Collapse" : "Expand"}
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-foreground-muted hover:text-foreground transition-colors"
+          >
+            <ChevronDown
+              className={cn("w-4 h-4 transition-transform", open && "rotate-180")}
+            />
+          </button>
+        </div>
+      </div>
       {open && <div className="mt-4">{children}</div>}
     </div>
   );
@@ -275,6 +295,12 @@ const ActorProfile = () => {
   const [notesDraft, setNotesDraft] = useState("");
   const [editingTags, setEditingTags] = useState(false);
   const [tagsDraft, setTagsDraft] = useState<string[]>([]);
+
+  // Manual ontology entry — which ontology section is in add mode + the draft
+  type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
+  const [addingOntology, setAddingOntology] = useState<OntologyKey | null>(null);
+  const [ontologyDraft, setOntologyDraft] = useState<string[]>([]);
+  const [savingOntology, setSavingOntology] = useState(false);
 
   // Confirm dialogs
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -423,6 +449,63 @@ const ActorProfile = () => {
       (Array.isArray(ad.customer_history) ? (ad.customer_history as any[]) : []);
     return { classification, standards, customers };
   }, [personal]);
+
+  // ---------- Manual ontology entry ----------
+  const isPersonal = source === "personal" && Boolean(personal);
+
+  const openOntologyAdd = (key: OntologyKey) => {
+    setOntologyDraft([]);
+    setAddingOntology(key);
+  };
+
+  const cancelOntologyAdd = () => {
+    setAddingOntology(null);
+    setOntologyDraft([]);
+  };
+
+  const saveOntologyAdd = async () => {
+    if (!personal || !addingOntology) return;
+    const sectionLabel: Record<OntologyKey, string> = {
+      capabilities: "Capabilities",
+      competences: "Competences",
+      domains: "Domains",
+      products: "Products",
+      services: "Services",
+    };
+    const cleaned = ontologyDraft.map((s) => s.trim()).filter(Boolean);
+    if (cleaned.length === 0) {
+      cancelOntologyAdd();
+      return;
+    }
+    setSavingOntology(true);
+    try {
+      const current = (personal.analysis_data ?? {}) as Record<string, unknown>;
+      const beforeCount = Array.isArray(current[addingOntology])
+        ? (current[addingOntology] as unknown[]).length
+        : 0;
+      const merged = appendManualOntologyItems(current[addingOntology], cleaned);
+      const added = merged.length - beforeCount;
+      const nextAnalysis = { ...current, [addingOntology]: merged };
+
+      const { error } = await supabase
+        .from("user_personal_actors")
+        .update({ analysis_data: nextAnalysis as never })
+        .eq("id", personal.id);
+      if (error) throw error;
+
+      setPersonal({ ...personal, analysis_data: nextAnalysis });
+      toast.success(
+        added > 0
+          ? `Added ${added} item${added === 1 ? "" : "s"} to ${sectionLabel[addingOntology]}`
+          : "No new items added (duplicates skipped)",
+      );
+      cancelOntologyAdd();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to save items");
+    } finally {
+      setSavingOntology(false);
+    }
+  };
 
   // ---------- Loading state ----------
   if (loading) {
@@ -671,7 +754,10 @@ const ActorProfile = () => {
 
         {/* Sections */}
         {hasIdentity && (
-          <ProfileSection title="Identity">
+          <ProfileSection
+            title="Identity"
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="identity" /> : undefined}
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <IdentityRow label="Legal name" value={name} />
               {dbActor?.trade_names && dbActor.trade_names.length > 0 && (
@@ -700,35 +786,76 @@ const ActorProfile = () => {
           </ProfileSection>
         )}
 
-        {ontology.capabilities.length > 0 && (
-          <ProfileSection title="Capabilities" count={ontology.capabilities.length}>
-            <TagList items={ontology.capabilities} />
-          </ProfileSection>
-        )}
-        {ontology.competences.length > 0 && (
-          <ProfileSection title="Competences" count={ontology.competences.length}>
-            <TagList items={ontology.competences} />
-          </ProfileSection>
-        )}
-        {ontology.domains.length > 0 && (
-          <ProfileSection title="Domains" count={ontology.domains.length}>
-            <TagList items={ontology.domains} />
-          </ProfileSection>
-        )}
-        {ontology.products.length > 0 && (
-          <ProfileSection title="Products" count={ontology.products.length}>
-            <TagList items={ontology.products} />
-          </ProfileSection>
-        )}
-        {ontology.services.length > 0 && (
-          <ProfileSection title="Services" count={ontology.services.length}>
-            <TagList items={ontology.services} />
-          </ProfileSection>
-        )}
+        {/* Ontology sections — always render for personal actors (with toolbar). DB actors only render when populated. */}
+        {(["capabilities", "competences", "domains", "products", "services"] as const).map((key) => {
+          const items = ontology[key];
+          const titles: Record<typeof key, string> = {
+            capabilities: "Capabilities",
+            competences: "Competences",
+            domains: "Domains",
+            products: "Products",
+            services: "Services",
+          };
+          if (!isPersonal && items.length === 0) return null;
+
+          const isAdding = addingOntology === key;
+          return (
+            <ProfileSection
+              key={key}
+              title={titles[key]}
+              count={items.length > 0 ? items.length : undefined}
+              headerExtra={
+                isPersonal ? (
+                  <EnrichmentToolbar
+                    sectionKey={key as SectionKey}
+                    onManualClick={() => openOntologyAdd(key)}
+                  />
+                ) : undefined
+              }
+            >
+              {items.length > 0 ? (
+                <TagList items={items} />
+              ) : (
+                !isAdding && (
+                  <p className="text-sm text-foreground-muted">
+                    No items yet. Click the pencil to add.
+                  </p>
+                )
+              )}
+              {isAdding && (
+                <div className="mt-3 space-y-3">
+                  <div className="bg-elevated border border-border rounded-md p-2">
+                    <TagInput
+                      tags={ontologyDraft}
+                      onChange={setOntologyDraft}
+                      placeholder={`Add ${titles[key].toLowerCase()} and press Enter…`}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveOntologyAdd} disabled={savingOntology}>
+                      <Check className="w-3.5 h-3.5" /> Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelOntologyAdd}
+                      disabled={savingOntology}
+                    >
+                      <XIcon className="w-3.5 h-3.5" /> Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </ProfileSection>
+          );
+        })}
 
         {/* Classification */}
         {(source === "database" ? classifications : personalDerived.classification).length > 0 && (
-          <ProfileSection title="Security Classification">
+          <ProfileSection
+            title="Security Classification"
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="classification" /> : undefined}
+          >
             <div className="space-y-3">
               {(source === "database" ? classifications : personalDerived.classification).map(
                 (c: any, i: number) => (
@@ -768,6 +895,7 @@ const ActorProfile = () => {
           <ProfileSection
             title="Standards & Certifications"
             count={(source === "database" ? standards : personalDerived.standards).length}
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="standards" /> : undefined}
           >
             <div className="space-y-2">
               {(source === "database" ? standards : personalDerived.standards).map(
@@ -808,6 +936,7 @@ const ActorProfile = () => {
           <ProfileSection
             title="Customer History"
             count={(source === "database" ? customers : personalDerived.customers).length}
+            headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="customers" /> : undefined}
           >
             <div className="space-y-2">
               {(source === "database" ? customers : personalDerived.customers).map(
@@ -954,7 +1083,10 @@ const ActorProfile = () => {
         )}
 
         {/* Source & Provenance */}
-        <ProfileSection title="Source & Provenance">
+        <ProfileSection
+          title="Source & Provenance"
+          headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="sources" /> : undefined}
+        >
           <div className="space-y-3 text-sm">
             {source === "personal" && personal && (
               <>
