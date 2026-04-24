@@ -1083,7 +1083,10 @@ const ActorProfile = () => {
         )}
 
         {/* Source & Provenance */}
-        <ProfileSection title="Source & Provenance">
+        <ProfileSection
+          title="Source & Provenance"
+          headerExtra={isPersonal ? <EnrichmentToolbar sectionKey="sources" /> : undefined}
+        >
           <div className="space-y-3 text-sm">
             {source === "personal" && personal && (
               <>
