@@ -4,6 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
+ * Maps known Postgres RAISE EXCEPTION messages from `fn_suggest_actor`
+ * into user-readable strings. Falls back to a generic message.
+ */
+function mapSuggestError(error: { message?: string } | null | undefined): string {
+  const msg = error?.message ?? "";
+  if (msg.includes("actor_not_found_or_not_owned")) {
+    return "We couldn't find that actor. Try refreshing the page.";
+  }
+  if (msg.includes("actor_already_suggested")) {
+    return "This actor has already been suggested.";
+  }
+  if (msg.includes("actor_already_merged")) {
+    return "This actor is already in the main database.";
+  }
+  return msg || "Failed to suggest actor";
+}
+/**
  * Shared mutations for personal actors (My Collection).
  * Used by both ActorProfile (full page) and ActorsView (cards).
  *
@@ -60,6 +77,10 @@ export function useActorActions() {
   /**
    * One-way action: marks the personal actor as suggested and creates a
    * pending row in actor_validation_queue for admin review.
+   *
+   * Implemented as a single atomic Postgres RPC (`fn_suggest_actor`) so that a
+   * partial failure can never leave the user in a stuck state where
+   * `status='suggested'` but no queue row exists. Closes audit finding M8/P29.
    */
   const suggestForDb = useCallback(
     async (actorId: string): Promise<boolean> => {
@@ -69,25 +90,13 @@ export function useActorActions() {
       }
       setBusy("suggest");
       try {
-        const nowIso = new Date().toISOString();
-        const { error: upErr } = await supabase
-          .from("user_personal_actors")
-          .update({
-            status: "suggested",
-            suggested_at: nowIso,
-          })
-          .eq("id", actorId);
-        if (upErr) throw upErr;
-
-        const { error: qErr } = await supabase
-          .from("actor_validation_queue")
-          .insert({
-            user_personal_actor_id: actorId,
-            suggested_by: user.id,
-            status: "pending",
-          });
-        if (qErr) throw qErr;
-
+        const { error } = await supabase.rpc("fn_suggest_actor", {
+          p_personal_actor_id: actorId,
+        });
+        if (error) {
+          toast.error(mapSuggestError(error));
+          return false;
+        }
         toast.success("Suggested for review");
         return true;
       } catch (e: any) {
