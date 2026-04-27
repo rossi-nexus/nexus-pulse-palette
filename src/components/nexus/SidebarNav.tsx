@@ -133,7 +133,7 @@ const SidebarNav = () => {
                                   if (e.key === "Enter") commitRename();
                                   if (e.key === "Escape") setEditingId(null);
                                 }}
-                                className="bg-base border border-border rounded px-1 py-0.5 text-xs w-full text-foreground focus:outline-none focus:border-primary"
+                                className="bg-background border border-border rounded px-1 py-0.5 text-xs w-full text-foreground focus:outline-none focus:border-primary"
                                 onClick={(e) => e.stopPropagation()}
                               />
                             ) : (
