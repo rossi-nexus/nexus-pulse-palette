@@ -412,14 +412,13 @@ ${searchResultsText}`;
     } catch (e) {
       console.error("Actor validation failed:", e);
       return new Response(JSON.stringify({
+        error: `Actor validation failed: ${(e as Error).message}`,
         role_id: role.id,
-        actors: [],
         queries_used: queries,
         search_mode: "web",
         processing_time_ms: Date.now() - startTime,
-        error: `Actor validation failed: ${(e as Error).message}`,
       }), {
-        status: 200,
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
