@@ -280,7 +280,7 @@ ${constraints?.standards?.required ? `Required standards: ${constraints.standard
       return JSON.parse(content);
     }
 
-    // Generate queries
+    // Generate queries — AI failure → 502 (caller can show real error)
     let queries: string[];
     try {
       const queryResult = await callAI(QUERY_SYNTHESIS_PROMPT, roleDescription, QUERY_TOOL_SCHEMA, "submit_queries", 4096);
@@ -289,14 +289,11 @@ ${constraints?.standards?.required ? `Required standards: ${constraints.standard
     } catch (e) {
       console.error("Query synthesis failed:", e);
       return new Response(JSON.stringify({
-        role_id: role.id,
-        actors: [],
-        queries_used: [],
-        search_mode: "web",
-        processing_time_ms: Date.now() - startTime,
         error: `Query synthesis failed: ${(e as Error).message}`,
+        role_id: role.id,
+        processing_time_ms: Date.now() - startTime,
       }), {
-        status: 200,
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -305,6 +302,9 @@ ${constraints?.standards?.required ? `Required standards: ${constraints.standard
     const constraintCountry = constraints?.geography?.countries?.[0]?.toLowerCase() || "no";
     const allResults: any[] = [];
     const seenDomains = new Set<string>();
+    let serperRateLimited = false;       // any 429
+    let serperHardFailures = 0;          // 5xx or network error
+    const serperAttempted = queries.length;
 
     for (const query of queries) {
       try {
@@ -321,7 +321,15 @@ ${constraints?.standards?.required ? `Required standards: ${constraints.standard
           }),
         });
 
+        if (searchResp.status === 429) {
+          serperRateLimited = true;
+          await searchResp.text().catch(() => "");
+          console.error(`Serper rate limit (429) for query "${query}"`);
+          continue;
+        }
         if (!searchResp.ok) {
+          serperHardFailures += 1;
+          await searchResp.text().catch(() => "");
           console.error(`Serper error for query "${query}":`, searchResp.status);
           continue;
         }
@@ -344,11 +352,37 @@ ${constraints?.standards?.required ? `Required standards: ${constraints.standard
           }
         }
       } catch (e) {
+        serperHardFailures += 1;
         console.error(`Search failed for query "${query}":`, e);
       }
     }
 
+    // If we got nothing AND every Serper query failed upstream, propagate the
+    // failure instead of silently returning "0 actors" (P24).
     if (allResults.length === 0) {
+      const allFailed = serperRateLimited || serperHardFailures >= serperAttempted;
+      if (allFailed && serperRateLimited) {
+        return new Response(JSON.stringify({
+          error: "Web search rate limit reached. Try again in a moment.",
+          role_id: role.id,
+          processing_time_ms: Date.now() - startTime,
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (allFailed) {
+        return new Response(JSON.stringify({
+          error: `Web search upstream failed (${serperHardFailures}/${serperAttempted} queries errored)`,
+          role_id: role.id,
+          processing_time_ms: Date.now() - startTime,
+        }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Genuine empty result set (Serper succeeded but found nothing) — keep
+      // the existing 200 shape so the caller treats it as a normal empty role.
       return new Response(JSON.stringify({
         role_id: role.id,
         actors: [],
@@ -378,14 +412,13 @@ ${searchResultsText}`;
     } catch (e) {
       console.error("Actor validation failed:", e);
       return new Response(JSON.stringify({
+        error: `Actor validation failed: ${(e as Error).message}`,
         role_id: role.id,
-        actors: [],
         queries_used: queries,
         search_mode: "web",
         processing_time_ms: Date.now() - startTime,
-        error: `Actor validation failed: ${(e as Error).message}`,
       }), {
-        status: 200,
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

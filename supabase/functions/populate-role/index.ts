@@ -164,57 +164,79 @@ ONTOLOGY:${ontologyText}
 
 Generate description, reasoning, and ontology targets for the new role above. Do not duplicate the focus of existing roles.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 4096,
-        tools: [TOOL_SCHEMA],
-        tool_choice: { type: "function", function: { name: "submit_role" } },
-      }),
-    });
-
-    if (!aiResp.ok) {
-      const errText = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, errText);
-      if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: "AI processing failed" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // AI call helper — throws on HTTP failure or missing/malformed tool output.
+    // Special-cases 429/402 by surfacing them with explicit codes.
+    async function callAI(extraSystemSuffix = "") {
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT + extraSystemSuffix },
+            { role: "user", content: userMessage },
+          ],
+          max_tokens: 4096,
+          tools: [TOOL_SCHEMA],
+          tool_choice: { type: "function", function: { name: "submit_role" } },
+        }),
       });
-    }
-
-    const aiResult = await aiResp.json();
-    const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      return new Response(JSON.stringify({ error: "AI returned no structured output" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        if (resp.status === 429) {
+          const e = new Error("Rate limit reached. Please try again in a moment.");
+          (e as any).upstreamStatus = 429;
+          throw e;
+        }
+        if (resp.status === 402) {
+          const e = new Error("AI credits exhausted. Add funds in workspace settings.");
+          (e as any).upstreamStatus = 402;
+          throw e;
+        }
+        throw new Error(`AI gateway error ${resp.status}: ${errText.slice(0, 200)}`);
+      }
+      const result = await resp.json();
+      const tc = result.choices?.[0]?.message?.tool_calls?.[0];
+      if (!tc?.function?.arguments) {
+        throw new Error("AI did not return structured output");
+      }
+      return JSON.parse(tc.function.arguments);
     }
 
     let parsed: any;
     try {
-      parsed = JSON.parse(toolCall.function.arguments);
-    } catch (e) {
-      return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      parsed = await callAI();
+    } catch (e1) {
+      // Surface explicit upstream codes immediately (no retry on 429/402)
+      const upstream = (e1 as any).upstreamStatus;
+      if (upstream === 429 || upstream === 402) {
+        return new Response(JSON.stringify({ error: (e1 as Error).message }), {
+          status: upstream,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Single retry with stricter reminder (matches reference pattern)
+      try {
+        parsed = await callAI(
+          "\n\nReminder: respond ONLY via the submit_role tool with valid arguments.",
+        );
+      } catch (e2) {
+        const upstream2 = (e2 as any).upstreamStatus;
+        if (upstream2 === 429 || upstream2 === 402) {
+          return new Response(JSON.stringify({ error: (e2 as Error).message }), {
+            status: upstream2,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        console.error("populate-role AI failed after retry:", e2);
+        return new Response(JSON.stringify({ error: (e2 as Error).message }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Build ontology selections (mirrors interpret-need's buildSelections)

@@ -387,6 +387,9 @@ serve(async (req) => {
     }
 
     let serperFailed = false;
+    let serperRateLimited = false;
+    let serperHardFailures = 0;
+    const serperAttempted = queries.length;
     for (const q of queries) {
       try {
         const resp = await fetch("https://google.serper.dev/search", {
@@ -394,7 +397,17 @@ serve(async (req) => {
           headers: { "X-API-KEY": serperApiKey, "Content-Type": "application/json" },
           body: JSON.stringify({ q, gl: constraintCountry, num: 8 }),
         });
+        if (resp.status === 429) {
+          serperRateLimited = true;
+          serperFailed = true;
+          await resp.text().catch(() => "");
+          console.warn(`Serper rate limit (429) for "${q}"`);
+          continue;
+        }
         if (!resp.ok) {
+          serperHardFailures += 1;
+          serperFailed = true;
+          await resp.text().catch(() => "");
           console.warn(`Serper failed for "${q}": ${resp.status}`);
           continue;
         }
@@ -410,12 +423,44 @@ serve(async (req) => {
           }
         }
       } catch (e) {
-        console.warn(`Serper error for "${q}":`, e);
+        serperHardFailures += 1;
         serperFailed = true;
+        console.warn(`Serper error for "${q}":`, e);
       }
     }
 
+    // If Step-3 sources also produced nothing (gatheredResults seeded from
+    // actor.sources first; an empty pool means we have neither prior sources
+    // nor any new Serper hits), the only honest move is to surface upstream
+    // failure rather than hand the AI an empty workload (P24).
     if (gatheredResults.length === 0) {
+      const allQueriesFailed = serperAttempted > 0 &&
+        (serperRateLimited || serperHardFailures >= serperAttempted);
+      if (allQueriesFailed && serperRateLimited) {
+        return new Response(JSON.stringify({
+          error: "Web search rate limit reached. Try again in a moment.",
+          actor_id: actor.id,
+          role_id: role.id,
+          processing_time_ms: Date.now() - startTime,
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (allQueriesFailed) {
+        return new Response(JSON.stringify({
+          error: `Web search upstream failed (${serperHardFailures}/${serperAttempted} queries errored)`,
+          actor_id: actor.id,
+          role_id: role.id,
+          processing_time_ms: Date.now() - startTime,
+        }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Genuine zero-source state (no Step-3 sources AND no queries OR queries
+      // succeeded but found nothing). Keep the existing 200 shape so the caller
+      // treats it as "nothing to analyze" rather than an error.
       return new Response(JSON.stringify({
         actor_id: actor.id,
         role_id: role.id,
@@ -520,13 +565,18 @@ ${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.s
       mode = r.mode;
     } catch (e) {
       console.error("AI analysis failed:", e);
+      const msg = (e as Error).message || "Unknown AI failure";
+      // Surface explicit upstream codes; otherwise treat as gateway failure (502)
+      // so supabase.functions.invoke / fetch !ok branches catch it (P23).
+      let status = 502;
+      if (/429/.test(msg)) status = 429;
+      else if (/402/.test(msg)) status = 402;
       return new Response(JSON.stringify({
+        error: `AI analysis failed: ${msg}`,
         actor_id: actor.id,
         role_id: role.id,
-        analysis: null,
         processing_time_ms: Date.now() - startTime,
-        error: `AI analysis failed: ${(e as Error).message}`,
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const analysis = normalizeAnalysis(analysisRaw);

@@ -435,10 +435,16 @@ serve(async (req) => {
 
     let parsed: any = null;
 
-    // Attempt 1: tool calling
+    // Attempt 1: tool calling. Retry trigger covers BOTH:
+    //   (a) HTTP failure (network/5xx/malformed JSON from gateway), AND
+    //   (b) valid 200 response that is empty / has no parseable tool call.
+    // 429/402 are surfaced immediately with explicit codes (no retry).
     const aiResponse1 = await callAI(true);
+    let attempt1ShouldRetry = false;
+    let attempt1Error: string | null = null;
+
     if (!aiResponse1.ok) {
-      const errText = await aiResponse1.text();
+      const errText = await aiResponse1.text().catch(() => "");
       console.error("AI gateway error:", aiResponse1.status, errText);
       if (aiResponse1.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), {
@@ -450,45 +456,62 @@ serve(async (req) => {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "AI processing failed" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiResult1 = await aiResponse1.json();
-    const toolCall = aiResult1.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        parsed = JSON.parse(toolCall.function.arguments);
-      } catch (e) {
-        console.error("Failed to parse tool call arguments, will retry with JSON mode");
+      // Other HTTP failure (5xx, network) → trigger retry via JSON mode
+      attempt1ShouldRetry = true;
+      attempt1Error = `AI gateway error ${aiResponse1.status}`;
+    } else {
+      const aiResult1 = await aiResponse1.json().catch(() => null);
+      const toolCall = aiResult1?.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        try {
+          parsed = JSON.parse(toolCall.function.arguments);
+        } catch (_e) {
+          // Malformed tool args → trigger retry
+          attempt1ShouldRetry = true;
+          attempt1Error = "Tool call arguments unparseable";
+        }
+      }
+      if (!parsed && !attempt1ShouldRetry) {
+        const finishReason = aiResult1?.choices?.[0]?.finish_reason;
+        console.log("Tool calling failed (finish_reason:", finishReason, "), retrying with JSON mode...");
+        attempt1ShouldRetry = true;
       }
     }
 
-    // Check for MALFORMED_FUNCTION_CALL or missing tool call — retry with JSON mode
-    if (!parsed) {
-      const finishReason = aiResult1.choices?.[0]?.finish_reason;
-      console.log("Tool calling failed (finish_reason:", finishReason, "), retrying with JSON mode...");
-
+    // Attempt 2: JSON mode retry — covers both HTTP-failure and empty-response cases above
+    if (!parsed && attempt1ShouldRetry) {
       const aiResponse2 = await callAI(false);
       if (!aiResponse2.ok) {
-        const errText = await aiResponse2.text();
+        const errText = await aiResponse2.text().catch(() => "");
         console.error("AI JSON mode error:", aiResponse2.status, errText);
-        return new Response(JSON.stringify({ error: "AI processing failed on retry" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        if (aiResponse2.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (aiResponse2.status === 402) {
+          return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({
+          error: `AI service unavailable (initial: ${attempt1Error || "empty response"}, retry: HTTP ${aiResponse2.status})`,
+        }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const aiResult2 = await aiResponse2.json();
-      let content = aiResult2.choices?.[0]?.message?.content || "";
-      // Strip markdown fences if present
+      const aiResult2 = await aiResponse2.json().catch(() => null);
+      let content = aiResult2?.choices?.[0]?.message?.content || "";
       content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
       try {
         parsed = JSON.parse(content);
-      } catch (e) {
+      } catch (_e) {
         console.error("Failed to parse JSON from AI content:", content.slice(0, 500));
-        return new Response(JSON.stringify({ error: "AI returned unparseable response after retry" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({
+          error: "AI returned unparseable response after retry",
+        }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
