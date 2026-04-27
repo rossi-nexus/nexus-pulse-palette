@@ -1003,6 +1003,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_suggest_actor: {
+        Args: { p_personal_actor_id: string }
+        Returns: string
+      }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
