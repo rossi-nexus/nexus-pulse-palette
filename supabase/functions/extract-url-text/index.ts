@@ -12,6 +12,21 @@ serve(async (req) => {
   }
 
   try {
+    const internalSecret = req.headers.get("X-Internal-Secret");
+    const expected = Deno.env.get("INTERNAL_FUNCTION_SECRET");
+    if (!expected) {
+      return new Response(
+        JSON.stringify({ error: "INTERNAL_FUNCTION_SECRET not configured on the server. Set it in edge function secrets." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (internalSecret !== expected) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { url } = await req.json();
 
     if (!url || typeof url !== "string") {
