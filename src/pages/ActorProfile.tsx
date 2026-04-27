@@ -48,6 +48,7 @@ import {
 } from "@/lib/readOntologyEntries";
 import type { EnrichmentAcceptedItem } from "@/types/enrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
+import type { PersonalActor } from "@/types/personal-actor";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 

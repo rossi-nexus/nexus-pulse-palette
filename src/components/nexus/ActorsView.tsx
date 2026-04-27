@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import type { PersonalActor } from "@/types/personal-actor";
 import { cn } from "@/lib/utils";
 
 type TabKey = "collection" | "database" | "queue";
