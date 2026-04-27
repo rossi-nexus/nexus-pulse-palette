@@ -288,12 +288,12 @@ serve(async (req) => {
             extractionErrors.push("Failed to download " + att.reference + ": " + errMsg);
             continue;
           }
-          // Call extract-file-text edge function
+          // Call extract-file-text edge function (forward caller JWT)
           const formData = new FormData();
           formData.append("file", new File([fileData], att.reference));
           const extractResp = await fetch(`${supabaseUrl}/functions/v1/extract-file-text`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${supabaseServiceKey}` },
+            headers: { Authorization: authHeader },
             body: formData,
           });
           if (extractResp.ok) {
@@ -303,11 +303,16 @@ serve(async (req) => {
             extractionErrors.push(`Failed to extract text from ${att.reference}`);
           }
         } else if (att.type === "url") {
+          const internalSecret = Deno.env.get("INTERNAL_FUNCTION_SECRET");
+          if (!internalSecret) {
+            extractionErrors.push(`Cannot extract URL ${att.reference}: INTERNAL_FUNCTION_SECRET is not configured on the server.`);
+            continue;
+          }
           const extractResp = await fetch(`${supabaseUrl}/functions/v1/extract-url-text`, {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${supabaseServiceKey}`,
               "Content-Type": "application/json",
+              "X-Internal-Secret": internalSecret,
             },
             body: JSON.stringify({ url: att.reference }),
           });
