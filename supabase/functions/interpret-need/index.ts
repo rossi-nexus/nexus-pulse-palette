@@ -472,8 +472,6 @@ serve(async (req) => {
         }
       }
       if (!parsed && !attempt1ShouldRetry) {
-        const finishReason = aiResult1?.choices?.[0]?.finish_reason;
-        console.log("Tool calling failed (finish_reason:", finishReason, "), retrying with JSON mode...");
         attempt1ShouldRetry = true;
       }
     }
