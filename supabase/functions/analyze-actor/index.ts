@@ -565,13 +565,18 @@ ${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.s
       mode = r.mode;
     } catch (e) {
       console.error("AI analysis failed:", e);
+      const msg = (e as Error).message || "Unknown AI failure";
+      // Surface explicit upstream codes; otherwise treat as gateway failure (502)
+      // so supabase.functions.invoke / fetch !ok branches catch it (P23).
+      let status = 502;
+      if (/429/.test(msg)) status = 429;
+      else if (/402/.test(msg)) status = 402;
       return new Response(JSON.stringify({
+        error: `AI analysis failed: ${msg}`,
         actor_id: actor.id,
         role_id: role.id,
-        analysis: null,
         processing_time_ms: Date.now() - startTime,
-        error: `AI analysis failed: ${(e as Error).message}`,
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const analysis = normalizeAnalysis(analysisRaw);
