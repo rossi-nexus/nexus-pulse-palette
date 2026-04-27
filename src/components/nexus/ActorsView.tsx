@@ -23,24 +23,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import type { PersonalActor } from "@/types/personal-actor";
 import { cn } from "@/lib/utils";
 
 type TabKey = "collection" | "database" | "queue";
-
-interface PersonalActor {
-  id: string;
-  user_id: string;
-  actor_name: string;
-  actor_type: string | null;
-  country: string | null;
-  source_session_id: string | null;
-  source_step: string | null;
-  profile_completeness: number | null;
-  analysis_data: Record<string, unknown> | null;
-  status: string;
-  suggested_at: string | null;
-  created_at: string;
-}
 
 interface DbActor {
   id: string;
