@@ -4,6 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
+ * Maps known Postgres RAISE EXCEPTION messages from `fn_suggest_actor`
+ * into user-readable strings. Falls back to a generic message.
+ */
+function mapSuggestError(error: { message?: string } | null | undefined): string {
+  const msg = error?.message ?? "";
+  if (msg.includes("actor_not_found_or_not_owned")) {
+    return "We couldn't find that actor. Try refreshing the page.";
+  }
+  if (msg.includes("actor_already_suggested")) {
+    return "This actor has already been suggested.";
+  }
+  if (msg.includes("actor_already_merged")) {
+    return "This actor is already in the main database.";
+  }
+  return msg || "Failed to suggest actor";
+}
+/**
  * Shared mutations for personal actors (My Collection).
  * Used by both ActorProfile (full page) and ActorsView (cards).
  *
