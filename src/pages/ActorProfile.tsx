@@ -53,34 +53,6 @@ import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
 
-interface PersonalActor {
-  id: string;
-  user_id: string;
-  actor_name: string;
-  actor_type: string | null;
-  actor_description: string | null;
-  actor_website: string | null;
-  country: string | null;
-  org_number: string | null;
-  trade_names: string[];
-  street_address: string | null;
-  city: string | null;
-  region: string | null;
-  source_step: string | null;
-  source_session_id: string | null;
-  source_urls: string[] | null;
-  profile_completeness: number | null;
-  matched_main_db_actor_id: string | null;
-  match_timestamp: string | null;
-  analysis_data: Record<string, unknown> | null;
-  search_data: Record<string, unknown> | null;
-  status: string;
-  notes: string | null;
-  tags: string[] | null;
-  suggested_at: string | null;
-  created_at: string;
-}
-
 interface DbActor {
   id: string;
   legal_name: string;

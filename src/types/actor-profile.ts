@@ -38,7 +38,7 @@ export interface ActorClassification {
   levelNormalized: 'top_secret' | 'secret' | 'confidential' | 'restricted' | 'industrial_security' | 'unclassified' | 'unknown';
   levelNationalTerm?: string;
   issuingAuthority?: string;
-  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence?: 'high' | 'medium' | 'low';
   evidence?: string;
   validFrom?: string;
   validTo?: string;
