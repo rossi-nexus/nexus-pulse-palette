@@ -8,6 +8,10 @@ export interface ExactMatch {
   /** Main DB legal name */
   db_actor_name: string;
   verification_status: "unverified" | "verified" | "admin_verified";
+  /** Verification lifecycle (Phase 6.5.3a). Optional for backward compatibility
+   * with cached locked outputs from before the migration. */
+  verified_at?: string | null;
+  decays_at?: string | null;
   /** ISO timestamp */
   last_updated: string;
   /** data_completeness fields populated for the matched DB actor */
