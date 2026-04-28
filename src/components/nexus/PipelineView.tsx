@@ -8,6 +8,7 @@ import InterpretationStep from "./InterpretationStep";
 import SearchStep from "./SearchStep";
 import AnalysisStep from "./AnalysisStep";
 import DatabaseCheckStep from "./DatabaseCheckStep";
+import ProgrammeContextBanner from "./ProgrammeContextBanner";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useStepA1 } from "@/hooks/useStepA1";
@@ -28,18 +29,27 @@ const STEP_NAMES: Record<number, string> = {
 };
 
 const PipelineView = () => {
-  const { sessionId, refreshSessions } = useSessionContext();
+  const { sessionId, sessions, refreshSessions } = useSessionContext();
+  const programmeId = sessions.find((s) => s.id === sessionId)?.programme_id ?? null;
   // Re-mount all step hooks when sessionId changes by keying the inner content.
   // (Hooks already have useEffect on sessionId, but keying guarantees a clean reset of local UI state.)
-  return <PipelineInner key={sessionId ?? "no-session"} sessionId={sessionId} refreshSessions={refreshSessions} />;
+  return (
+    <PipelineInner
+      key={sessionId ?? "no-session"}
+      sessionId={sessionId}
+      programmeId={programmeId}
+      refreshSessions={refreshSessions}
+    />
+  );
 };
 
 interface PipelineInnerProps {
   sessionId: string | null;
+  programmeId: string | null;
   refreshSessions: () => Promise<void>;
 }
 
-const PipelineInner = ({ sessionId, refreshSessions }: PipelineInnerProps) => {
+const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInnerProps) => {
   const stepA1 = useStepA1({ sessionId });
   const stepA2 = useInterpretation({ sessionId });
   const stepA3 = useSearch({ sessionId });
@@ -192,6 +202,7 @@ const PipelineInner = ({ sessionId, refreshSessions }: PipelineInnerProps) => {
           <main className="h-full flex flex-col min-w-0">
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-4xl mx-auto px-8 py-8 space-y-4">
+                <ProgrammeContextBanner sessionId={sessionId} programmeId={programmeId} />
                 <StepContainer
                   stepNumber={1}
                   title="Define Your Need"

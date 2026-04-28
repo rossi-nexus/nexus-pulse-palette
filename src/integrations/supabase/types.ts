@@ -645,6 +645,102 @@ export type Database = {
           },
         ]
       }
+      programme_members: {
+        Row: {
+          invited_by: string | null
+          joined_at: string
+          programme_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          invited_by?: string | null
+          joined_at?: string
+          programme_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          invited_by?: string | null
+          joined_at?: string
+          programme_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programme_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programme_members_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programme_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      programmes: {
+        Row: {
+          client_org: string | null
+          created_at: string
+          deliverables_summary: string | null
+          description: string | null
+          ended_at: string | null
+          id: string
+          name: string
+          owner_user_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_org?: string | null
+          created_at?: string
+          deliverables_summary?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          name: string
+          owner_user_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_org?: string | null
+          created_at?: string
+          deliverables_summary?: string | null
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          name?: string
+          owner_user_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programmes_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_analytics: {
         Row: {
           actors_found: number | null
@@ -720,7 +816,7 @@ export type Database = {
           created_at: string
           id: string
           name: string | null
-          project_id: string | null
+          programme_id: string | null
           status: string
           updated_at: string
           user_id: string
@@ -730,7 +826,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string | null
-          project_id?: string | null
+          programme_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -740,12 +836,19 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string | null
-          project_id?: string | null
+          programme_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "search_sessions_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "search_sessions_user_id_fkey"
             columns: ["user_id"]

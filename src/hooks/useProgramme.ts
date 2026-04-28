@@ -1,0 +1,163 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import type {
+  Programme,
+  ProgrammeMemberWithUser,
+  ProgrammeRole,
+  ProgrammeListItem,
+} from "@/types/programme";
+
+interface ProgrammeSession {
+  id: string;
+  name: string | null;
+  user_id: string;
+  updated_at: string;
+  status: string;
+}
+
+interface UseProgrammeResult {
+  programme: Programme | null;
+  members: ProgrammeMemberWithUser[];
+  sessions: ProgrammeSession[];
+  currentUserRole: ProgrammeRole | null;
+  isOwner: boolean;
+  loading: boolean;
+  notFound: boolean;
+  refresh: () => Promise<void>;
+}
+
+export function useProgramme(programmeId: string | undefined): UseProgrammeResult {
+  const { user } = useAuth();
+  const [programme, setProgramme] = useState<Programme | null>(null);
+  const [members, setMembers] = useState<ProgrammeMemberWithUser[]>([]);
+  const [sessions, setSessions] = useState<ProgrammeSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!programmeId || !user) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setNotFound(false);
+
+    const { data: prog } = await supabase
+      .from("programmes")
+      .select("*")
+      .eq("id", programmeId)
+      .maybeSingle();
+
+    if (!prog) {
+      setProgramme(null);
+      setMembers([]);
+      setSessions([]);
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    setProgramme(prog as Programme);
+
+    const { data: memberRows } = await supabase
+      .from("programme_members")
+      .select("*")
+      .eq("programme_id", programmeId);
+
+    const memberList: ProgrammeMemberWithUser[] = (memberRows ?? []) as ProgrammeMemberWithUser[];
+
+    if (memberList.length > 0) {
+      const userIds = memberList.map((m) => m.user_id);
+      const { data: userRows } = await supabase
+        .from("users")
+        .select("id, email, name")
+        .in("id", userIds);
+      const userMap = new Map<string, { email: string; name: string }>();
+      for (const u of userRows ?? []) userMap.set(u.id, { email: u.email, name: u.name });
+      for (const m of memberList) {
+        const u = userMap.get(m.user_id);
+        m.user_email = u?.email ?? null;
+        m.user_name = u?.name ?? null;
+      }
+    }
+    setMembers(memberList);
+
+    const { data: sessRows } = await supabase
+      .from("search_sessions")
+      .select("id, name, user_id, updated_at, status")
+      .eq("programme_id", programmeId)
+      .order("updated_at", { ascending: false });
+    setSessions((sessRows ?? []) as ProgrammeSession[]);
+
+    setLoading(false);
+  }, [programmeId, user]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const currentUserRole: ProgrammeRole | null =
+    (members.find((m) => m.user_id === user?.id)?.role as ProgrammeRole | undefined) ?? null;
+
+  return {
+    programme,
+    members,
+    sessions,
+    currentUserRole,
+    isOwner: currentUserRole === "owner",
+    loading,
+    notFound,
+    refresh: load,
+  };
+}
+
+export function useProgrammeList() {
+  const { user } = useAuth();
+  const [programmes, setProgrammes] = useState<ProgrammeListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!user) {
+      setProgrammes([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data: memberRows } = await supabase
+      .from("programme_members")
+      .select("programme_id, role")
+      .eq("user_id", user.id);
+
+    const ids = (memberRows ?? []).map((r) => r.programme_id);
+    if (ids.length === 0) {
+      setProgrammes([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data: progRows } = await supabase
+      .from("programmes")
+      .select("id, name, status")
+      .in("id", ids)
+      .order("updated_at", { ascending: false });
+
+    const roleMap = new Map<string, string>();
+    for (const r of memberRows ?? []) roleMap.set(r.programme_id, r.role);
+
+    const list: ProgrammeListItem[] = (progRows ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      status: p.status as ProgrammeListItem["status"],
+      role: (roleMap.get(p.id) ?? "viewer") as ProgrammeListItem["role"],
+    }));
+    setProgrammes(list);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { programmes, loading, refresh: load };
+}
