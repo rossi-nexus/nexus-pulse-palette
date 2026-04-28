@@ -328,7 +328,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                   <AnalysisStep
                     hook={stepA4}
                     interpretation={lockedA2Output?.interpretation ?? null}
-                    searchHook={stepA3}
+                    lockedA3Output={lockedA3Output}
                     step3Locked={isStep3Locked}
                     onUnlock={() => handleUnlockWithCascade(4)}
                     downstreamStepNames={downstreamNamesForStep[4]}
@@ -340,8 +340,8 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                 ) : (
                   <DatabaseCheckStep
                     hook={stepA5}
-                    analysisHook={stepA4}
-                    searchHook={stepA3}
+                    lockedA3Output={lockedA3Output}
+                    lockedA4Output={lockedA4Output}
                     step4Locked={isStep4Locked}
                     onUnlock={() => handleUnlockWithCascade(5)}
                     downstreamStepNames={downstreamNamesForStep[5]}
