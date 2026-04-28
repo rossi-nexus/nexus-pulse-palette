@@ -20,36 +20,48 @@ export type Database = {
           actor_ontology_tag_id: string
           attribute_type: string
           created_at: string
+          decays_at: string | null
           evidence: string | null
           id: string
           unit: string | null
           value_max: number | null
           value_min: number | null
           value_text: string
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
         }
         Insert: {
           actor_id: string
           actor_ontology_tag_id: string
           attribute_type: string
           created_at?: string
+          decays_at?: string | null
           evidence?: string | null
           id?: string
           unit?: string | null
           value_max?: number | null
           value_min?: number | null
           value_text: string
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Update: {
           actor_id?: string
           actor_ontology_tag_id?: string
           attribute_type?: string
           created_at?: string
+          decays_at?: string | null
           evidence?: string | null
           id?: string
           unit?: string | null
           value_max?: number | null
           value_min?: number | null
           value_text?: string
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Relationships: [
           {
@@ -66,6 +78,13 @@ export type Database = {
             referencedRelation: "actor_ontology_tags"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "actor_capacity_attributes_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       actor_certifications: {
@@ -74,6 +93,7 @@ export type Database = {
           classification_system: string
           confidence: string | null
           created_at: string
+          decays_at: string | null
           evidence: string | null
           id: string
           issuing_authority: string | null
@@ -81,12 +101,16 @@ export type Database = {
           level_normalized: string
           valid_from: string | null
           valid_to: string | null
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
         }
         Insert: {
           actor_id: string
           classification_system: string
           confidence?: string | null
           created_at?: string
+          decays_at?: string | null
           evidence?: string | null
           id?: string
           issuing_authority?: string | null
@@ -94,12 +118,16 @@ export type Database = {
           level_normalized: string
           valid_from?: string | null
           valid_to?: string | null
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Update: {
           actor_id?: string
           classification_system?: string
           confidence?: string | null
           created_at?: string
+          decays_at?: string | null
           evidence?: string | null
           id?: string
           issuing_authority?: string | null
@@ -107,13 +135,23 @@ export type Database = {
           level_normalized?: string
           valid_from?: string | null
           valid_to?: string | null
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "actor_classifications_actor_id_fkey"
+            foreignKeyName: "actor_certifications_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_certifications_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -121,30 +159,42 @@ export type Database = {
       actor_contacts: {
         Row: {
           actor_id: string
+          decays_at: string | null
           email: string | null
           id: string
           linkedin: string | null
           name: string
           phone: string | null
           title: string | null
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
         }
         Insert: {
           actor_id: string
+          decays_at?: string | null
           email?: string | null
           id?: string
           linkedin?: string | null
           name: string
           phone?: string | null
           title?: string | null
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Update: {
           actor_id?: string
+          decays_at?: string | null
           email?: string | null
           id?: string
           linkedin?: string | null
           name?: string
           phone?: string | null
           title?: string | null
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Relationships: [
           {
@@ -152,6 +202,13 @@ export type Database = {
             columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_contacts_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -163,10 +220,14 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_segment: string | null
+          decays_at: string | null
           description: string | null
           domain: string | null
           id: string
           is_reference: boolean
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
           year: number | null
         }
         Insert: {
@@ -175,10 +236,14 @@ export type Database = {
           created_at?: string
           customer_name: string
           customer_segment?: string | null
+          decays_at?: string | null
           description?: string | null
           domain?: string | null
           id?: string
           is_reference?: boolean
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
           year?: number | null
         }
         Update: {
@@ -187,10 +252,14 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_segment?: string | null
+          decays_at?: string | null
           description?: string | null
           domain?: string | null
           id?: string
           is_reference?: boolean
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
           year?: number | null
         }
         Relationships: [
@@ -201,6 +270,13 @@ export type Database = {
             referencedRelation: "actors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "actor_customer_history_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       actor_descriptions: {
@@ -208,25 +284,37 @@ export type Database = {
           actor_id: string
           content: string
           created_at: string
+          decays_at: string | null
           id: string
           source: string
           type: string
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
         }
         Insert: {
           actor_id: string
           content: string
           created_at?: string
+          decays_at?: string | null
           id?: string
           source: string
           type: string
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Update: {
           actor_id?: string
           content?: string
           created_at?: string
+          decays_at?: string | null
           id?: string
           source?: string
           type?: string
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Relationships: [
           {
@@ -234,6 +322,13 @@ export type Database = {
             columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_descriptions_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -324,6 +419,7 @@ export type Database = {
           actor_id: string
           certifying_body: string | null
           created_at: string
+          decays_at: string | null
           evidence: string | null
           id: string
           scope: string | null
@@ -331,11 +427,15 @@ export type Database = {
           standard_number: string | null
           valid_from: string | null
           valid_to: string | null
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
         }
         Insert: {
           actor_id: string
           certifying_body?: string | null
           created_at?: string
+          decays_at?: string | null
           evidence?: string | null
           id?: string
           scope?: string | null
@@ -343,11 +443,15 @@ export type Database = {
           standard_number?: string | null
           valid_from?: string | null
           valid_to?: string | null
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Update: {
           actor_id?: string
           certifying_body?: string | null
           created_at?: string
+          decays_at?: string | null
           evidence?: string | null
           id?: string
           scope?: string | null
@@ -355,6 +459,9 @@ export type Database = {
           standard_number?: string | null
           valid_from?: string | null
           valid_to?: string | null
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
         }
         Relationships: [
           {
@@ -362,6 +469,13 @@ export type Database = {
             columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_standards_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -431,6 +545,7 @@ export type Database = {
           country: string | null
           created_at: string
           data_completeness: string[] | null
+          decays_at: string | null
           id: string
           legal_name: string
           org_number: string | null
@@ -440,6 +555,9 @@ export type Database = {
           trade_names: string[] | null
           updated_at: string
           verification_status: string
+          verified_at: string | null
+          verifier_confidence: string | null
+          verifier_id: string | null
           websites: string[] | null
         }
         Insert: {
@@ -448,6 +566,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           data_completeness?: string[] | null
+          decays_at?: string | null
           id?: string
           legal_name: string
           org_number?: string | null
@@ -457,6 +576,9 @@ export type Database = {
           trade_names?: string[] | null
           updated_at?: string
           verification_status?: string
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
           websites?: string[] | null
         }
         Update: {
@@ -465,6 +587,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           data_completeness?: string[] | null
+          decays_at?: string | null
           id?: string
           legal_name?: string
           org_number?: string | null
@@ -474,9 +597,20 @@ export type Database = {
           trade_names?: string[] | null
           updated_at?: string
           verification_status?: string
+          verified_at?: string | null
+          verifier_confidence?: string | null
+          verifier_id?: string | null
           websites?: string[] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "actors_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       api_connectors: {
         Row: {
@@ -1142,6 +1276,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_check_decay: {
+        Args: { _within?: string }
+        Returns: {
+          actor_id: string
+          actor_name: string
+          decays_at: string
+          state: string
+          verified_at: string
+        }[]
+      }
       fn_suggest_actor: {
         Args: { p_personal_actor_id: string }
         Returns: string
