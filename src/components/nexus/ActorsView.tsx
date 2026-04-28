@@ -483,6 +483,11 @@ const ActorsView = () => {
                   key={a.id}
                   actor={a}
                   session={a.source_session_id ? sessionMap.get(a.source_session_id) : undefined}
+                  matchedVerification={
+                    a.matched_main_db_actor_id
+                      ? matchedVerification.get(a.matched_main_db_actor_id)
+                      : undefined
+                  }
                   onClick={() => navigate(`/actors/${a.id}`)}
                   onSuggest={() => openSuggest(a)}
                   onDelete={() => openDelete(a)}
@@ -522,6 +527,11 @@ const ActorsView = () => {
                 key={a.id}
                 actor={a}
                 suggester={usersMap.get(a.user_id)}
+                matchedVerification={
+                  a.matched_main_db_actor_id
+                    ? matchedVerification.get(a.matched_main_db_actor_id)
+                    : undefined
+                }
                 onClick={() => navigate(`/actors/${a.id}`)}
               />
             ))}
