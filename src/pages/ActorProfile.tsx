@@ -959,6 +959,28 @@ const ActorProfile = () => {
               </TooltipProvider>
             )}
           </div>
+          {dbActor?.verified_at && (
+            <p className="text-xs text-foreground-muted mt-2">
+              Verified
+              {dbActor.verifier_id ? " by consultant" : ""}
+              {" on "}
+              {new Date(dbActor.verified_at).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+              {dbActor.decays_at && (
+                <>
+                  {" · decays "}
+                  {new Date(dbActor.decays_at).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </>
+              )}
+            </p>
+          )}
           {website && (
             <a
               href={website}
