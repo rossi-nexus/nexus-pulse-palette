@@ -1367,6 +1367,13 @@ export type Database = {
         Args: { _key: string; _uid: string; _value?: string }
         Returns: boolean
       }
+      fn_verify_phase49b: {
+        Args: never
+        Returns: {
+          label: string
+          value: string
+        }[]
+      }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
