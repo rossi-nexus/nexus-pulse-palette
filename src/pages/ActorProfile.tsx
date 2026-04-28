@@ -49,27 +49,11 @@ import {
 import type { EnrichmentAcceptedItem } from "@/types/enrichment";
 import type { SectionKey } from "@/config/enrichmentMethods";
 import type { PersonalActor } from "@/types/personal-actor";
+import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
-
-interface DbActor {
-  id: string;
-  legal_name: string;
-  trade_names: string[] | null;
-  org_number: string | null;
-  country: string | null;
-  region: string | null;
-  city: string | null;
-  street_address: string | null;
-  websites: string[] | null;
-  verification_status: string;
-  source: string;
-  data_completeness: string[] | null;
-  created_at: string;
-  updated_at: string;
-}
 
 interface OntologyTagRow {
   id: string;
