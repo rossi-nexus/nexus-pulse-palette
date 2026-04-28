@@ -24,22 +24,10 @@ import {
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import type { PersonalActor } from "@/types/personal-actor";
+import type { DbActor } from "@/types/db-actor";
 import { cn } from "@/lib/utils";
 
 type TabKey = "collection" | "database" | "queue";
-
-interface DbActor {
-  id: string;
-  legal_name: string;
-  org_number: string | null;
-  country: string | null;
-  websites: string[] | null;
-  verification_status: string;
-  data_completeness: string[] | null;
-  source: string;
-  created_at: string;
-  updated_at: string;
-}
 
 interface SessionInfo {
   id: string;
