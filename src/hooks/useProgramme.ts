@@ -98,7 +98,7 @@ export function useProgramme(programmeId: string | undefined): UseProgrammeResul
   }, [load]);
 
   const currentUserRole: ProgrammeRole | null =
-    members.find((m) => m.user_id === user?.id)?.role ?? null;
+    (members.find((m) => m.user_id === user?.id)?.role as ProgrammeRole | undefined) ?? null;
 
   return {
     programme,
