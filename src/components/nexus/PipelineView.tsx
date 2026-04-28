@@ -19,6 +19,9 @@ import { useDatabaseCheck } from "@/hooks/useDatabaseCheck";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Interpretation, ClarificationPoint } from "@/types/interpretation";
+import type { LockedA3Output, LockedA4Output } from "@/types/pipeline";
+import type { RoleSearchResult } from "@/hooks/useSearch";
+import type { RoleAnalysisProgress } from "@/hooks/useAnalysis";
 
 const STEP_NAMES: Record<number, string> = {
   1: "Define Your Need",
@@ -61,6 +64,8 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
     interpretation: Interpretation | null;
     clarificationPoints: ClarificationPoint[];
   } | null>(null);
+  const [lockedA3Output, setLockedA3Output] = useState<LockedA3Output | null>(null);
+  const [lockedA4Output, setLockedA4Output] = useState<LockedA4Output | null>(null);
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
 
