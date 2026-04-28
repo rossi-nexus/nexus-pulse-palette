@@ -1,6 +1,7 @@
 import { Check, Bookmark, Undo2, ExternalLink, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import { cn } from "@/lib/utils";
 import type { ActorCardData } from "@/hooks/useSearch";
 
@@ -46,6 +47,13 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
                 <ArrowRightLeft className="w-2.5 h-2.5" />
                 Multi-role
               </Badge>
+            )}
+            {actor.matched_verified_at && (
+              <VerifiedStatusBadge
+                size="sm"
+                verifiedAt={actor.matched_verified_at}
+                decaysAt={actor.matched_decays_at}
+              />
             )}
           </div>
           {(actor.location || actor.country) && (
