@@ -30,6 +30,14 @@ export interface ActorCardData {
   triage_decision?: "included" | "saved_for_later";
   cross_role: boolean;
   cross_role_ids?: string[];
+  /**
+   * Verification lifecycle pulled from a matched DB actor. Will be populated
+   * once pipeline matching against verified records ships (6.5.5b). Today
+   * always undefined, so VerifiedStatusBadge in ActorCard never renders —
+   * surface is wired so 6.5.5b only needs to fill the data.
+   */
+  matched_verified_at?: string | null;
+  matched_decays_at?: string | null;
 }
 
 export interface RoleSearchResult {
