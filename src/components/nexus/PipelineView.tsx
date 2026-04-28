@@ -110,7 +110,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
         .from("session_step_states")
         .select("step,status,locked_output")
         .eq("session_id", sessionId)
-        .in("step", ["A2"])
+        .in("step", ["A2", "A3", "A4"])
         .eq("status", "locked");
       if (cancelled || !data) return;
       const a2 = data.find((r) => r.step === "A2");
@@ -122,6 +122,16 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
             clarificationPoints: out.clarificationPoints || [],
           });
         }
+      }
+      const a3 = data.find((r) => r.step === "A3");
+      if (a3?.locked_output) {
+        const out = a3.locked_output as { roleResults?: RoleSearchResult[] };
+        if (out.roleResults) setLockedA3Output({ roleResults: out.roleResults });
+      }
+      const a4 = data.find((r) => r.step === "A4");
+      if (a4?.locked_output) {
+        const out = a4.locked_output as { roleProgress?: RoleAnalysisProgress[] };
+        if (out.roleProgress) setLockedA4Output({ roleProgress: out.roleProgress });
       }
     })();
     return () => { cancelled = true; };
@@ -141,8 +151,25 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
   }, [stepA2.status, stepA2.interpretation, stepA2.clarificationPoints]);
 
   useEffect(() => {
+    if (prevA3Status.current !== "locked" && stepA3.status === "locked") {
+      setLockedA3Output({ roleResults: stepA3.orderedRoles });
+    }
+    if (prevA3Status.current === "locked" && stepA3.status !== "locked") {
+      setLockedA3Output(null);
+    }
     prevA3Status.current = stepA3.status;
-  }, [stepA3.status]);
+  }, [stepA3.status, stepA3.orderedRoles]);
+
+  const prevA4Status = useRef(stepA4.status);
+  useEffect(() => {
+    if (prevA4Status.current !== "locked" && stepA4.status === "locked") {
+      setLockedA4Output({ roleProgress: stepA4.orderedRoles });
+    }
+    if (prevA4Status.current === "locked" && stepA4.status !== "locked") {
+      setLockedA4Output(null);
+    }
+    prevA4Status.current = stepA4.status;
+  }, [stepA4.status, stepA4.orderedRoles]);
 
   const handleUnlockWithCascade = useCallback(
     async (stepNumber: number) => {
