@@ -8,6 +8,7 @@ export interface SessionListItem {
   status: string;
   created_at: string;
   updated_at: string;
+  programme_id: string | null;
 }
 
 /**
@@ -29,6 +30,7 @@ interface SessionContextValue {
   refreshSessions: () => Promise<void>;
   createSession: () => Promise<string | null>;
   renameSession: (id: string, name: string) => Promise<void>;
+  assignSessionToProgramme: (id: string, programmeId: string | null) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
