@@ -1,5 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
+import { Routes, Route } from "react-router-dom";
 import AppLayout from "@/components/nexus/AppLayout";
+import ConsultantLayout from "@/pages/ConsultantLayout";
 import LoginPage from "@/components/nexus/LoginPage";
 
 const Index = () => {
@@ -17,7 +19,12 @@ const Index = () => {
   // To restore: uncomment the line below.
   // if (!user) return <LoginPage />;
 
-  return <AppLayout />;
+  return (
+    <Routes>
+      <Route path="/consultant/*" element={<ConsultantLayout />} />
+      <Route path="/*" element={<AppLayout />} />
+    </Routes>
+  );
 };
 
 export default Index;
