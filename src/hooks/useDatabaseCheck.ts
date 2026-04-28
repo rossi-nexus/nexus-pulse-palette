@@ -301,7 +301,6 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
             source_urls: sources,
             matched_main_db_actor_id: match?.db_actor_id || null,
             match_timestamp: match ? new Date().toISOString() : null,
-            sharing_level: "private",
             status: "personal",
           });
         }
@@ -330,7 +329,6 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
             analysis_data: {},
             role_names: [s.role_name],
             source_urls: sources,
-            sharing_level: "private",
             status: "personal",
           });
         }

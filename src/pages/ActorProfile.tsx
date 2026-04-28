@@ -512,7 +512,7 @@ const ActorProfile = () => {
                 "id, ontology_entry_id, source, ontology_entries(id, raw_name, category_id, ontology_categories(type, normalized_name))",
               )
               .eq("actor_id", id),
-            supabase.from("actor_classifications").select("*").eq("actor_id", id),
+            supabase.from("actor_certifications").select("*").eq("actor_id", id),
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
