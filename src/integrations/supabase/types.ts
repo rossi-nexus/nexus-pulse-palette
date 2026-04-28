@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      _verify49d_results: {
+        Row: {
+          label: string | null
+          ord: number
+          section: string | null
+          value: string | null
+        }
+        Insert: {
+          label?: string | null
+          ord?: number
+          section?: string | null
+          value?: string | null
+        }
+        Update: {
+          label?: string | null
+          ord?: number
+          section?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       actor_capacity_attributes: {
         Row: {
           actor_id: string
@@ -1366,55 +1387,6 @@ export type Database = {
       fn_user_has_attr: {
         Args: { _key: string; _uid: string; _value?: string }
         Returns: boolean
-      }
-      fn_verify_phase49c_delete: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase49c_programme_delete: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase49c_update: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase49d_actor_delete: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase49d_programme_create: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase49d_programme_delete: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase49d_update: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
       }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
