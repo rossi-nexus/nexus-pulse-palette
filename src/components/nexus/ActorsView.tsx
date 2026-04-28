@@ -23,9 +23,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { cn } from "@/lib/utils";
+
+/** Subset of DbActor verification fields needed to render the badge. */
+type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
 
 type TabKey = "collection" | "database" | "queue";
 
@@ -83,6 +87,8 @@ const ActorsView = () => {
   const [queue, setQueue] = useState<PersonalActor[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, UserInfo>>(new Map());
+  // Verification lifecycle data for matched DB actors (used by personal/queue cards)
+  const [matchedVerification, setMatchedVerification] = useState<Map<string, DbVerification>>(new Map());
 
   // Action dialogs (personal actors)
   const [actionTarget, setActionTarget] = useState<PersonalActor | null>(null);
@@ -136,13 +142,15 @@ const ActorsView = () => {
               .eq("user_id", user.id),
           ]);
           if (cancelled) return;
-          setPersonal((actors ?? []) as unknown as PersonalActor[]);
+          const list = (actors ?? []) as unknown as PersonalActor[];
+          setPersonal(list);
           setSessions((sess ?? []) as SessionInfo[]);
+          await loadMatchedVerification(list, cancelled);
         } else if (tab === "database") {
           const { data } = await supabase
             .from("actors")
             .select(
-              "id, legal_name, org_number, country, websites, verification_status, data_completeness, source, created_at, updated_at",
+              "id, legal_name, org_number, country, websites, verification_status, verified_at, decays_at, data_completeness, source, created_at, updated_at",
             )
             .order("updated_at", { ascending: false });
           if (cancelled) return;
@@ -156,6 +164,7 @@ const ActorsView = () => {
           if (cancelled) return;
           const list = (data ?? []) as unknown as PersonalActor[];
           setQueue(list);
+          await loadMatchedVerification(list, cancelled);
           // Fetch user info for suggesters
           const ids = Array.from(new Set(list.map((a) => a.user_id)));
           if (ids.length > 0) {
