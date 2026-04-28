@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public._verify49d_results;

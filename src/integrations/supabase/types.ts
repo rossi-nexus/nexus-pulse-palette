@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _verify49d_results: {
-        Row: {
-          label: string | null
-          ord: number
-          section: string | null
-          value: string | null
-        }
-        Insert: {
-          label?: string | null
-          ord?: number
-          section?: string | null
-          value?: string | null
-        }
-        Update: {
-          label?: string | null
-          ord?: number
-          section?: string | null
-          value?: string | null
-        }
-        Relationships: []
-      }
       actor_capacity_attributes: {
         Row: {
           actor_id: string
