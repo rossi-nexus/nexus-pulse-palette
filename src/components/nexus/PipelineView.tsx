@@ -180,6 +180,8 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
       if (stepNumber <= 4) downstreamResets.push(stepA5.reset);
 
       if (stepNumber <= 2) setLockedA2Output(null);
+      if (stepNumber <= 3) setLockedA3Output(null);
+      if (stepNumber <= 4) setLockedA4Output(null);
 
       await Promise.all(downstreamResets.map((fn) => fn()));
 
