@@ -68,7 +68,7 @@ export type Database = {
           },
         ]
       }
-      actor_classifications: {
+      actor_certifications: {
         Row: {
           actor_id: string
           classification_system: string
@@ -847,6 +847,48 @@ export type Database = {
           },
         ]
       }
+      user_attributes: {
+        Row: {
+          expires_at: string | null
+          granted_at: string
+          granted_by: string | null
+          key: string
+          user_id: string
+          value: string | null
+        }
+        Insert: {
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          key: string
+          user_id: string
+          value?: string | null
+        }
+        Update: {
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          key?: string
+          user_id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_attributes_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_attributes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_personal_actors: {
         Row: {
           actor_description: string | null
@@ -867,7 +909,6 @@ export type Database = {
           region: string | null
           role_names: string[] | null
           search_data: Json | null
-          sharing_level: string | null
           source_session_id: string | null
           source_step: string | null
           source_urls: string[] | null
@@ -897,7 +938,6 @@ export type Database = {
           region?: string | null
           role_names?: string[] | null
           search_data?: Json | null
-          sharing_level?: string | null
           source_session_id?: string | null
           source_step?: string | null
           source_urls?: string[] | null
@@ -927,7 +967,6 @@ export type Database = {
           region?: string | null
           role_names?: string[] | null
           search_data?: Json | null
-          sharing_level?: string | null
           source_session_id?: string | null
           source_step?: string | null
           source_urls?: string[] | null
@@ -968,7 +1007,6 @@ export type Database = {
           created_at: string
           email: string
           id: string
-          is_anonymous: boolean
           name: string
           organization_name: string | null
           role: string
@@ -979,7 +1017,6 @@ export type Database = {
           created_at?: string
           email: string
           id: string
-          is_anonymous?: boolean
           name: string
           organization_name?: string | null
           role?: string
@@ -990,7 +1027,6 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
-          is_anonymous?: boolean
           name?: string
           organization_name?: string | null
           role?: string
@@ -1006,6 +1042,10 @@ export type Database = {
       fn_suggest_actor: {
         Args: { p_personal_actor_id: string }
         Returns: string
+      }
+      fn_user_has_attr: {
+        Args: { _key: string; _uid: string; _value?: string }
+        Returns: boolean
       }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
