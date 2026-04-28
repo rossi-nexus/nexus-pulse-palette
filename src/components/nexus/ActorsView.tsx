@@ -643,6 +643,7 @@ const ActionButton = ({ children }: { children: React.ReactNode }) => (
 const PersonalActorCard = ({
   actor,
   session,
+  matchedVerification,
   onClick,
   onSuggest,
   onDelete,
@@ -650,6 +651,7 @@ const PersonalActorCard = ({
 }: {
   actor: PersonalActor;
   session?: SessionInfo;
+  matchedVerification?: DbVerification;
   onClick: () => void;
   onSuggest: () => void;
   onDelete: () => void;
