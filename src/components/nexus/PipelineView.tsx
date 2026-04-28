@@ -202,6 +202,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
           <main className="h-full flex flex-col min-w-0">
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-4xl mx-auto px-8 py-8 space-y-4">
+                <ProgrammeContextBanner sessionId={sessionId} programmeId={programmeId} />
                 <StepContainer
                   stepNumber={1}
                   title="Define Your Need"
