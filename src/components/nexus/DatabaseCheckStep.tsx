@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
 import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
+import VerifiedStatusBadge from "./VerifiedStatusBadge";
 import { buildCheckInputs, type useDatabaseCheck } from "@/hooks/useDatabaseCheck";
 import type { useAnalysis } from "@/hooks/useAnalysis";
 import type { useSearch, RoleSearchResult } from "@/hooks/useSearch";
@@ -151,7 +152,12 @@ const DatabaseCheckStep = ({
                         <CheckCircle2 className="w-4 h-4 text-accent-green shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <span className="text-body-sm font-medium text-foreground">{m.db_actor_name}</span>
-                          <span className="ml-2 text-mono-xs font-mono uppercase text-accent-green">Verified</span>
+                          <VerifiedStatusBadge
+                            size="sm"
+                            className="ml-2"
+                            verifiedAt={m.verified_at}
+                            decaysAt={m.decays_at}
+                          />
                         </div>
                       </li>
                     ))}
@@ -316,9 +322,11 @@ const DatabaseCheckStep = ({
                             <span className="text-body-sm font-medium text-foreground truncate">
                               {m.db_actor_name}
                             </span>
-                            <span className="text-mono-xs font-mono uppercase tracking-wider text-accent-green">
-                              Verified
-                            </span>
+                            <VerifiedStatusBadge
+                              size="sm"
+                              verifiedAt={m.verified_at}
+                              decaysAt={m.decays_at}
+                            />
                           </div>
                           <p className="text-caption text-foreground-muted">
                             In database · Last updated{" "}

@@ -23,9 +23,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { cn } from "@/lib/utils";
+
+/** Subset of DbActor verification fields needed to render the badge. */
+type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
 
 type TabKey = "collection" | "database" | "queue";
 
@@ -83,6 +87,8 @@ const ActorsView = () => {
   const [queue, setQueue] = useState<PersonalActor[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [usersMap, setUsersMap] = useState<Map<string, UserInfo>>(new Map());
+  // Verification lifecycle data for matched DB actors (used by personal/queue cards)
+  const [matchedVerification, setMatchedVerification] = useState<Map<string, DbVerification>>(new Map());
 
   // Action dialogs (personal actors)
   const [actionTarget, setActionTarget] = useState<PersonalActor | null>(null);
@@ -120,6 +126,31 @@ const ActorsView = () => {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+
+    const fetchMatchedVerification = async (list: PersonalActor[]) => {
+      const ids = Array.from(
+        new Set(
+          list
+            .map((a) => a.matched_main_db_actor_id)
+            .filter((x): x is string => !!x),
+        ),
+      );
+      if (ids.length === 0) {
+        if (!cancelled) setMatchedVerification(new Map());
+        return;
+      }
+      const { data } = await supabase
+        .from("actors")
+        .select("id, verified_at, decays_at")
+        .in("id", ids);
+      if (cancelled) return;
+      const m = new Map<string, DbVerification>();
+      (data ?? []).forEach((row) =>
+        m.set(row.id, { verified_at: row.verified_at, decays_at: row.decays_at }),
+      );
+      setMatchedVerification(m);
+    };
+
     (async () => {
       setLoading(true);
       try {
@@ -136,13 +167,15 @@ const ActorsView = () => {
               .eq("user_id", user.id),
           ]);
           if (cancelled) return;
-          setPersonal((actors ?? []) as unknown as PersonalActor[]);
+          const list = (actors ?? []) as unknown as PersonalActor[];
+          setPersonal(list);
           setSessions((sess ?? []) as SessionInfo[]);
+          await fetchMatchedVerification(list);
         } else if (tab === "database") {
           const { data } = await supabase
             .from("actors")
             .select(
-              "id, legal_name, org_number, country, websites, verification_status, data_completeness, source, created_at, updated_at",
+              "id, legal_name, org_number, country, websites, verification_status, verified_at, decays_at, data_completeness, source, created_at, updated_at",
             )
             .order("updated_at", { ascending: false });
           if (cancelled) return;
@@ -156,6 +189,7 @@ const ActorsView = () => {
           if (cancelled) return;
           const list = (data ?? []) as unknown as PersonalActor[];
           setQueue(list);
+          await fetchMatchedVerification(list);
           // Fetch user info for suggesters
           const ids = Array.from(new Set(list.map((a) => a.user_id)));
           if (ids.length > 0) {
@@ -449,6 +483,11 @@ const ActorsView = () => {
                   key={a.id}
                   actor={a}
                   session={a.source_session_id ? sessionMap.get(a.source_session_id) : undefined}
+                  matchedVerification={
+                    a.matched_main_db_actor_id
+                      ? matchedVerification.get(a.matched_main_db_actor_id)
+                      : undefined
+                  }
                   onClick={() => navigate(`/actors/${a.id}`)}
                   onSuggest={() => openSuggest(a)}
                   onDelete={() => openDelete(a)}
@@ -488,6 +527,11 @@ const ActorsView = () => {
                 key={a.id}
                 actor={a}
                 suggester={usersMap.get(a.user_id)}
+                matchedVerification={
+                  a.matched_main_db_actor_id
+                    ? matchedVerification.get(a.matched_main_db_actor_id)
+                    : undefined
+                }
                 onClick={() => navigate(`/actors/${a.id}`)}
               />
             ))}
@@ -599,6 +643,7 @@ const ActionButton = ({ children }: { children: React.ReactNode }) => (
 const PersonalActorCard = ({
   actor,
   session,
+  matchedVerification,
   onClick,
   onSuggest,
   onDelete,
@@ -606,6 +651,7 @@ const PersonalActorCard = ({
 }: {
   actor: PersonalActor;
   session?: SessionInfo;
+  matchedVerification?: DbVerification;
   onClick: () => void;
   onSuggest: () => void;
   onDelete: () => void;
@@ -652,6 +698,13 @@ const PersonalActorCard = ({
                 <TooltipContent>This actor is now part of the main database</TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          )}
+          {actor.matched_main_db_actor_id && matchedVerification && (
+            <VerifiedStatusBadge
+              size="sm"
+              verifiedAt={matchedVerification.verified_at}
+              decaysAt={matchedVerification.decays_at}
+            />
           )}
         </div>
         {actor.country && (
@@ -757,13 +810,6 @@ const CardActionButton = ({
 };
 
 const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => void }) => {
-  const verifiedLabel =
-    actor.verification_status === "admin_verified"
-      ? { label: "Admin Verified", cls: "bg-info/15 text-info border-info/30" }
-      : actor.verification_status === "verified"
-        ? { label: "Verified", cls: "bg-success/15 text-success border-success/30" }
-        : { label: "Unverified", cls: "bg-warning/15 text-warning border-warning/30" };
-
   return (
     <div
       onClick={onClick}
@@ -778,14 +824,11 @@ const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => 
         )}
       </div>
       <div className="flex items-center gap-2 flex-wrap text-xs text-foreground-secondary">
-        <span
-          className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border",
-            verifiedLabel.cls,
-          )}
-        >
-          {verifiedLabel.label}
-        </span>
+        <VerifiedStatusBadge
+          size="sm"
+          verifiedAt={actor.verified_at}
+          decaysAt={actor.decays_at}
+        />
         <span>·</span>
         <span className="text-foreground-muted">
           Last updated: {formatDateShort(actor.updated_at)}
@@ -798,10 +841,12 @@ const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => 
 const QueueActorCard = ({
   actor,
   suggester,
+  matchedVerification,
   onClick,
 }: {
   actor: PersonalActor;
   suggester?: UserInfo;
+  matchedVerification?: DbVerification;
   onClick: () => void;
 }) => {
   const ad = (actor.analysis_data ?? {}) as Record<string, unknown>;
@@ -816,9 +861,18 @@ const QueueActorCard = ({
       className="group relative bg-surface border border-border rounded-lg p-4 cursor-pointer hover:border-border-accent hover:shadow-md transition-all"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="font-semibold text-foreground text-base leading-tight">
-          {actor.actor_name}
-        </h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="font-semibold text-foreground text-base leading-tight">
+            {actor.actor_name}
+          </h3>
+          {actor.matched_main_db_actor_id && matchedVerification && (
+            <VerifiedStatusBadge
+              size="sm"
+              verifiedAt={matchedVerification.verified_at}
+              decaysAt={matchedVerification.decays_at}
+            />
+          )}
+        </div>
         {actor.country && (
           <span className="text-xs text-foreground-muted whitespace-nowrap">{actor.country}</span>
         )}
