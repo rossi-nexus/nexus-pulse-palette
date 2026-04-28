@@ -9,7 +9,7 @@ import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import type { useAnalysis, AnalysisInput, ActorAnalysisStatus } from "@/hooks/useAnalysis";
 import type { Interpretation } from "@/types/interpretation";
-import type { useSearch } from "@/hooks/useSearch";
+import type { LockedA3Output } from "@/types/pipeline";
 import type { ActorAnalysis, MatchedCategory } from "@/types/analyzed-actors";
 
 /** Sum of all matched ontology entries across every category. */
@@ -35,7 +35,8 @@ const sortReferenceLast = (actors: ActorAnalysisStatus[]): ActorAnalysisStatus[]
 interface AnalysisStepProps {
   hook: ReturnType<typeof useAnalysis>;
   interpretation: Interpretation | null;
-  searchHook: ReturnType<typeof useSearch>;
+  /** A3 locked output read from session_step_states by PipelineView (P22). */
+  lockedA3Output: LockedA3Output | null;
   step3Locked: boolean;
   onUnlock: () => void;
   downstreamStepNames: string[];
@@ -195,7 +196,7 @@ const buildDevInput = (): AnalysisInput => {
   return { roles, roleResults, constraints };
 };
 
-const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock, downstreamStepNames }: AnalysisStepProps) => {
+const AnalysisStep = ({ hook, interpretation, lockedA3Output, step3Locked, onUnlock, downstreamStepNames }: AnalysisStepProps) => {
   const {
     status,
     orderedRoles,
@@ -245,7 +246,7 @@ const AnalysisStep = ({ hook, interpretation, searchHook, step3Locked, onUnlock,
     const acceptedRoles = interpretation.roles.filter((r) => r.status !== "rejected");
     startAnalysis({
       roles: acceptedRoles,
-      roleResults: searchHook.orderedRoles,
+      roleResults: lockedA3Output?.roleResults ?? [],
       constraints: interpretation.constraints,
     });
   };

@@ -6,14 +6,16 @@ import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import VerifiedStatusBadge from "./VerifiedStatusBadge";
 import { buildCheckInputs, type useDatabaseCheck } from "@/hooks/useDatabaseCheck";
-import type { useAnalysis } from "@/hooks/useAnalysis";
-import type { useSearch, RoleSearchResult } from "@/hooks/useSearch";
+import type { RoleSearchResult } from "@/hooks/useSearch";
 import type { RoleAnalysisProgress } from "@/hooks/useAnalysis";
+import type { LockedA3Output, LockedA4Output } from "@/types/pipeline";
 
 interface DatabaseCheckStepProps {
   hook: ReturnType<typeof useDatabaseCheck>;
-  analysisHook: ReturnType<typeof useAnalysis>;
-  searchHook: ReturnType<typeof useSearch>;
+  /** A3 locked output read from session_step_states by PipelineView (P22). */
+  lockedA3Output: LockedA3Output | null;
+  /** A4 locked output read from session_step_states by PipelineView (P22). */
+  lockedA4Output: LockedA4Output | null;
   step4Locked: boolean;
   onUnlock: () => void;
   downstreamStepNames: string[];
@@ -82,8 +84,8 @@ const buildDevRoles = (): { analyzed: RoleAnalysisProgress[]; search: RoleSearch
 
 const DatabaseCheckStep = ({
   hook,
-  analysisHook,
-  searchHook,
+  lockedA3Output,
+  lockedA4Output,
   step4Locked,
   onUnlock,
   downstreamStepNames,
@@ -97,16 +99,19 @@ const DatabaseCheckStep = ({
     else onUnlock();
   };
 
+  const analyzedRoles = lockedA4Output?.roleProgress ?? [];
+  const searchRoles = lockedA3Output?.roleResults ?? [];
+
   const totalAnalyzed = useMemo(() => {
     let n = 0;
-    for (const r of analysisHook.orderedRoles || []) {
+    for (const r of analyzedRoles) {
       for (const a of r.actors) if (a.status === "complete" || a.status === "skipped") n++;
     }
     return n;
-  }, [analysisHook.orderedRoles]);
+  }, [analyzedRoles]);
 
   const runFromState = () => {
-    const { analyzed, saved } = buildCheckInputs(analysisHook.orderedRoles, searchHook.orderedRoles);
+    const { analyzed, saved } = buildCheckInputs(analyzedRoles, searchRoles);
     runCheck(analyzed, saved);
   };
 
@@ -117,7 +122,7 @@ const DatabaseCheckStep = ({
   };
 
   const handleSave = () => {
-    saveToPersonalSpace(analysisHook.orderedRoles, searchHook.orderedRoles);
+    saveToPersonalSpace(analyzedRoles, searchRoles);
   };
 
   const showDev =

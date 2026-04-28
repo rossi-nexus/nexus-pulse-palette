@@ -19,6 +19,9 @@ import { useDatabaseCheck } from "@/hooks/useDatabaseCheck";
 import { EXAMPLE_SEARCHES } from "@/constants/exampleSearches";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Interpretation, ClarificationPoint } from "@/types/interpretation";
+import type { LockedA3Output, LockedA4Output } from "@/types/pipeline";
+import type { RoleSearchResult } from "@/hooks/useSearch";
+import type { RoleAnalysisProgress } from "@/hooks/useAnalysis";
 
 const STEP_NAMES: Record<number, string> = {
   1: "Define Your Need",
@@ -61,6 +64,8 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
     interpretation: Interpretation | null;
     clarificationPoints: ClarificationPoint[];
   } | null>(null);
+  const [lockedA3Output, setLockedA3Output] = useState<LockedA3Output | null>(null);
+  const [lockedA4Output, setLockedA4Output] = useState<LockedA4Output | null>(null);
 
   const hasContent = stepA1.contextText.trim() !== "" || stepA1.attachments.length > 0;
 
@@ -105,7 +110,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
         .from("session_step_states")
         .select("step,status,locked_output")
         .eq("session_id", sessionId)
-        .in("step", ["A2"])
+        .in("step", ["A2", "A3", "A4"])
         .eq("status", "locked");
       if (cancelled || !data) return;
       const a2 = data.find((r) => r.step === "A2");
@@ -117,6 +122,16 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
             clarificationPoints: out.clarificationPoints || [],
           });
         }
+      }
+      const a3 = data.find((r) => r.step === "A3");
+      if (a3?.locked_output) {
+        const out = a3.locked_output as { roleResults?: RoleSearchResult[] };
+        if (out.roleResults) setLockedA3Output({ roleResults: out.roleResults });
+      }
+      const a4 = data.find((r) => r.step === "A4");
+      if (a4?.locked_output) {
+        const out = a4.locked_output as { roleProgress?: RoleAnalysisProgress[] };
+        if (out.roleProgress) setLockedA4Output({ roleProgress: out.roleProgress });
       }
     })();
     return () => { cancelled = true; };
@@ -136,8 +151,25 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
   }, [stepA2.status, stepA2.interpretation, stepA2.clarificationPoints]);
 
   useEffect(() => {
+    if (prevA3Status.current !== "locked" && stepA3.status === "locked") {
+      setLockedA3Output({ roleResults: stepA3.orderedRoles });
+    }
+    if (prevA3Status.current === "locked" && stepA3.status !== "locked") {
+      setLockedA3Output(null);
+    }
     prevA3Status.current = stepA3.status;
-  }, [stepA3.status]);
+  }, [stepA3.status, stepA3.orderedRoles]);
+
+  const prevA4Status = useRef(stepA4.status);
+  useEffect(() => {
+    if (prevA4Status.current !== "locked" && stepA4.status === "locked") {
+      setLockedA4Output({ roleProgress: stepA4.orderedRoles });
+    }
+    if (prevA4Status.current === "locked" && stepA4.status !== "locked") {
+      setLockedA4Output(null);
+    }
+    prevA4Status.current = stepA4.status;
+  }, [stepA4.status, stepA4.orderedRoles]);
 
   const handleUnlockWithCascade = useCallback(
     async (stepNumber: number) => {
@@ -148,6 +180,8 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
       if (stepNumber <= 4) downstreamResets.push(stepA5.reset);
 
       if (stepNumber <= 2) setLockedA2Output(null);
+      if (stepNumber <= 3) setLockedA3Output(null);
+      if (stepNumber <= 4) setLockedA4Output(null);
 
       await Promise.all(downstreamResets.map((fn) => fn()));
 
@@ -294,7 +328,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                   <AnalysisStep
                     hook={stepA4}
                     interpretation={lockedA2Output?.interpretation ?? null}
-                    searchHook={stepA3}
+                    lockedA3Output={lockedA3Output}
                     step3Locked={isStep3Locked}
                     onUnlock={() => handleUnlockWithCascade(4)}
                     downstreamStepNames={downstreamNamesForStep[4]}
@@ -306,8 +340,8 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                 ) : (
                   <DatabaseCheckStep
                     hook={stepA5}
-                    analysisHook={stepA4}
-                    searchHook={stepA3}
+                    lockedA3Output={lockedA3Output}
+                    lockedA4Output={lockedA4Output}
                     step4Locked={isStep4Locked}
                     onUnlock={() => handleUnlockWithCascade(5)}
                     downstreamStepNames={downstreamNamesForStep[5]}
