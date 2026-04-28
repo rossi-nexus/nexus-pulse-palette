@@ -37,6 +37,7 @@ const SidebarNav = () => {
     assignSessionToProgramme,
   } = useSessionContext();
   const { programmes, refresh: refreshProgrammes } = useProgrammeList();
+  const { hasAccess: hasConsultantAccess } = useManagedProgrammes();
   const navigate = useNavigate();
 
   const [editingId, setEditingId] = useState<string | null>(null);
