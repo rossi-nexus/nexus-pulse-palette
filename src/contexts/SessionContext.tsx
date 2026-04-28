@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -10,12 +10,22 @@ export interface SessionListItem {
   updated_at: string;
 }
 
+/**
+ * Effective ABAC attribute set: real attributes from `user_attributes` merged
+ * with optional dev-mode URL overrides (`?attr=key:value` or
+ * `?attr=key1:value1,key2:value2`). Override is gated by `import.meta.env.DEV`
+ * and only affects frontend gating decisions — RLS still uses real DB attrs.
+ */
+export type EffectiveAttributes = Record<string, string | null>;
+
 interface SessionContextValue {
   sessionId: string | null;
   setSessionId: (id: string) => void;
   sessions: SessionListItem[];
   loading: boolean;
   isAdmin: boolean;
+  effectiveAttributes: EffectiveAttributes;
+  hasAttr: (key: string, value?: string) => boolean;
   refreshSessions: () => Promise<void>;
   createSession: () => Promise<string | null>;
   renameSession: (id: string, name: string) => Promise<void>;
@@ -23,12 +33,43 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+function parseAttrOverrides(): EffectiveAttributes {
+  if (!import.meta.env.DEV) return {};
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get("attr");
+  if (!raw) return {};
+  const out: EffectiveAttributes = {};
+  for (const pair of raw.split(",")) {
+    const [k, v] = pair.split(":");
+    if (k) out[k.trim()] = v?.trim() ?? null;
+  }
+  return out;
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [sessionId, setSessionIdState] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [dbAttributes, setDbAttributes] = useState<EffectiveAttributes>({});
+
+  const attrOverrides = useMemo(() => parseAttrOverrides(), []);
+
+  const effectiveAttributes = useMemo<EffectiveAttributes>(
+    () => ({ ...dbAttributes, ...attrOverrides }),
+    [dbAttributes, attrOverrides]
+  );
+
+  const hasAttr = useCallback(
+    (key: string, value?: string) => {
+      if (!(key in effectiveAttributes)) return false;
+      if (value === undefined) return true;
+      return effectiveAttributes[key] === value;
+    },
+    [effectiveAttributes]
+  );
 
   const fetchSessions = useCallback(async (uid: string) => {
     const { data } = await supabase
@@ -40,7 +81,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return (data ?? []) as SessionListItem[];
   }, []);
 
-  // Initial load: pick latest session or create one. Also load user role.
+  // Initial load: pick latest session or create one. Also load user role + attributes.
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -55,6 +96,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         .eq("id", user.id)
         .maybeSingle();
       if (!cancelled) setIsAdmin(profile?.role === "admin");
+
+      // Load ABAC attributes
+      const { data: attrs } = await supabase
+        .from("user_attributes")
+        .select("key, value")
+        .eq("user_id", user.id);
+      if (!cancelled) {
+        const map: EffectiveAttributes = {};
+        for (const row of attrs ?? []) map[row.key] = row.value;
+        setDbAttributes(map);
+      }
 
       const list = await fetchSessions(user.id);
       if (cancelled) return;
@@ -116,6 +168,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         sessions,
         loading,
         isAdmin,
+        effectiveAttributes,
+        hasAttr,
         refreshSessions,
         createSession,
         renameSession,

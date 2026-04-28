@@ -13,7 +13,7 @@
  *
  * Field list deliberately matches audit M6 (P27). Extra DB columns that
  * exist on the row but are not consumed by the frontend (merged_actor_id,
- * sharing_level, role_names) are intentionally omitted to keep the
+ * role_names) are intentionally omitted to keep the
  * interface focused on the consumed shape.
  */
 export interface PersonalActor {
