@@ -699,6 +699,13 @@ const PersonalActorCard = ({
               </Tooltip>
             </TooltipProvider>
           )}
+          {actor.matched_main_db_actor_id && matchedVerification && (
+            <VerifiedStatusBadge
+              size="sm"
+              verifiedAt={matchedVerification.verified_at}
+              decaysAt={matchedVerification.decays_at}
+            />
+          )}
         </div>
         {actor.country && (
           <span className="text-xs text-foreground-muted whitespace-nowrap">{actor.country}</span>
@@ -803,13 +810,6 @@ const CardActionButton = ({
 };
 
 const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => void }) => {
-  const verifiedLabel =
-    actor.verification_status === "admin_verified"
-      ? { label: "Admin Verified", cls: "bg-info/15 text-info border-info/30" }
-      : actor.verification_status === "verified"
-        ? { label: "Verified", cls: "bg-success/15 text-success border-success/30" }
-        : { label: "Unverified", cls: "bg-warning/15 text-warning border-warning/30" };
-
   return (
     <div
       onClick={onClick}
@@ -824,14 +824,11 @@ const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => 
         )}
       </div>
       <div className="flex items-center gap-2 flex-wrap text-xs text-foreground-secondary">
-        <span
-          className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border",
-            verifiedLabel.cls,
-          )}
-        >
-          {verifiedLabel.label}
-        </span>
+        <VerifiedStatusBadge
+          size="sm"
+          verifiedAt={actor.verified_at}
+          decaysAt={actor.decays_at}
+        />
         <span>·</span>
         <span className="text-foreground-muted">
           Last updated: {formatDateShort(actor.updated_at)}
@@ -844,10 +841,12 @@ const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => 
 const QueueActorCard = ({
   actor,
   suggester,
+  matchedVerification,
   onClick,
 }: {
   actor: PersonalActor;
   suggester?: UserInfo;
+  matchedVerification?: DbVerification;
   onClick: () => void;
 }) => {
   const ad = (actor.analysis_data ?? {}) as Record<string, unknown>;
@@ -862,9 +861,18 @@ const QueueActorCard = ({
       className="group relative bg-surface border border-border rounded-lg p-4 cursor-pointer hover:border-border-accent hover:shadow-md transition-all"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="font-semibold text-foreground text-base leading-tight">
-          {actor.actor_name}
-        </h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="font-semibold text-foreground text-base leading-tight">
+            {actor.actor_name}
+          </h3>
+          {actor.matched_main_db_actor_id && matchedVerification && (
+            <VerifiedStatusBadge
+              size="sm"
+              verifiedAt={matchedVerification.verified_at}
+              decaysAt={matchedVerification.decays_at}
+            />
+          )}
+        </div>
         {actor.country && (
           <span className="text-xs text-foreground-muted whitespace-nowrap">{actor.country}</span>
         )}
