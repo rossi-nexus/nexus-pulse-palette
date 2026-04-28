@@ -657,6 +657,67 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          actor_id: string | null
+          actor_user_id: string | null
+          changes: Json | null
+          created_at: string
+          event_type: string
+          id: string
+          programme_id: string | null
+          reason: string | null
+          target_record_id: string | null
+          target_table: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_user_id?: string | null
+          changes?: Json | null
+          created_at?: string
+          event_type: string
+          id?: string
+          programme_id?: string | null
+          reason?: string | null
+          target_record_id?: string | null
+          target_table: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_user_id?: string | null
+          changes?: Json | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          programme_id?: string | null
+          reason?: string | null
+          target_record_id?: string | null
+          target_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intelligence_items: {
         Row: {
           admin_notes: string | null
@@ -1276,6 +1337,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_audit_log_event: {
+        Args: {
+          p_actor_id?: string
+          p_changes?: Json
+          p_event_type: string
+          p_programme_id?: string
+          p_reason?: string
+          p_target_record_id: string
+          p_target_table: string
+        }
+        Returns: string
+      }
       fn_check_decay: {
         Args: { _within?: string }
         Returns: {
