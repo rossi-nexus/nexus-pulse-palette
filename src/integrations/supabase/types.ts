@@ -1388,6 +1388,34 @@ export type Database = {
           value: string
         }[]
       }
+      fn_verify_phase49d_actor_delete: {
+        Args: never
+        Returns: {
+          label: string
+          value: string
+        }[]
+      }
+      fn_verify_phase49d_programme_create: {
+        Args: never
+        Returns: {
+          label: string
+          value: string
+        }[]
+      }
+      fn_verify_phase49d_programme_delete: {
+        Args: never
+        Returns: {
+          label: string
+          value: string
+        }[]
+      }
+      fn_verify_phase49d_update: {
+        Args: never
+        Returns: {
+          label: string
+          value: string
+        }[]
+      }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
