@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.__verify48_results();
