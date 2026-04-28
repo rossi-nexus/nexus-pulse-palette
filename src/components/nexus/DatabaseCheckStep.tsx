@@ -322,9 +322,11 @@ const DatabaseCheckStep = ({
                             <span className="text-body-sm font-medium text-foreground truncate">
                               {m.db_actor_name}
                             </span>
-                            <span className="text-mono-xs font-mono uppercase tracking-wider text-accent-green">
-                              Verified
-                            </span>
+                            <VerifiedStatusBadge
+                              size="sm"
+                              verifiedAt={m.verified_at}
+                              decaysAt={m.decays_at}
+                            />
                           </div>
                           <p className="text-caption text-foreground-muted">
                             In database · Last updated{" "}
