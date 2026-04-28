@@ -76,7 +76,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const fetchSessions = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from("search_sessions")
-      .select("id, name, status, created_at, updated_at")
+      .select("id, name, status, created_at, updated_at, programme_id")
       .eq("user_id", uid)
       .eq("status", "active")
       .order("updated_at", { ascending: false });
@@ -120,7 +120,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const { data: created } = await supabase
           .from("search_sessions")
           .insert({ user_id: user.id, status: "active" })
-          .select("id, name, status, created_at, updated_at")
+          .select("id, name, status, created_at, updated_at, programme_id")
           .single();
         if (created && !cancelled) {
           setSessions([created as SessionListItem]);
@@ -147,7 +147,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from("search_sessions")
       .insert({ user_id: user.id, status: "active" })
-      .select("id, name, status, created_at, updated_at")
+      .select("id, name, status, created_at, updated_at, programme_id")
       .single();
     if (data) {
       setSessions((prev) => [data as SessionListItem, ...prev]);
@@ -162,6 +162,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)));
   }, []);
 
+  const assignSessionToProgramme = useCallback(
+    async (id: string, programmeId: string | null) => {
+      await supabase.from("search_sessions").update({ programme_id: programmeId }).eq("id", id);
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, programme_id: programmeId } : s))
+      );
+    },
+    []
+  );
+
   return (
     <SessionContext.Provider
       value={{
@@ -175,6 +185,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         refreshSessions,
         createSession,
         renameSession,
+        assignSessionToProgramme,
       }}
     >
       {children}
