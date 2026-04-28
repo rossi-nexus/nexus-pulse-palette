@@ -8,6 +8,7 @@ import InterpretationStep from "./InterpretationStep";
 import SearchStep from "./SearchStep";
 import AnalysisStep from "./AnalysisStep";
 import DatabaseCheckStep from "./DatabaseCheckStep";
+import ProgrammeContextBanner from "./ProgrammeContextBanner";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useStepA1 } from "@/hooks/useStepA1";
