@@ -28,18 +28,27 @@ const STEP_NAMES: Record<number, string> = {
 };
 
 const PipelineView = () => {
-  const { sessionId, refreshSessions } = useSessionContext();
+  const { sessionId, sessions, refreshSessions } = useSessionContext();
+  const programmeId = sessions.find((s) => s.id === sessionId)?.programme_id ?? null;
   // Re-mount all step hooks when sessionId changes by keying the inner content.
   // (Hooks already have useEffect on sessionId, but keying guarantees a clean reset of local UI state.)
-  return <PipelineInner key={sessionId ?? "no-session"} sessionId={sessionId} refreshSessions={refreshSessions} />;
+  return (
+    <PipelineInner
+      key={sessionId ?? "no-session"}
+      sessionId={sessionId}
+      programmeId={programmeId}
+      refreshSessions={refreshSessions}
+    />
+  );
 };
 
 interface PipelineInnerProps {
   sessionId: string | null;
+  programmeId: string | null;
   refreshSessions: () => Promise<void>;
 }
 
-const PipelineInner = ({ sessionId, refreshSessions }: PipelineInnerProps) => {
+const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInnerProps) => {
   const stepA1 = useStepA1({ sessionId });
   const stepA2 = useInterpretation({ sessionId });
   const stepA3 = useSearch({ sessionId });
