@@ -910,26 +910,13 @@ const ActorProfile = () => {
                 {TYPE_LABEL[actorType] ?? actorType}
               </Badge>
             )}
-            {verification && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] font-medium uppercase tracking-wider gap-1",
-                  verification === "admin_verified" &&
-                    "bg-info/15 text-info border-info/30",
-                  verification === "verified" &&
-                    "bg-success/15 text-success border-success/30",
-                  verification === "unverified" &&
-                    "bg-warning/15 text-warning border-warning/30",
-                )}
-              >
-                <ShieldCheck className="w-3 h-3" />
-                {verification === "admin_verified"
-                  ? "Admin Verified"
-                  : verification === "verified"
-                    ? "Verified"
-                    : "Unverified"}
-              </Badge>
+            {dbActor && (
+              <VerifiedStatusBadge
+                size="md"
+                showLabel
+                verifiedAt={dbActor.verified_at}
+                decaysAt={dbActor.decays_at}
+              />
             )}
             {personal?.matched_main_db_actor_id && (
               <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30">
