@@ -1276,6 +1276,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      __verify48_results: {
+        Args: never
+        Returns: {
+          result: string
+          test_name: string
+        }[]
+      }
       fn_check_decay: {
         Args: { _within?: string }
         Returns: {
