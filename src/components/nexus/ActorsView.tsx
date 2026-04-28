@@ -126,6 +126,31 @@ const ActorsView = () => {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+
+    const fetchMatchedVerification = async (list: PersonalActor[]) => {
+      const ids = Array.from(
+        new Set(
+          list
+            .map((a) => a.matched_main_db_actor_id)
+            .filter((x): x is string => !!x),
+        ),
+      );
+      if (ids.length === 0) {
+        if (!cancelled) setMatchedVerification(new Map());
+        return;
+      }
+      const { data } = await supabase
+        .from("actors")
+        .select("id, verified_at, decays_at")
+        .in("id", ids);
+      if (cancelled) return;
+      const m = new Map<string, DbVerification>();
+      (data ?? []).forEach((row) =>
+        m.set(row.id, { verified_at: row.verified_at, decays_at: row.decays_at }),
+      );
+      setMatchedVerification(m);
+    };
+
     (async () => {
       setLoading(true);
       try {
@@ -145,7 +170,7 @@ const ActorsView = () => {
           const list = (actors ?? []) as unknown as PersonalActor[];
           setPersonal(list);
           setSessions((sess ?? []) as SessionInfo[]);
-          await loadMatchedVerification(list, cancelled);
+          await fetchMatchedVerification(list);
         } else if (tab === "database") {
           const { data } = await supabase
             .from("actors")
@@ -164,7 +189,7 @@ const ActorsView = () => {
           if (cancelled) return;
           const list = (data ?? []) as unknown as PersonalActor[];
           setQueue(list);
-          await loadMatchedVerification(list, cancelled);
+          await fetchMatchedVerification(list);
           // Fetch user info for suggesters
           const ids = Array.from(new Set(list.map((a) => a.user_id)));
           if (ids.length > 0) {
