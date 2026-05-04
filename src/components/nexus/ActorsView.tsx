@@ -460,29 +460,7 @@ const ActorsView = () => {
               ))}
             </div>
           )
-        ) : filteredQueue.length === 0 ? (
-          queue.length === 0 ? (
-            <EmptyQueue />
-          ) : (
-            <NoResults onClear={clearFilters} />
-          )
-        ) : (
-          <div className="space-y-3">
-            {filteredQueue.map((a) => (
-              <QueueActorCard
-                key={a.id}
-                actor={a}
-                suggester={usersMap.get(a.user_id)}
-                matchedVerification={
-                  a.matched_main_db_actor_id
-                    ? matchedVerification.get(a.matched_main_db_actor_id)
-                    : undefined
-                }
-                onClick={() => navigate(`/actors/${a.id}`)}
-              />
-            ))}
-          </div>
-        )}
+        ) : null}
       </div>
 
       {/* Confirmation dialogs */}
