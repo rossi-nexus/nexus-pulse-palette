@@ -39,12 +39,6 @@ interface SessionInfo {
   created_at: string;
 }
 
-interface UserInfo {
-  id: string;
-  name: string | null;
-  email: string | null;
-}
-
 const ACTOR_TYPE_VARIANT: Record<string, string> = {
   commercial: "bg-success/15 text-success border-success/30",
   government: "bg-info/15 text-info border-info/30",
