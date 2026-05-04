@@ -36,6 +36,7 @@ import {
 import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
+import { VerificationReviewDialog, type VerificationSubmitPayload } from "@/components/consultant/VerificationReviewDialog";
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
@@ -386,6 +387,8 @@ const ActorProfile = () => {
   const [dbActor, setDbActor] = useState<DbActor | null>(null);
   const [sessionName, setSessionName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reverifyOpen, setReverifyOpen] = useState(false);
+  const [reverifyBusy, setReverifyBusy] = useState(false);
 
   // DB satellite data
   const [contacts, setContacts] = useState<any[]>([]);
