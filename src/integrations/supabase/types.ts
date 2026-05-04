@@ -1467,42 +1467,6 @@ export type Database = {
         }
         Returns: string
       }
-      fn_verify_phase52b_approve: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase52b_audit_breakdown: {
-        Args: never
-        Returns: {
-          event_type: string
-          n: number
-          target_table: string
-        }[]
-      }
-      fn_verify_phase52b_perms: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase52b_reject: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
-      fn_verify_phase52b_reverify: {
-        Args: never
-        Returns: {
-          label: string
-          value: string
-        }[]
-      }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
