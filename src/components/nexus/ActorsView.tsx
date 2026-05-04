@@ -253,17 +253,6 @@ const ActorsView = () => {
     return list;
   }, [dbActors, search, country, verified, sort]);
 
-  const filteredQueue = useMemo(() => {
-    let list = [...queue];
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((a) => a.actor_name.toLowerCase().includes(q));
-    }
-    if (country !== "all") list = list.filter((a) => a.country === country);
-    if (type !== "all") list = list.filter((a) => a.actor_type === type);
-    return list;
-  }, [queue, search, country, type]);
-
   // Distinct countries for filter
   const collectionCountries = useMemo(
     () =>
@@ -274,11 +263,6 @@ const ActorsView = () => {
     () =>
       Array.from(new Set(dbActors.map((a) => a.country).filter(Boolean))).sort() as string[],
     [dbActors],
-  );
-  const queueCountries = useMemo(
-    () =>
-      Array.from(new Set(queue.map((a) => a.country).filter(Boolean))).sort() as string[],
-    [queue],
   );
 
   const filtersActive =
