@@ -1332,11 +1332,96 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_events: {
+        Row: {
+          actor_id: string
+          completed_at: string | null
+          created_at: string
+          decays_at: string | null
+          evidence: Json
+          id: string
+          programme_id: string | null
+          source_queue_id: string | null
+          verification_status: string
+          verifier_confidence: string | null
+          verifier_id: string | null
+          verifier_notes: string | null
+        }
+        Insert: {
+          actor_id: string
+          completed_at?: string | null
+          created_at?: string
+          decays_at?: string | null
+          evidence?: Json
+          id?: string
+          programme_id?: string | null
+          source_queue_id?: string | null
+          verification_status: string
+          verifier_confidence?: string | null
+          verifier_id?: string | null
+          verifier_notes?: string | null
+        }
+        Update: {
+          actor_id?: string
+          completed_at?: string | null
+          created_at?: string
+          decays_at?: string | null
+          evidence?: Json
+          id?: string
+          programme_id?: string | null
+          source_queue_id?: string | null
+          verification_status?: string
+          verifier_confidence?: string | null
+          verifier_id?: string | null
+          verifier_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_events_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_events_source_queue_id_fkey"
+            columns: ["source_queue_id"]
+            isOneToOne: false
+            referencedRelation: "actor_validation_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_events_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      fn_approve_and_verify: {
+        Args: {
+          p_confidence: string
+          p_decays_at: string
+          p_evidence: Json
+          p_notes: string
+          p_programme_id?: string
+          p_queue_id: string
+        }
+        Returns: Json
+      }
       fn_audit_log_event: {
         Args: {
           p_actor_id?: string
@@ -1359,6 +1444,10 @@ export type Database = {
           verified_at: string
         }[]
       }
+      fn_reject_suggestion: {
+        Args: { p_programme_id?: string; p_queue_id: string; p_reason?: string }
+        Returns: string
+      }
       fn_suggest_actor: {
         Args: { p_personal_actor_id: string }
         Returns: string
@@ -1366,6 +1455,17 @@ export type Database = {
       fn_user_has_attr: {
         Args: { _key: string; _uid: string; _value?: string }
         Returns: boolean
+      }
+      fn_verify_actor: {
+        Args: {
+          p_actor_id: string
+          p_confidence: string
+          p_decays_at: string
+          p_evidence: Json
+          p_notes: string
+          p_programme_id?: string
+        }
+        Returns: string
       }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
