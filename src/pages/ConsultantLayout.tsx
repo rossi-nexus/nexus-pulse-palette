@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import TopBar from "@/components/nexus/TopBar";
 import ConsultantSidebar from "@/components/consultant/ConsultantSidebar";
 import ConsultantProgrammesPage from "@/pages/consultant/ConsultantProgrammesPage";
-import VerificationPlaceholder from "@/pages/consultant/VerificationPlaceholder";
+import VerificationWorkspacePage from "@/pages/consultant/VerificationWorkspacePage";
 import AnalyticsPlaceholder from "@/pages/consultant/AnalyticsPlaceholder";
 import ProgrammeView from "@/pages/ProgrammeView";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
@@ -33,7 +33,7 @@ const ConsultantLayout = () => {
             <Routes>
               <Route index element={<Navigate to="programmes" replace />} />
               <Route path="programmes" element={<ConsultantProgrammesPage />} />
-              <Route path="verification" element={<VerificationPlaceholder />} />
+              <Route path="verification" element={<VerificationWorkspacePage />} />
               <Route path="analytics" element={<AnalyticsPlaceholder />} />
               <Route path="programmes/:id" element={<ProgrammeView />} />
             </Routes>
