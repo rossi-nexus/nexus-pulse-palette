@@ -39,12 +39,6 @@ interface SessionInfo {
   created_at: string;
 }
 
-interface UserInfo {
-  id: string;
-  name: string | null;
-  email: string | null;
-}
-
 const ACTOR_TYPE_VARIANT: Record<string, string> = {
   commercial: "bg-success/15 text-success border-success/30",
   government: "bg-info/15 text-info border-info/30",
@@ -549,21 +543,6 @@ const TypeBadge = ({ type }: { type: string | null }) => {
   );
 };
 
-const ActionButton = ({ children }: { children: React.ReactNode }) => (
-  <TooltipProvider delayDuration={150}>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span>
-          <Button size="sm" variant="outline" disabled className="h-7 text-xs">
-            {children}
-          </Button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>Coming soon</TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
-);
-
 const PersonalActorCard = ({
   actor,
   session,
@@ -762,82 +741,6 @@ const DatabaseActorCard = ({ actor, onClick }: { actor: DbActor; onClick: () => 
   );
 };
 
-const QueueActorCard = ({
-  actor,
-  suggester,
-  matchedVerification,
-  onClick,
-}: {
-  actor: PersonalActor;
-  suggester?: UserInfo;
-  matchedVerification?: DbVerification;
-  onClick: () => void;
-}) => {
-  const ad = (actor.analysis_data ?? {}) as Record<string, unknown>;
-  const capCount = arrayLen(ad.capabilities);
-  const domainCount = arrayLen(ad.domains);
-  const completeness = actor.profile_completeness ?? 0;
-  const suggesterLabel = suggester?.name || suggester?.email || "Unknown user";
-
-  return (
-    <div
-      onClick={onClick}
-      className="group relative bg-surface border border-border rounded-lg p-4 cursor-pointer hover:border-border-accent hover:shadow-md transition-all"
-    >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="font-semibold text-foreground text-base leading-tight">
-            {actor.actor_name}
-          </h3>
-          {actor.matched_main_db_actor_id && matchedVerification && (
-            <VerifiedStatusBadge
-              size="sm"
-              verifiedAt={matchedVerification.verified_at}
-              decaysAt={matchedVerification.decays_at}
-            />
-          )}
-        </div>
-        {actor.country && (
-          <span className="text-xs text-foreground-muted whitespace-nowrap">{actor.country}</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap text-xs text-foreground-secondary mb-2">
-        <TypeBadge type={actor.actor_type} />
-        {(capCount > 0 || domainCount > 0) && (
-          <>
-            <span>·</span>
-            {capCount > 0 && <span>{capCount} capabilities</span>}
-            {domainCount > 0 && (
-              <>
-                {capCount > 0 && <span>·</span>}
-                <span>{domainCount} domains</span>
-              </>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="text-xs text-foreground-muted">
-        Suggested by: <span className="text-foreground-secondary">{suggesterLabel}</span> ·{" "}
-        {formatDateShort(actor.suggested_at)}
-      </div>
-      <div className="text-xs text-foreground-muted mt-1">
-        Completeness: <span className="font-mono text-foreground-secondary">{completeness}%</span>
-      </div>
-
-      {/* Action row — reserved height so the card doesn't jump on hover.
-          Hidden by default, revealed on group-hover or focus-within. */}
-      <div
-        className="mt-3 h-7 flex justify-end gap-1.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 transition-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ActionButton>Approve</ActionButton>
-        <ActionButton>Reject</ActionButton>
-      </div>
-    </div>
-  );
-};
 
 const LoadingSkeletons = () => (
   <div className="space-y-3">
@@ -902,13 +805,6 @@ const EmptyDatabase = () => (
   />
 );
 
-const EmptyQueue = () => (
-  <EmptyState
-    icon={<CheckCircle2 className="w-12 h-12" />}
-    title="No actors pending review"
-    description="When users suggest actors for the main database, they'll appear here for review."
-  />
-);
 
 const NoResults = ({ onClear }: { onClear: () => void }) => (
   <EmptyState
