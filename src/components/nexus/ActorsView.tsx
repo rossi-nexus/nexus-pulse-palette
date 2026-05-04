@@ -84,10 +84,8 @@ const ActorsView = () => {
 
   const [personal, setPersonal] = useState<PersonalActor[]>([]);
   const [dbActors, setDbActors] = useState<DbActor[]>([]);
-  const [queue, setQueue] = useState<PersonalActor[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
-  const [usersMap, setUsersMap] = useState<Map<string, UserInfo>>(new Map());
-  // Verification lifecycle data for matched DB actors (used by personal/queue cards)
+  // Verification lifecycle data for matched DB actors (used by personal cards)
   const [matchedVerification, setMatchedVerification] = useState<Map<string, DbVerification>>(new Map());
 
   // Action dialogs (personal actors)
