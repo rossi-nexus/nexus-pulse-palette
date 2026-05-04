@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
 
-type TabKey = "collection" | "database" | "queue";
+type TabKey = "collection" | "database";
 
 interface SessionInfo {
   id: string;
@@ -346,11 +346,7 @@ const ActorsView = () => {
           <TabButton active={tab === "database"} onClick={() => setTab("database")}>
             Database
           </TabButton>
-          {isAdmin && (
-            <TabButton active={tab === "queue"} onClick={() => setTab("queue")}>
-              Validation Queue
-            </TabButton>
-          )}
+          {/* Phase 6.5.5b: validation queue tab removed — superseded by /consultant/verification */}
         </div>
 
         {/* Search + Filters */}
