@@ -981,6 +981,15 @@ const ActorProfile = () => {
               )}
             </p>
           )}
+          {/* Phase 6.5.5b: Re-verify button (admins only for MVP — programme-scoped re-verify lives in workspace) */}
+          {source === "database" && dbActor && isAdmin && (
+            <div className="mt-3">
+              <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
+                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                Re-verify
+              </Button>
+            </div>
+          )}
           {website && (
             <a
               href={website}
