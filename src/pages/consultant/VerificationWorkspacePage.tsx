@@ -20,7 +20,7 @@ const VerificationWorkspacePage = () => {
     setBusy(true);
     const { error } = await supabase.rpc("fn_approve_and_verify", {
       p_queue_id: active.queue_id,
-      p_evidence: p.evidence,
+      p_evidence: p.evidence as unknown as never,
       p_decays_at: p.decays_at,
       p_confidence: p.confidence,
       p_notes: p.notes || null,
