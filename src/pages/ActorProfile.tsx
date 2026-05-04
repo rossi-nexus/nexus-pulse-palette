@@ -1697,6 +1697,42 @@ const ActorProfile = () => {
           />
         </>
       )}
+      {dbActor && (
+        <VerificationReviewDialog
+          open={reverifyOpen}
+          onOpenChange={setReverifyOpen}
+          title={`Re-verify ${dbActor.legal_name}`}
+          description="Record a new verification event with current evidence and a fresh decay window."
+          primaryLabel="Verify"
+          busy={reverifyBusy}
+          summary={
+            <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 gap-x-4">
+              <dt className="text-foreground-muted">Name</dt>
+              <dd className="text-foreground">{dbActor.legal_name}</dd>
+              {dbActor.country && (<><dt className="text-foreground-muted">Country</dt><dd className="text-foreground">{dbActor.country}</dd></>)}
+              {dbActor.org_number && (<><dt className="text-foreground-muted">Org no.</dt><dd className="text-foreground font-mono">{dbActor.org_number}</dd></>)}
+            </dl>
+          }
+          onApprove={async (p: VerificationSubmitPayload) => {
+            setReverifyBusy(true);
+            const { error } = await supabase.rpc("fn_verify_actor", {
+              p_actor_id: dbActor.id,
+              p_evidence: p.evidence as unknown as never,
+              p_decays_at: p.decays_at,
+              p_confidence: p.confidence,
+              p_notes: p.notes || null,
+              p_programme_id: null,
+            });
+            setReverifyBusy(false);
+            if (error) { toast.error(error.message); return; }
+            toast.success("Verification recorded");
+            setReverifyOpen(false);
+            // Refresh denormalised columns
+            const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+            if (refreshed) setDbActor(refreshed as DbActor);
+          }}
+        />
+      )}
     </div>
   );
 };
