@@ -549,21 +549,6 @@ const TypeBadge = ({ type }: { type: string | null }) => {
   );
 };
 
-const ActionButton = ({ children }: { children: React.ReactNode }) => (
-  <TooltipProvider delayDuration={150}>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span>
-          <Button size="sm" variant="outline" disabled className="h-7 text-xs">
-            {children}
-          </Button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>Coming soon</TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
-);
-
 const PersonalActorCard = ({
   actor,
   session,
