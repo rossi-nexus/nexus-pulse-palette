@@ -281,11 +281,7 @@ const ActorsView = () => {
   }
 
   const totalForTab =
-    tab === "collection"
-      ? filteredCollection.length
-      : tab === "database"
-        ? filteredDatabase.length
-        : filteredQueue.length;
+    tab === "collection" ? filteredCollection.length : filteredDatabase.length;
 
   const sessionsRepresented =
     tab === "collection"
@@ -327,12 +323,7 @@ const ActorsView = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All countries</SelectItem>
-                {(tab === "collection"
-                  ? collectionCountries
-                  : tab === "database"
-                    ? dbCountries
-                    : queueCountries
-                ).map((c) => (
+                {(tab === "collection" ? collectionCountries : dbCountries).map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}
                   </SelectItem>
