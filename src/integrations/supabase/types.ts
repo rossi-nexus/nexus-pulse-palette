@@ -1467,11 +1467,6 @@ export type Database = {
         }
         Returns: string
       }
-      fn_verify_phase52c_as_user: {
-        Args: { p_args: Json; p_op: string; p_user_id: string }
-        Returns: Json
-      }
-      fn_verify_phase52c_setup: { Args: never; Returns: Json }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
