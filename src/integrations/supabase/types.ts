@@ -1456,6 +1456,14 @@ export type Database = {
         Args: { _key: string; _uid: string; _value?: string }
         Returns: boolean
       }
+      fn_user_is_programme_member: {
+        Args: { _programme_id: string; _uid: string }
+        Returns: boolean
+      }
+      fn_user_is_programme_owner: {
+        Args: { _programme_id: string; _uid: string }
+        Returns: boolean
+      }
       fn_verify_actor: {
         Args: {
           p_actor_id: string
