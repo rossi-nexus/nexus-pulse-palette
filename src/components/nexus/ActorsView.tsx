@@ -902,13 +902,6 @@ const EmptyDatabase = () => (
   />
 );
 
-const EmptyQueue = () => (
-  <EmptyState
-    icon={<CheckCircle2 className="w-12 h-12" />}
-    title="No actors pending review"
-    description="When users suggest actors for the main database, they'll appear here for review."
-  />
-);
 
 const NoResults = ({ onClear }: { onClear: () => void }) => (
   <EmptyState
