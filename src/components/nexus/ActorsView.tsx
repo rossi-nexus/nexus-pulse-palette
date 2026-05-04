@@ -178,29 +178,6 @@ const ActorsView = () => {
             .order("updated_at", { ascending: false });
           if (cancelled) return;
           setDbActors((data ?? []) as DbActor[]);
-        } else if (tab === "queue" && isAdmin) {
-          const { data } = await supabase
-            .from("user_personal_actors")
-            .select("*")
-            .eq("status", "suggested")
-            .order("suggested_at", { ascending: false });
-          if (cancelled) return;
-          const list = (data ?? []) as unknown as PersonalActor[];
-          setQueue(list);
-          await fetchMatchedVerification(list);
-          // Fetch user info for suggesters
-          const ids = Array.from(new Set(list.map((a) => a.user_id)));
-          if (ids.length > 0) {
-            const { data: u } = await supabase
-              .from("users")
-              .select("id, name, email")
-              .in("id", ids);
-            if (!cancelled) {
-              const m = new Map<string, UserInfo>();
-              (u ?? []).forEach((row) => m.set(row.id, row as UserInfo));
-              setUsersMap(m);
-            }
-          }
         }
       } finally {
         if (!cancelled) setLoading(false);
