@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import AddMemberDialog from "@/components/nexus/AddMemberDialog";
 import { toast } from "sonner";
-import { UserPlus, LogOut, Trash2, ExternalLink } from "lucide-react";
+import { UserPlus, LogOut, Trash2, ExternalLink, Pencil } from "lucide-react";
+import { EditProgrammeDialog } from "@/components/nexus/EditProgrammeDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ const ProgrammeView = () => {
   const { programme, members, sessions, currentUserRole, isOwner, loading, notFound, refresh } =
     useProgramme(id);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<{ userId: string; isSelf: boolean } | null>(null);
 
   if (loading) {
@@ -89,7 +91,8 @@ const ProgrammeView = () => {
               </div>
             </div>
             {isOwner && (
-              <Button variant="outline" disabled title="Coming in consultant workspace">
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
                 Edit
               </Button>
             )}
@@ -185,6 +188,13 @@ const ProgrammeView = () => {
         onOpenChange={setAddMemberOpen}
         programmeId={programme.id}
         onAdded={refresh}
+      />
+
+      <EditProgrammeDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        programme={programme}
+        onSaved={refresh}
       />
 
       <AlertDialog open={confirmRemove !== null} onOpenChange={(o) => !o && setConfirmRemove(null)}>
