@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
 
-type TabKey = "collection" | "database" | "queue";
+type TabKey = "collection" | "database";
 
 interface SessionInfo {
   id: string;
@@ -84,10 +84,8 @@ const ActorsView = () => {
 
   const [personal, setPersonal] = useState<PersonalActor[]>([]);
   const [dbActors, setDbActors] = useState<DbActor[]>([]);
-  const [queue, setQueue] = useState<PersonalActor[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
-  const [usersMap, setUsersMap] = useState<Map<string, UserInfo>>(new Map());
-  // Verification lifecycle data for matched DB actors (used by personal/queue cards)
+  // Verification lifecycle data for matched DB actors (used by personal cards)
   const [matchedVerification, setMatchedVerification] = useState<Map<string, DbVerification>>(new Map());
 
   // Action dialogs (personal actors)
@@ -180,29 +178,6 @@ const ActorsView = () => {
             .order("updated_at", { ascending: false });
           if (cancelled) return;
           setDbActors((data ?? []) as DbActor[]);
-        } else if (tab === "queue" && isAdmin) {
-          const { data } = await supabase
-            .from("user_personal_actors")
-            .select("*")
-            .eq("status", "suggested")
-            .order("suggested_at", { ascending: false });
-          if (cancelled) return;
-          const list = (data ?? []) as unknown as PersonalActor[];
-          setQueue(list);
-          await fetchMatchedVerification(list);
-          // Fetch user info for suggesters
-          const ids = Array.from(new Set(list.map((a) => a.user_id)));
-          if (ids.length > 0) {
-            const { data: u } = await supabase
-              .from("users")
-              .select("id, name, email")
-              .in("id", ids);
-            if (!cancelled) {
-              const m = new Map<string, UserInfo>();
-              (u ?? []).forEach((row) => m.set(row.id, row as UserInfo));
-              setUsersMap(m);
-            }
-          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -278,17 +253,6 @@ const ActorsView = () => {
     return list;
   }, [dbActors, search, country, verified, sort]);
 
-  const filteredQueue = useMemo(() => {
-    let list = [...queue];
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((a) => a.actor_name.toLowerCase().includes(q));
-    }
-    if (country !== "all") list = list.filter((a) => a.country === country);
-    if (type !== "all") list = list.filter((a) => a.actor_type === type);
-    return list;
-  }, [queue, search, country, type]);
-
   // Distinct countries for filter
   const collectionCountries = useMemo(
     () =>
@@ -299,11 +263,6 @@ const ActorsView = () => {
     () =>
       Array.from(new Set(dbActors.map((a) => a.country).filter(Boolean))).sort() as string[],
     [dbActors],
-  );
-  const queueCountries = useMemo(
-    () =>
-      Array.from(new Set(queue.map((a) => a.country).filter(Boolean))).sort() as string[],
-    [queue],
   );
 
   const filtersActive =
@@ -322,11 +281,7 @@ const ActorsView = () => {
   }
 
   const totalForTab =
-    tab === "collection"
-      ? filteredCollection.length
-      : tab === "database"
-        ? filteredDatabase.length
-        : filteredQueue.length;
+    tab === "collection" ? filteredCollection.length : filteredDatabase.length;
 
   const sessionsRepresented =
     tab === "collection"
@@ -346,11 +301,7 @@ const ActorsView = () => {
           <TabButton active={tab === "database"} onClick={() => setTab("database")}>
             Database
           </TabButton>
-          {isAdmin && (
-            <TabButton active={tab === "queue"} onClick={() => setTab("queue")}>
-              Validation Queue
-            </TabButton>
-          )}
+          {/* Phase 6.5.5b: validation queue tab removed — superseded by /consultant/verification */}
         </div>
 
         {/* Search + Filters */}
@@ -372,12 +323,7 @@ const ActorsView = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All countries</SelectItem>
-                {(tab === "collection"
-                  ? collectionCountries
-                  : tab === "database"
-                    ? dbCountries
-                    : queueCountries
-                ).map((c) => (
+                {(tab === "collection" ? collectionCountries : dbCountries).map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}
                   </SelectItem>
@@ -514,29 +460,7 @@ const ActorsView = () => {
               ))}
             </div>
           )
-        ) : filteredQueue.length === 0 ? (
-          queue.length === 0 ? (
-            <EmptyQueue />
-          ) : (
-            <NoResults onClear={clearFilters} />
-          )
-        ) : (
-          <div className="space-y-3">
-            {filteredQueue.map((a) => (
-              <QueueActorCard
-                key={a.id}
-                actor={a}
-                suggester={usersMap.get(a.user_id)}
-                matchedVerification={
-                  a.matched_main_db_actor_id
-                    ? matchedVerification.get(a.matched_main_db_actor_id)
-                    : undefined
-                }
-                onClick={() => navigate(`/actors/${a.id}`)}
-              />
-            ))}
-          </div>
-        )}
+        ) : null}
       </div>
 
       {/* Confirmation dialogs */}

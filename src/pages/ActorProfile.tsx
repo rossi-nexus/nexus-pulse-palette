@@ -36,6 +36,7 @@ import {
 import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
+import { VerificationReviewDialog, type VerificationSubmitPayload } from "@/components/consultant/VerificationReviewDialog";
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
@@ -386,6 +387,8 @@ const ActorProfile = () => {
   const [dbActor, setDbActor] = useState<DbActor | null>(null);
   const [sessionName, setSessionName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reverifyOpen, setReverifyOpen] = useState(false);
+  const [reverifyBusy, setReverifyBusy] = useState(false);
 
   // DB satellite data
   const [contacts, setContacts] = useState<any[]>([]);
@@ -980,6 +983,15 @@ const ActorProfile = () => {
                 </>
               )}
             </p>
+          )}
+          {/* Phase 6.5.5b: Re-verify button (admins only for MVP — programme-scoped re-verify lives in workspace) */}
+          {source === "database" && dbActor && isAdmin && (
+            <div className="mt-3">
+              <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
+                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                Re-verify
+              </Button>
+            </div>
           )}
           {website && (
             <a
@@ -1684,6 +1696,42 @@ const ActorProfile = () => {
             }}
           />
         </>
+      )}
+      {dbActor && (
+        <VerificationReviewDialog
+          open={reverifyOpen}
+          onOpenChange={setReverifyOpen}
+          title={`Re-verify ${dbActor.legal_name}`}
+          description="Record a new verification event with current evidence and a fresh decay window."
+          primaryLabel="Verify"
+          busy={reverifyBusy}
+          summary={
+            <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 gap-x-4">
+              <dt className="text-foreground-muted">Name</dt>
+              <dd className="text-foreground">{dbActor.legal_name}</dd>
+              {dbActor.country && (<><dt className="text-foreground-muted">Country</dt><dd className="text-foreground">{dbActor.country}</dd></>)}
+              {dbActor.org_number && (<><dt className="text-foreground-muted">Org no.</dt><dd className="text-foreground font-mono">{dbActor.org_number}</dd></>)}
+            </dl>
+          }
+          onApprove={async (p: VerificationSubmitPayload) => {
+            setReverifyBusy(true);
+            const { error } = await supabase.rpc("fn_verify_actor", {
+              p_actor_id: dbActor.id,
+              p_evidence: p.evidence as unknown as never,
+              p_decays_at: p.decays_at,
+              p_confidence: p.confidence,
+              p_notes: p.notes || null,
+              p_programme_id: null,
+            });
+            setReverifyBusy(false);
+            if (error) { toast.error(error.message); return; }
+            toast.success("Verification recorded");
+            setReverifyOpen(false);
+            // Refresh denormalised columns
+            const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+            if (refreshed) setDbActor(refreshed as DbActor);
+          }}
+        />
       )}
     </div>
   );
