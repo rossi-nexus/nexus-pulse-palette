@@ -15,9 +15,7 @@ const Index = () => {
     );
   }
 
-  // Login temporarily disabled — render app directly.
-  // To restore: uncomment the line below.
-  // if (!user) return <LoginPage />;
+  if (!user) return <LoginPage />;
 
   return (
     <Routes>
