@@ -32,16 +32,32 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const handleSubmit = async () => {
     if (!user || !name.trim()) return;
     setSubmitting(true);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const payload = {
+      name: name.trim(),
+      description: description.trim() || null,
+      client_org: clientOrg.trim() || null,
+      owner_user_id: user.id,
+    };
+    console.log('[programme-create] hook user:', user);
+    console.log('[programme-create] hook user.id:', user?.id);
+    console.log('[programme-create] supabase session:', session);
+    console.log('[programme-create] supabase session.user.id:', session?.user?.id);
+    console.log('[programme-create] supabase getUser() result:', currentUser);
+    console.log('[programme-create] supabase getUser().id:', currentUser?.id);
+    console.log('[programme-create] insert payload owner_user_id:', user?.id);
+    console.log('[programme-create] insert payload full:', payload);
+
     const { data, error } = await supabase
       .from("programmes")
-      .insert({
-        name: name.trim(),
-        description: description.trim() || null,
-        client_org: clientOrg.trim() || null,
-        owner_user_id: user.id,
-      })
+      .insert(payload)
       .select("id")
       .single();
+
+    console.log('[programme-create] insert response data:', data);
+    console.log('[programme-create] insert response error:', error);
     setSubmitting(false);
     if (error || !data) {
       toast.error(error?.message ?? "Failed to create programme");
