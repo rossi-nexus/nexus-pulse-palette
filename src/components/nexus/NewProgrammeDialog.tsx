@@ -113,6 +113,28 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
             />
           </div>
         </div>
+        {import.meta.env.DEV && (
+          <div className="border-t border-border pt-3 mt-2 space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={runDiagnostic}
+              disabled={diagRunning}
+            >
+              {diagRunning ? "Running…" : "🔍 Run whoami diagnostic (dev)"}
+            </Button>
+            {diagResult && (
+              <Textarea
+                readOnly
+                rows={10}
+                value={diagResult}
+                className="font-mono text-xs"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+            )}
+          </div>
+        )}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
