@@ -28,6 +28,26 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const [description, setDescription] = useState("");
   const [clientOrg, setClientOrg] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [diagRunning, setDiagRunning] = useState(false);
+  const [diagResult, setDiagResult] = useState<string>("");
+
+  const runDiagnostic = async () => {
+    setDiagRunning(true);
+    setDiagResult("");
+    try {
+      // @ts-expect-error - whoami_diagnostic is a temporary diagnostic RPC not in generated types
+      const { data, error } = await supabase.rpc("whoami_diagnostic");
+      if (error) {
+        setDiagResult(`ERROR:\n${JSON.stringify(error, null, 2)}`);
+      } else {
+        setDiagResult(JSON.stringify({ user_id_from_session: user?.id ?? null, rpc_data: data }, null, 2));
+      }
+    } catch (e) {
+      setDiagResult(`ERROR (thrown):\n${String(e)}`);
+    } finally {
+      setDiagRunning(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!user || !name.trim()) return;
