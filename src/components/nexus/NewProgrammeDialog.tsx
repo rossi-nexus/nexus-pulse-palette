@@ -35,8 +35,7 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
     setDiagRunning(true);
     setDiagResult("");
     try {
-      // @ts-expect-error - whoami_diagnostic is a temporary diagnostic RPC not in generated types
-      const { data, error } = await supabase.rpc("whoami_diagnostic");
+      const { data, error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ data: unknown; error: unknown }>)("whoami_diagnostic");
       if (error) {
         setDiagResult(`ERROR:\n${JSON.stringify(error, null, 2)}`);
       } else {
