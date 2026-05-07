@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { UserPlus, LogOut, Trash2, ExternalLink, Pencil } from "lucide-react";
 import { EditProgrammeDialog } from "@/components/nexus/EditProgrammeDialog";
 import ProgrammeAuditLogPanel from "@/components/programme/ProgrammeAuditLogPanel";
+import { OutcomeHistoryList } from "@/components/outcome/OutcomeHistoryList";
+import { useProgrammeOutcomes } from "@/hooks/useProgrammeOutcomes";
 import {
   AlertDialog,
   AlertDialogAction,
