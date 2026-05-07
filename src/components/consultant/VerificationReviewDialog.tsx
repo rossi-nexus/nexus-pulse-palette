@@ -120,6 +120,8 @@ export const VerificationReviewDialog = ({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
+        {outcomesPanel}
+
         {/* Read-only actor summary */}
         <div className="bg-surface border border-border rounded-md p-4 text-sm">
           {summary}
