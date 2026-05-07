@@ -37,6 +37,11 @@ import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import { VerificationReviewDialog, type VerificationSubmitPayload } from "@/components/consultant/VerificationReviewDialog";
+import { RecordOutcomeDialog } from "@/components/outcome/RecordOutcomeDialog";
+import { OutcomeHistoryList } from "@/components/outcome/OutcomeHistoryList";
+import { useActorOutcomes } from "@/hooks/useActorOutcomes";
+import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
+import { OUTCOME_LABEL, OUTCOME_TYPES } from "@/types/outcome";
 import { EnrichmentToolbar } from "@/components/nexus/EnrichmentToolbar";
 import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
@@ -389,6 +394,9 @@ const ActorProfile = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [reverifyBusy, setReverifyBusy] = useState(false);
+  const [outcomeOpen, setOutcomeOpen] = useState(false);
+  const { programmes: managedProgrammes } = useManagedProgrammes();
+  const canRecordOutcome = isAdmin || managedProgrammes.length > 0;
 
   // DB satellite data
   const [contacts, setContacts] = useState<any[]>([]);
@@ -449,6 +457,10 @@ const ActorProfile = () => {
 
   const { busy, updateNotes, updateTags, suggestForDb, deleteFromCollection } =
     useActorActions();
+
+  const actorIdForOutcomes = source === "database" ? dbActor?.id : personal?.matched_main_db_actor_id ?? undefined;
+  const { outcomes: actorOutcomes, summary: outcomeSummary, refresh: refreshOutcomes } =
+    useActorOutcomes(actorIdForOutcomes);
 
   useEffect(() => {
     if (!id || !user) return;
@@ -984,13 +996,20 @@ const ActorProfile = () => {
               )}
             </p>
           )}
-          {/* Phase 6.5.5b: Re-verify button (admins only for MVP — programme-scoped re-verify lives in workspace) */}
-          {source === "database" && dbActor && isAdmin && (
-            <div className="mt-3">
-              <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
-                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
-                Re-verify
-              </Button>
+          {/* Phase 6.5.5b/6.5.6: Re-verify + Record outcome action row */}
+          {source === "database" && dbActor && (isAdmin || canRecordOutcome) && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              {isAdmin && (
+                <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                  Re-verify
+                </Button>
+              )}
+              {canRecordOutcome && (
+                <Button size="sm" variant="outline" onClick={() => setOutcomeOpen(true)}>
+                  Record outcome
+                </Button>
+              )}
             </div>
           )}
           {website && (
@@ -1601,6 +1620,21 @@ const ActorProfile = () => {
           </div>
         </ProfileSection>
 
+        {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Outcome history" count={actorOutcomes.length}>
+            <OutcomeHistoryList
+              outcomes={actorOutcomes}
+              variant="actor"
+              emptyState={
+                canRecordOutcome
+                  ? "No outcomes recorded yet. Use 'Record outcome' above to capture the first one."
+                  : "No outcomes recorded yet."
+              }
+            />
+          </ProfileSection>
+        )}
+
         {/* Actions */}
         <ProfileSection title="Actions">
           <div className="flex flex-wrap gap-2">
@@ -1705,6 +1739,27 @@ const ActorProfile = () => {
           description="Record a new verification event with current evidence and a fresh decay window."
           primaryLabel="Verify"
           busy={reverifyBusy}
+          outcomesPanel={
+            actorOutcomes.length > 0 ? (
+              <div className="bg-elevated border border-border rounded-md p-3 text-sm space-y-1">
+                <div className="text-xs uppercase tracking-wide text-foreground-muted">
+                  Past outcomes for this actor
+                </div>
+                <ul className="space-y-0.5">
+                  {OUTCOME_TYPES.map((t) =>
+                    outcomeSummary[t] > 0 ? (
+                      <li key={t} className="text-foreground-secondary">
+                        • {outcomeSummary[t]} {OUTCOME_LABEL[t].toLowerCase()}
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
+                <div className="text-xs text-foreground-muted pt-1">
+                  Scroll the profile for full outcome history.
+                </div>
+              </div>
+            ) : null
+          }
           summary={
             <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 gap-x-4">
               <dt className="text-foreground-muted">Name</dt>
@@ -1731,6 +1786,15 @@ const ActorProfile = () => {
             const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
             if (refreshed) setDbActor(refreshed as DbActor);
           }}
+        />
+      )}
+      {dbActor && (
+        <RecordOutcomeDialog
+          open={outcomeOpen}
+          onOpenChange={setOutcomeOpen}
+          actorId={dbActor.id}
+          actorName={dbActor.legal_name}
+          onRecorded={refreshOutcomes}
         />
       )}
     </div>

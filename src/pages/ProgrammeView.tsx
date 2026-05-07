@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { UserPlus, LogOut, Trash2, ExternalLink, Pencil } from "lucide-react";
 import { EditProgrammeDialog } from "@/components/nexus/EditProgrammeDialog";
 import ProgrammeAuditLogPanel from "@/components/programme/ProgrammeAuditLogPanel";
+import { OutcomeHistoryList } from "@/components/outcome/OutcomeHistoryList";
+import { useProgrammeOutcomes } from "@/hooks/useProgrammeOutcomes";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +28,7 @@ const ProgrammeView = () => {
   const { user } = useAuth();
   const { programme, members, sessions, currentUserRole, isOwner, loading, notFound, refresh } =
     useProgramme(id);
+  const { outcomes: programmeOutcomes } = useProgrammeOutcomes(programme?.id);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<{ userId: string; isSelf: boolean } | null>(null);
@@ -185,6 +188,21 @@ const ProgrammeView = () => {
 
         {/* Activity log — visible to all programme members */}
         <ProgrammeAuditLogPanel programmeId={programme.id} />
+
+        {/* Phase 6.5.6: Outcomes section */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-h2 text-foreground">Outcomes</h2>
+            <p className="text-body-sm text-foreground-muted">
+              Real-world results for actors recommended on this programme.
+            </p>
+          </div>
+          <OutcomeHistoryList
+            outcomes={programmeOutcomes}
+            variant="programme"
+            emptyState="No outcomes recorded yet."
+          />
+        </section>
       </div>
 
       <AddMemberDialog
