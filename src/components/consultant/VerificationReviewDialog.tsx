@@ -46,6 +46,8 @@ interface Props {
   onApprove: (payload: VerificationSubmitPayload) => Promise<void>;
   /** Optional secondary action (Reject) for the suggestion-approval flow. */
   onReject?: (reason: string) => Promise<void>;
+  /** Phase 6.5.6: optional past-outcomes summary panel rendered above the read-only actor summary. */
+  outcomesPanel?: React.ReactNode;
   busy?: boolean;
 }
 
@@ -58,6 +60,7 @@ export const VerificationReviewDialog = ({
   primaryLabel,
   onApprove,
   onReject,
+  outcomesPanel,
   busy = false,
 }: Props) => {
   const [evidence, setEvidence] = useState<VerificationEvidenceItem[]>([{}]);
