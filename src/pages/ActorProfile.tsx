@@ -458,6 +458,10 @@ const ActorProfile = () => {
   const { busy, updateNotes, updateTags, suggestForDb, deleteFromCollection } =
     useActorActions();
 
+  const actorIdForOutcomes = source === "database" ? dbActor?.id : personal?.matched_main_db_actor_id ?? undefined;
+  const { outcomes: actorOutcomes, summary: outcomeSummary, refresh: refreshOutcomes } =
+    useActorOutcomes(actorIdForOutcomes);
+
   useEffect(() => {
     if (!id || !user) return;
     let cancelled = false;
