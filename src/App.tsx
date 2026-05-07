@@ -19,7 +19,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/pitch" element={<Pitch />} />
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Index />} />
