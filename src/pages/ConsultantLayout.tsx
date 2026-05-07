@@ -5,11 +5,11 @@ import ConsultantProgrammesPage from "@/pages/consultant/ConsultantProgrammesPag
 import VerificationWorkspacePage from "@/pages/consultant/VerificationWorkspacePage";
 import ProgrammeAnalyticsPage from "@/pages/consultant/ProgrammeAnalyticsPage";
 import ProgrammeView from "@/pages/ProgrammeView";
-import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
+import { useConsultantAccess } from "@/hooks/useConsultantAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
 const ConsultantLayout = () => {
-  const { hasAccess, loading } = useManagedProgrammes();
+  const { hasAccess, loading } = useConsultantAccess();
 
   if (loading) {
     return (
@@ -20,7 +20,7 @@ const ConsultantLayout = () => {
   }
 
   if (!hasAccess) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/pipeline" replace />;
   }
 
   return (
