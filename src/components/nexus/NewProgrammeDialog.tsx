@@ -28,40 +28,16 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const [description, setDescription] = useState("");
   const [clientOrg, setClientOrg] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [diagRunning, setDiagRunning] = useState(false);
-  const [diagResult, setDiagResult] = useState<string>("");
-
-  const runDiagnostic = async () => {
-    setDiagRunning(true);
-    setDiagResult("");
-    try {
-      const { data, error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ data: unknown; error: unknown }>)("whoami_diagnostic");
-      if (error) {
-        setDiagResult(`ERROR:\n${JSON.stringify(error, null, 2)}`);
-      } else {
-        setDiagResult(JSON.stringify({ user_id_from_session: user?.id ?? null, rpc_data: data }, null, 2));
-      }
-    } catch (e) {
-      setDiagResult(`ERROR (thrown):\n${String(e)}`);
-    } finally {
-      setDiagRunning(false);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!user || !name.trim()) return;
     setSubmitting(true);
 
-    const { data, error } = await supabase
-      .from("programmes")
-      .insert({
-        name: name.trim(),
-        description: description.trim() || null,
-        client_org: clientOrg.trim() || null,
-        owner_user_id: user.id,
-      })
-      .select("id")
-      .single();
+    const { data, error } = await supabase.rpc("fn_create_programme", {
+      p_name: name,
+      p_description: description ?? null,
+      p_client_org: clientOrg ?? null,
+    });
 
     setSubmitting(false);
     if (error || !data) {
@@ -73,7 +49,7 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
     setClientOrg("");
     onOpenChange(false);
     onCreated?.();
-    navigate(`/programmes/${data.id}`);
+    navigate(`/programmes/${data as string}`);
   };
 
   return (
@@ -113,28 +89,6 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
             />
           </div>
         </div>
-        {import.meta.env.DEV && (
-          <div className="border-t border-border pt-3 mt-2 space-y-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={runDiagnostic}
-              disabled={diagRunning}
-            >
-              {diagRunning ? "Running…" : "🔍 Run whoami diagnostic (dev)"}
-            </Button>
-            {diagResult && (
-              <Textarea
-                readOnly
-                rows={10}
-                value={diagResult}
-                className="font-mono text-xs"
-                onFocus={(e) => e.currentTarget.select()}
-              />
-            )}
-          </div>
-        )}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel

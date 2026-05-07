@@ -1444,6 +1444,10 @@ export type Database = {
           verified_at: string
         }[]
       }
+      fn_create_programme: {
+        Args: { p_client_org?: string; p_description?: string; p_name: string }
+        Returns: string
+      }
       fn_reject_suggestion: {
         Args: { p_programme_id?: string; p_queue_id: string; p_reason?: string }
         Returns: string
@@ -1477,7 +1481,6 @@ export type Database = {
       }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
-      whoami_diagnostic: { Args: never; Returns: Json }
     }
     Enums: {
       [_ in never]: never
