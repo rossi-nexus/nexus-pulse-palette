@@ -28,6 +28,7 @@ const ProgrammeView = () => {
   const { user } = useAuth();
   const { programme, members, sessions, currentUserRole, isOwner, loading, notFound, refresh } =
     useProgramme(id);
+  const { outcomes: programmeOutcomes } = useProgrammeOutcomes(programme?.id);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<{ userId: string; isSelf: boolean } | null>(null);
