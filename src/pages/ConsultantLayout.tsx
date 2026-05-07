@@ -3,7 +3,7 @@ import TopBar from "@/components/nexus/TopBar";
 import ConsultantSidebar from "@/components/consultant/ConsultantSidebar";
 import ConsultantProgrammesPage from "@/pages/consultant/ConsultantProgrammesPage";
 import VerificationWorkspacePage from "@/pages/consultant/VerificationWorkspacePage";
-import AnalyticsPlaceholder from "@/pages/consultant/AnalyticsPlaceholder";
+import ProgrammeAnalyticsPage from "@/pages/consultant/ProgrammeAnalyticsPage";
 import ProgrammeView from "@/pages/ProgrammeView";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -34,7 +34,7 @@ const ConsultantLayout = () => {
               <Route index element={<Navigate to="programmes" replace />} />
               <Route path="programmes" element={<ConsultantProgrammesPage />} />
               <Route path="verification" element={<VerificationWorkspacePage />} />
-              <Route path="analytics" element={<AnalyticsPlaceholder />} />
+              <Route path="analytics" element={<ProgrammeAnalyticsPage />} />
               <Route path="programmes/:id" element={<ProgrammeView />} />
             </Routes>
           </div>
