@@ -728,6 +728,7 @@ export type Database = {
           id: string
           ingestion_date: string
           ontology_tags: Json | null
+          programme_id: string | null
           publication_date: string | null
           source_name: string | null
           source_url: string | null
@@ -743,6 +744,7 @@ export type Database = {
           id?: string
           ingestion_date?: string
           ontology_tags?: Json | null
+          programme_id?: string | null
           publication_date?: string | null
           source_name?: string | null
           source_url?: string | null
@@ -758,13 +760,22 @@ export type Database = {
           id?: string
           ingestion_date?: string
           ontology_tags?: Json | null
+          programme_id?: string | null
           publication_date?: string | null
           source_name?: string | null
           source_url?: string | null
           status?: string
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "intelligence_items_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ontology_categories: {
         Row: {
@@ -944,6 +955,7 @@ export type Database = {
           created_at: string
           id: string
           is_anonymous: boolean
+          programme_id: string | null
           roles_created: number | null
           searched_capabilities: string[] | null
           searched_competences: string[] | null
@@ -961,6 +973,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_anonymous?: boolean
+          programme_id?: string | null
           roles_created?: number | null
           searched_capabilities?: string[] | null
           searched_competences?: string[] | null
@@ -978,6 +991,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_anonymous?: boolean
+          programme_id?: string | null
           roles_created?: number | null
           searched_capabilities?: string[] | null
           searched_competences?: string[] | null
@@ -989,6 +1003,13 @@ export type Database = {
           user_tier?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "search_analytics_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "search_analytics_session_id_fkey"
             columns: ["session_id"]
@@ -1447,6 +1468,16 @@ export type Database = {
       fn_create_programme: {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string
+      }
+      fn_programme_summary: {
+        Args: { p_programme_id: string }
+        Returns: {
+          decay_warning_count: number
+          member_count: number
+          pending_suggestion_count: number
+          session_count: number
+          verified_actor_count: number
+        }[]
       }
       fn_reject_suggestion: {
         Args: { p_programme_id?: string; p_queue_id: string; p_reason?: string }
