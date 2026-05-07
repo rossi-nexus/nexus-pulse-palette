@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index.tsx";
 import DesignSystem from "./pages/DesignSystem.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import Pitch from "./pages/Pitch.tsx";
+
 
 const queryClient = new QueryClient();
 
