@@ -1620,6 +1620,21 @@ const ActorProfile = () => {
           </div>
         </ProfileSection>
 
+        {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Outcome history" count={actorOutcomes.length}>
+            <OutcomeHistoryList
+              outcomes={actorOutcomes}
+              variant="actor"
+              emptyState={
+                canRecordOutcome
+                  ? "No outcomes recorded yet. Use 'Record outcome' above to capture the first one."
+                  : "No outcomes recorded yet."
+              }
+            />
+          </ProfileSection>
+        )}
+
         {/* Actions */}
         <ProfileSection title="Actions">
           <div className="flex flex-wrap gap-2">
