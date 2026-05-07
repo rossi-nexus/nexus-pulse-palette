@@ -897,6 +897,64 @@ export type Database = {
           },
         ]
       }
+      programme_outcomes: {
+        Row: {
+          actor_id: string
+          completed_at: string | null
+          evidence: Json
+          id: string
+          notes: string | null
+          outcome_type: string
+          programme_id: string
+          recorded_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          actor_id: string
+          completed_at?: string | null
+          evidence?: Json
+          id?: string
+          notes?: string | null
+          outcome_type: string
+          programme_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          actor_id?: string
+          completed_at?: string | null
+          evidence?: Json
+          id?: string
+          notes?: string | null
+          outcome_type?: string
+          programme_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programme_outcomes_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programme_outcomes_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programme_outcomes_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       programmes: {
         Row: {
           client_org: string | null
@@ -1478,6 +1536,17 @@ export type Database = {
           session_count: number
           verified_actor_count: number
         }[]
+      }
+      fn_record_outcome: {
+        Args: {
+          p_actor_id: string
+          p_completed_at?: string
+          p_evidence?: Json
+          p_notes?: string
+          p_outcome_type: string
+          p_programme_id: string
+        }
+        Returns: string
       }
       fn_reject_suggestion: {
         Args: { p_programme_id?: string; p_queue_id: string; p_reason?: string }
