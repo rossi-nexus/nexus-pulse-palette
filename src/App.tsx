@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index.tsx";
 import DesignSystem from "./pages/DesignSystem.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Pitch from "./pages/Pitch.tsx";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/pitch" element={<Pitch />} />
             <Route path="/design-system" element={<DesignSystem />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Index />} />
