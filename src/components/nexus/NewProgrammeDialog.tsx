@@ -33,7 +33,6 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
     if (!user || !name.trim()) return;
     setSubmitting(true);
 
-    // @ts-expect-error fn_create_programme not yet in generated types; remove after types regen
     const { data, error } = await supabase.rpc("fn_create_programme", {
       p_name: name,
       p_description: description ?? null,
