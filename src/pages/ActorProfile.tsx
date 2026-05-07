@@ -1739,6 +1739,27 @@ const ActorProfile = () => {
           description="Record a new verification event with current evidence and a fresh decay window."
           primaryLabel="Verify"
           busy={reverifyBusy}
+          outcomesPanel={
+            actorOutcomes.length > 0 ? (
+              <div className="bg-elevated border border-border rounded-md p-3 text-sm space-y-1">
+                <div className="text-xs uppercase tracking-wide text-foreground-muted">
+                  Past outcomes for this actor
+                </div>
+                <ul className="space-y-0.5">
+                  {OUTCOME_TYPES.map((t) =>
+                    outcomeSummary[t] > 0 ? (
+                      <li key={t} className="text-foreground-secondary">
+                        • {outcomeSummary[t]} {OUTCOME_LABEL[t].toLowerCase()}
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
+                <div className="text-xs text-foreground-muted pt-1">
+                  Scroll the profile for full outcome history.
+                </div>
+              </div>
+            ) : null
+          }
           summary={
             <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 gap-x-4">
               <dt className="text-foreground-muted">Name</dt>
