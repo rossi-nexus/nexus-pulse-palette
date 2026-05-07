@@ -996,13 +996,20 @@ const ActorProfile = () => {
               )}
             </p>
           )}
-          {/* Phase 6.5.5b: Re-verify button (admins only for MVP — programme-scoped re-verify lives in workspace) */}
-          {source === "database" && dbActor && isAdmin && (
-            <div className="mt-3">
-              <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
-                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
-                Re-verify
-              </Button>
+          {/* Phase 6.5.5b/6.5.6: Re-verify + Record outcome action row */}
+          {source === "database" && dbActor && (isAdmin || canRecordOutcome) && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              {isAdmin && (
+                <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                  Re-verify
+                </Button>
+              )}
+              {canRecordOutcome && (
+                <Button size="sm" variant="outline" onClick={() => setOutcomeOpen(true)}>
+                  Record outcome
+                </Button>
+              )}
             </div>
           )}
           {website && (
