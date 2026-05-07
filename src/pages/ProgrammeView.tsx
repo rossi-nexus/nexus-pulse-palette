@@ -188,6 +188,21 @@ const ProgrammeView = () => {
 
         {/* Activity log — visible to all programme members */}
         <ProgrammeAuditLogPanel programmeId={programme.id} />
+
+        {/* Phase 6.5.6: Outcomes section */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-h2 text-foreground">Outcomes</h2>
+            <p className="text-body-sm text-foreground-muted">
+              Real-world results for actors recommended on this programme.
+            </p>
+          </div>
+          <OutcomeHistoryList
+            outcomes={programmeOutcomes}
+            variant="programme"
+            emptyState="No outcomes recorded yet."
+          />
+        </section>
       </div>
 
       <AddMemberDialog
