@@ -1788,6 +1788,15 @@ const ActorProfile = () => {
           }}
         />
       )}
+      {dbActor && (
+        <RecordOutcomeDialog
+          open={outcomeOpen}
+          onOpenChange={setOutcomeOpen}
+          actorId={dbActor.id}
+          actorName={dbActor.legal_name}
+          onRecorded={refreshOutcomes}
+        />
+      )}
     </div>
   );
 };
