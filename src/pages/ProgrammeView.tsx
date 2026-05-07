@@ -9,6 +9,7 @@ import AddMemberDialog from "@/components/nexus/AddMemberDialog";
 import { toast } from "sonner";
 import { UserPlus, LogOut, Trash2, ExternalLink, Pencil } from "lucide-react";
 import { EditProgrammeDialog } from "@/components/nexus/EditProgrammeDialog";
+import ProgrammeAuditLogPanel from "@/components/programme/ProgrammeAuditLogPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -181,6 +182,9 @@ const ProgrammeView = () => {
             </div>
           )}
         </section>
+
+        {/* Activity log — visible to all programme members */}
+        <ProgrammeAuditLogPanel programmeId={programme.id} />
       </div>
 
       <AddMemberDialog
