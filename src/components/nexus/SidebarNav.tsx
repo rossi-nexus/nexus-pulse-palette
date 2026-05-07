@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useSessionContext, type SessionListItem } from "@/contexts/SessionContext";
 import { useProgrammeList } from "@/hooks/useProgramme";
-import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
+import { useConsultantAccess } from "@/hooks/useConsultantAccess";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NewProgrammeDialog from "./NewProgrammeDialog";
