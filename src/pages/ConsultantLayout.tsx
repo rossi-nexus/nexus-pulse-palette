@@ -35,6 +35,7 @@ const ConsultantLayout = () => {
               <Route index element={<Navigate to="programmes" replace />} />
               <Route path="programmes" element={<ConsultantProgrammesPage />} />
               <Route path="verification" element={<VerificationWorkspacePage />} />
+              <Route path="onboarding" element={<OnboardingPage />} />
               <Route path="analytics" element={<ProgrammeAnalyticsPage />} />
               <Route path="programmes/:id" element={<ProgrammeView />} />
             </Routes>
