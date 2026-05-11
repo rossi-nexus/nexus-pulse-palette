@@ -1,10 +1,11 @@
 import { NavLink, Link } from "react-router-dom";
-import { FolderOpen, ShieldCheck, BarChart3, ArrowLeft } from "lucide-react";
+import { FolderOpen, ShieldCheck, BarChart3, ArrowLeft, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/consultant/programmes", icon: FolderOpen, label: "Programmes" },
   { to: "/consultant/verification", icon: ShieldCheck, label: "Verification queue" },
+  { to: "/consultant/onboarding", icon: UserPlus, label: "Onboard actor" },
   { to: "/consultant/analytics", icon: BarChart3, label: "Analytics" },
 ];
 
