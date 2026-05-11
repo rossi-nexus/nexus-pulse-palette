@@ -6,7 +6,7 @@
 //
 // B1-fix: wizard state persists in localStorage (key b1_onboarding_draft_v1)
 //         and programme assignment is optional.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw } from "lucide-react";
@@ -166,14 +166,16 @@ const OnboardingPage = () => {
   // Draft restore tracking
   const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  const hydratedRef = useRef(false);
+  // State-based hydration flag — guarantees the save effect only runs AFTER
+  // the restore-triggered re-render commits with the restored values, so it
+  // can never overwrite the freshly-restored draft with stale empties.
+  const [hydrated, setHydrated] = useState(false);
 
   // ---------- Restore draft on mount ----------
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (!raw) {
-        hydratedRef.current = true;
         return;
       }
       const draft = JSON.parse(raw) as DraftShape;
@@ -183,7 +185,6 @@ const OnboardingPage = () => {
         toast.info(
           `Cleared a stale onboarding draft from ${savedAt.toLocaleDateString?.() ?? "an earlier session"}.`,
         );
-        hydratedRef.current = true;
         return;
       }
       setStep(draft.step);
@@ -211,13 +212,16 @@ const OnboardingPage = () => {
       // corrupted draft — wipe.
       localStorage.removeItem(DRAFT_KEY);
     } finally {
-      hydratedRef.current = true;
+      // Set last — scheduled together with the setters above, so the save
+      // effect's first run sees BOTH `hydrated === true` AND the restored
+      // sections in the same committed render.
+      setHydrated(true);
     }
   }, []);
 
   // ---------- Persist draft on change (debounced) ----------
   useEffect(() => {
-    if (!hydratedRef.current) return;
+    if (!hydrated) return;
     const timer = setTimeout(() => {
       try {
         const draft: DraftShape = {
@@ -247,6 +251,7 @@ const OnboardingPage = () => {
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [
+    hydrated,
     step, legalName, country, orgNumber, websites, streetAddress, city, region,
     sections, evidence, decay, confidence, notes, programmeId,
   ]);
