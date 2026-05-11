@@ -24,6 +24,7 @@ const AppLayout = () => {
               <Route path="/actors/:id" element={<ActorProfile />} />
               <Route path="/programmes/:id" element={<ProgrammeView />} />
               <Route path="/admin" element={<AdminPlaceholder />} />
+              <Route path="/admin/p36-diagnostic" element={<P36DiagnosticPage />} />
             </Routes>
           </div>
         </div>
