@@ -1807,8 +1807,12 @@ const ActorProfile = () => {
             toast.success("Verification recorded");
             setReverifyOpen(false);
             // Refresh denormalised columns
-            const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
-            if (refreshed) setDbActor(refreshed as DbActor);
+            const { data: refreshed, error: refreshErr } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+            if (refreshErr) {
+              toast.error(`Verification saved, but refresh failed: ${refreshErr.message}`);
+            } else if (refreshed) {
+              setDbActor(refreshed as DbActor);
+            }
           }}
         />
       )}
