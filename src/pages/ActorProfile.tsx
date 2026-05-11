@@ -466,61 +466,84 @@ const ActorProfile = () => {
     if (!id || !user) return;
     let cancelled = false;
 
+    function settledOk<T>(
+      res: PromiseSettledResult<{ data: T | null; error: unknown }>,
+      label: string,
+    ): T | null {
+      if (res.status === "rejected") {
+        toast.error(`Failed to load ${label}: ${(res.reason as any)?.message ?? "Unknown error"}`);
+        return null;
+      }
+      if (res.value.error) {
+        toast.error(`Failed to load ${label}: ${(res.value.error as any).message ?? "Unknown error"}`);
+        return null;
+      }
+      return res.value.data;
+    }
+
     (async () => {
       setLoading(true);
       setSource(null);
       setPersonal(null);
       setDbActor(null);
 
-      // Check admin role
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!cancelled) setIsAdmin(userRow?.role === "admin");
+      try {
+        // Check admin role
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!cancelled) setIsAdmin(userRow?.role === "admin");
 
-      // Try personal first
-      const { data: pa } = await supabase
-        .from("user_personal_actors")
-        .select("*")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+        // Try personal first
+        const { data: pa, error: paErr } = await supabase
+          .from("user_personal_actors")
+          .select("*")
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (pa) {
-        setPersonal(pa as unknown as PersonalActor);
-        setSource("personal");
-
-        if (pa.source_session_id) {
-          const { data: s } = await supabase
-            .from("search_sessions")
-            .select("name, created_at")
-            .eq("id", pa.source_session_id)
-            .maybeSingle();
-          if (!cancelled) setSessionName(s?.name ?? null);
+        if (paErr) {
+          toast.error(`Failed to load actor: ${paErr.message}`);
         }
-        setLoading(false);
-        return;
-      }
 
-      // Try DB actor
-      const { data: da } = await supabase
-        .from("actors")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+        if (pa) {
+          setPersonal(pa as unknown as PersonalActor);
+          setSource("personal");
 
-      if (cancelled) return;
+          if (pa.source_session_id) {
+            const { data: s } = await supabase
+              .from("search_sessions")
+              .select("name, created_at")
+              .eq("id", pa.source_session_id)
+              .maybeSingle();
+            if (!cancelled) setSessionName(s?.name ?? null);
+          }
+          return;
+        }
 
-      if (da) {
-        setDbActor(da as unknown as DbActor);
-        setSource("database");
+        // Try DB actor
+        const { data: da, error: daErr } = await supabase
+          .from("actors")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
 
-        const [contactsRes, tagsRes, classRes, stdRes, custRes, descRes] =
-          await Promise.all([
+        if (cancelled) return;
+
+        if (daErr) {
+          toast.error(`Failed to load actor: ${daErr.message}`);
+          return;
+        }
+
+        if (da) {
+          setDbActor(da as unknown as DbActor);
+          setSource("database");
+
+          const results = await Promise.allSettled([
             supabase.from("actor_contacts").select("*").eq("actor_id", id),
             supabase
               .from("actor_ontology_tags")
@@ -534,16 +557,17 @@ const ActorProfile = () => {
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
           ]);
 
-        if (cancelled) return;
-        setContacts(contactsRes.data ?? []);
-        setOntologyTags((tagsRes.data ?? []) as unknown as OntologyTagRow[]);
-        setClassifications(classRes.data ?? []);
-        setStandards(stdRes.data ?? []);
-        setCustomers(custRes.data ?? []);
-        setDescriptions(descRes.data ?? []);
+          if (cancelled) return;
+          setContacts(settledOk<any[]>(results[0] as any, "contacts") ?? []);
+          setOntologyTags((settledOk<any[]>(results[1] as any, "ontology tags") ?? []) as unknown as OntologyTagRow[]);
+          setClassifications(settledOk<any[]>(results[2] as any, "certifications") ?? []);
+          setStandards(settledOk<any[]>(results[3] as any, "standards") ?? []);
+          setCustomers(settledOk<any[]>(results[4] as any, "customer history") ?? []);
+          setDescriptions(settledOk<any[]>(results[5] as any, "descriptions") ?? []);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      setLoading(false);
     })();
 
     return () => {
