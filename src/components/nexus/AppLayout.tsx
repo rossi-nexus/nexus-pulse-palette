@@ -5,7 +5,6 @@ import PipelineView from "./PipelineView";
 import ActorsView from "./ActorsView";
 import ActorProfile from "@/pages/ActorProfile";
 import AdminPlaceholder from "@/pages/AdminPlaceholder";
-import P36DiagnosticPage from "@/pages/admin/P36DiagnosticPage";
 import ProgrammeView from "@/pages/ProgrammeView";
 import { SessionProvider } from "@/contexts/SessionContext";
 
@@ -24,7 +23,6 @@ const AppLayout = () => {
               <Route path="/actors/:id" element={<ActorProfile />} />
               <Route path="/programmes/:id" element={<ProgrammeView />} />
               <Route path="/admin" element={<AdminPlaceholder />} />
-              <Route path="/admin/p36-diagnostic" element={<P36DiagnosticPage />} />
             </Routes>
           </div>
         </div>
