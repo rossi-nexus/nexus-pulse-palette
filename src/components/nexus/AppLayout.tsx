@@ -5,7 +5,6 @@ import PipelineView from "./PipelineView";
 import ActorsView from "./ActorsView";
 import ActorProfile from "@/pages/ActorProfile";
 import AdminPlaceholder from "@/pages/AdminPlaceholder";
-import P36DiagnosticPage from "@/pages/admin/P36DiagnosticPage";
 import ProgrammeView from "@/pages/ProgrammeView";
 import { SessionProvider } from "@/contexts/SessionContext";
 
