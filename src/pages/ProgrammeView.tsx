@@ -238,9 +238,11 @@ const ProgrammeView = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveMember}>
-              {confirmRemove?.isSelf ? "Leave" : "Remove"}
+            <AlertDialogCancel disabled={removingMember}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveMember} disabled={removingMember}>
+              {removingMember
+                ? (confirmRemove?.isSelf ? "Leaving…" : "Removing…")
+                : (confirmRemove?.isSelf ? "Leave" : "Remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
