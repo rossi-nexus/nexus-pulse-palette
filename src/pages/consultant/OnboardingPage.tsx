@@ -2,11 +2,14 @@
 // Consultant or admin seeds a verified actor in one flow:
 //   Step 1 — Identity (+ optional registry lookup)
 //   Step 2 — AI ontology scrape per section (optional)
-//   Step 3 — Commit (evidence/decay/confidence/notes/programme) → fn_onboard_verified_actor
-import { useState } from "react";
+//   Step 3 — Commit (evidence/decay/confidence/notes/programme[optional]) → fn_onboard_verified_actor
+//
+// B1-fix: wizard state persists in localStorage (key b1_onboarding_draft_v1)
+//         and programme assignment is optional.
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
+import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { cn } from "@/lib/utils";
 import type { VerificationEvidenceItem, VerifierConfidence } from "@/types/verification";
@@ -87,6 +91,36 @@ const REGISTRY_BY_COUNTRY: Record<string, string> = {
   FI: "prh",
 };
 
+// ---------- localStorage draft persistence ----------
+const DRAFT_KEY = "b1_onboarding_draft_v1";
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const SAVE_DEBOUNCE_MS = 300;
+const PROGRAMME_NONE = "__none__"; // sentinel; Radix Select disallows empty-string values
+
+interface DraftShape {
+  saved_at: string;
+  step: 1 | 2 | 3;
+  identity: {
+    legalName: string;
+    country: string;
+    orgNumber: string;
+    websites: string[];
+    streetAddress: string;
+    city: string;
+    region: string;
+  };
+  // Section accepted items only — proposals/loading/error are transient.
+  accepted: Record<SectionKey, AcceptedItem[]>;
+  scraped: Record<SectionKey, boolean>;
+  verification: {
+    evidence: VerificationEvidenceItem[];
+    decay: string;
+    confidence: VerifierConfidence | "";
+    notes: string;
+    programmeId: string; // "" means "no programme"
+  };
+}
+
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { programmes, loading: progLoading } = useManagedProgrammes();
@@ -128,6 +162,120 @@ const OnboardingPage = () => {
   const [notes, setNotes] = useState("");
   const [programmeId, setProgrammeId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Draft restore tracking
+  const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const hydratedRef = useRef(false);
+
+  // ---------- Restore draft on mount ----------
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) {
+        hydratedRef.current = true;
+        return;
+      }
+      const draft = JSON.parse(raw) as DraftShape;
+      const savedAt = new Date(draft.saved_at);
+      if (Number.isNaN(savedAt.getTime()) || Date.now() - savedAt.getTime() > STALE_AFTER_MS) {
+        localStorage.removeItem(DRAFT_KEY);
+        toast.info(
+          `Cleared a stale onboarding draft from ${savedAt.toLocaleDateString?.() ?? "an earlier session"}.`,
+        );
+        hydratedRef.current = true;
+        return;
+      }
+      setStep(draft.step);
+      setLegalName(draft.identity.legalName ?? "");
+      setCountry(draft.identity.country ?? "");
+      setOrgNumber(draft.identity.orgNumber ?? "");
+      setWebsites(draft.identity.websites?.length ? draft.identity.websites : [""]);
+      setStreetAddress(draft.identity.streetAddress ?? "");
+      setCity(draft.identity.city ?? "");
+      setRegion(draft.identity.region ?? "");
+      setSections({
+        capabilities: { ...emptySection(), accepted: draft.accepted?.capabilities ?? [], scraped: !!draft.scraped?.capabilities },
+        competences: { ...emptySection(), accepted: draft.accepted?.competences ?? [], scraped: !!draft.scraped?.competences },
+        domains: { ...emptySection(), accepted: draft.accepted?.domains ?? [], scraped: !!draft.scraped?.domains },
+        products: { ...emptySection(), accepted: draft.accepted?.products ?? [], scraped: !!draft.scraped?.products },
+        services: { ...emptySection(), accepted: draft.accepted?.services ?? [], scraped: !!draft.scraped?.services },
+      });
+      setEvidence(draft.verification?.evidence?.length ? draft.verification.evidence : [{}]);
+      setDecay(draft.verification?.decay ?? "90");
+      setConfidence(draft.verification?.confidence ?? "");
+      setNotes(draft.verification?.notes ?? "");
+      setProgrammeId(draft.verification?.programmeId ?? "");
+      setDraftRestoredAt(draft.saved_at);
+    } catch {
+      // corrupted draft — wipe.
+      localStorage.removeItem(DRAFT_KEY);
+    } finally {
+      hydratedRef.current = true;
+    }
+  }, []);
+
+  // ---------- Persist draft on change (debounced) ----------
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const timer = setTimeout(() => {
+      try {
+        const draft: DraftShape = {
+          saved_at: new Date().toISOString(),
+          step,
+          identity: { legalName, country, orgNumber, websites, streetAddress, city, region },
+          accepted: {
+            capabilities: sections.capabilities.accepted,
+            competences: sections.competences.accepted,
+            domains: sections.domains.accepted,
+            products: sections.products.accepted,
+            services: sections.services.accepted,
+          },
+          scraped: {
+            capabilities: sections.capabilities.scraped,
+            competences: sections.competences.scraped,
+            domains: sections.domains.scraped,
+            products: sections.products.scraped,
+            services: sections.services.scraped,
+          },
+          verification: { evidence, decay, confidence, notes, programmeId },
+        };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch {
+        // quota / privacy mode — silently ignore.
+      }
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [
+    step, legalName, country, orgNumber, websites, streetAddress, city, region,
+    sections, evidence, decay, confidence, notes, programmeId,
+  ]);
+
+  const clearDraftAndReset = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setStep(1);
+    setLegalName("");
+    setCountry("");
+    setOrgNumber("");
+    setWebsites([""]);
+    setStreetAddress("");
+    setCity("");
+    setRegion("");
+    setSections({
+      capabilities: emptySection(),
+      competences: emptySection(),
+      domains: emptySection(),
+      products: emptySection(),
+      services: emptySection(),
+    });
+    setManualDrafts({ capabilities: null, competences: null, domains: null, products: null, services: null });
+    setEvidence([{}]);
+    setDecay("90");
+    setConfidence("");
+    setNotes("");
+    setProgrammeId("");
+    setDraftRestoredAt(null);
+  };
 
   const cleanWebsites = () => websites.map((w) => w.trim()).filter(Boolean);
 
@@ -310,7 +458,7 @@ const OnboardingPage = () => {
     );
 
   const handleSubmit = async () => {
-    if (!legalName.trim() || !confidence || !programmeId) return;
+    if (!legalName.trim() || !confidence) return;
     setSubmitting(true);
     try {
       const decayOpt = DECAY_OPTIONS.find((d) => d.value === decay);
@@ -348,7 +496,7 @@ const OnboardingPage = () => {
           confidence,
           notes: notes.trim() || null,
         } as never,
-        p_programme_id: programmeId,
+        p_programme_id: programmeId || null,
       });
 
       if (error) throw new Error(error.message);
@@ -360,12 +508,21 @@ const OnboardingPage = () => {
       };
       const matched = result.ontology_matched_count ?? 0;
       const unmatched = result.ontology_unmatched ?? [];
-      toast.success(
-        `Onboarded ${legalName.trim()}. ${matched} ontology tag${matched === 1 ? "" : "s"} applied.` +
-          (unmatched.length > 0
-            ? ` ${unmatched.length} entr${unmatched.length === 1 ? "y" : "ies"} didn't match (not stored).`
-            : ""),
-      );
+      const tagFragment =
+        `${matched} ontology tag${matched === 1 ? "" : "s"} applied.` +
+        (unmatched.length > 0
+          ? ` ${unmatched.length} entr${unmatched.length === 1 ? "y" : "ies"} didn't match (not stored).`
+          : "");
+      if (programmeId) {
+        toast.success(`Onboarded ${legalName.trim()}. ${tagFragment}`);
+      } else {
+        toast.success(
+          `Onboarded ${legalName.trim()} (no programme assigned). ${tagFragment} Link to a programme later via re-verify on the actor profile.`,
+        );
+      }
+
+      // Clear draft on successful submit.
+      localStorage.removeItem(DRAFT_KEY);
       navigate(`/actors/${result.actor_id}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Onboarding failed");
@@ -376,7 +533,7 @@ const OnboardingPage = () => {
 
   // ---------- Render ----------
   const canContinueStep1 = legalName.trim().length > 0;
-  const canSubmit = !!confidence && !!programmeId && !submitting;
+  const canSubmit = !!confidence && !submitting;
 
   return (
     <div className="h-full overflow-y-auto bg-background">
@@ -389,6 +546,26 @@ const OnboardingPage = () => {
             the actor profile after onboarding.
           </p>
         </div>
+
+        {/* Draft restored indicator */}
+        {draftRestoredAt && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground">
+            <span>
+              Draft restored from{" "}
+              <span className="font-mono">
+                {new Date(draftRestoredAt).toLocaleString()}
+              </span>
+              .
+            </span>
+            <button
+              type="button"
+              onClick={() => setResetConfirmOpen(true)}
+              className="inline-flex items-center gap-1 text-info hover:underline"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset
+            </button>
+          </div>
+        )}
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-8">
@@ -674,15 +851,23 @@ const OnboardingPage = () => {
               </p>
             </div>
 
+            <div className="rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground">
+              Programme assignment is optional. Confidence, decay, and notes are still
+              required for a meaningful verification record.
+            </div>
+
             <div className="space-y-2">
-              <Label>
-                Programme <span className="text-destructive">*</span>
-              </Label>
-              <Select value={programmeId} onValueChange={setProgrammeId} disabled={progLoading}>
+              <Label>Programme</Label>
+              <Select
+                value={programmeId === "" ? PROGRAMME_NONE : programmeId}
+                onValueChange={(v) => setProgrammeId(v === PROGRAMME_NONE ? "" : v)}
+                disabled={progLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder={progLoading ? "Loading…" : "Select programme"} />
+                  <SelectValue placeholder={progLoading ? "Loading…" : "No programme (assign later)"} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={PROGRAMME_NONE}>No programme (assign later)</SelectItem>
                   {programmes.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}{p.client_org ? ` — ${p.client_org}` : ""}
@@ -690,9 +875,14 @@ const OnboardingPage = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-foreground-muted">
+                Onboard now without a programme. You can link this verification to a
+                programme later via the re-verify flow on the actor's profile.
+              </p>
               {!progLoading && programmes.length === 0 && (
-                <p className="text-xs text-warning">
-                  You don't manage any programmes. Create one first or ask an admin to add you.
+                <p className="text-[11px] text-foreground-muted">
+                  You don't manage any programmes — you can still onboard without one
+                  and link to a programme later.
                 </p>
               )}
             </div>
@@ -778,6 +968,19 @@ const OnboardingPage = () => {
           </div>
         )}
       </div>
+
+      <ConfirmActorActionDialog
+        open={resetConfirmOpen}
+        onOpenChange={setResetConfirmOpen}
+        title="Discard your draft and start over?"
+        description="This clears all fields you've filled in so far across every step. This cannot be undone."
+        confirmLabel="Discard draft"
+        destructive
+        onConfirm={() => {
+          clearDraftAndReset();
+          setResetConfirmOpen(false);
+        }}
+      />
     </div>
   );
 };
