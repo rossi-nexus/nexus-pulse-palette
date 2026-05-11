@@ -131,11 +131,15 @@ const ActorsView = () => {
         if (!cancelled) setMatchedVerification(new Map());
         return;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("actors")
         .select("id, verified_at, decays_at")
         .in("id", ids);
       if (cancelled) return;
+      if (error) {
+        toast.error(`Failed to load verification info: ${error.message}`);
+        return;
+      }
       const m = new Map<string, DbVerification>();
       (data ?? []).forEach((row) =>
         m.set(row.id, { verified_at: row.verified_at, decays_at: row.decays_at }),
@@ -147,7 +151,7 @@ const ActorsView = () => {
       setLoading(true);
       try {
         if (tab === "collection") {
-          const [{ data: actors }, { data: sess }] = await Promise.all([
+          const [actorsRes, sessRes] = await Promise.all([
             supabase
               .from("user_personal_actors")
               .select("*")
@@ -159,18 +163,27 @@ const ActorsView = () => {
               .eq("user_id", user.id),
           ]);
           if (cancelled) return;
-          const list = (actors ?? []) as unknown as PersonalActor[];
+          if (actorsRes.error) {
+            toast.error(`Failed to load collection: ${actorsRes.error.message}`);
+          }
+          if (sessRes.error) {
+            toast.error(`Failed to load sessions: ${sessRes.error.message}`);
+          }
+          const list = (actorsRes.data ?? []) as unknown as PersonalActor[];
           setPersonal(list);
-          setSessions((sess ?? []) as SessionInfo[]);
+          setSessions((sessRes.data ?? []) as SessionInfo[]);
           await fetchMatchedVerification(list);
         } else if (tab === "database") {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("actors")
             .select(
               "id, legal_name, org_number, country, websites, verification_status, verified_at, decays_at, data_completeness, source, created_at, updated_at",
             )
             .order("updated_at", { ascending: false });
           if (cancelled) return;
+          if (error) {
+            toast.error(`Failed to load database: ${error.message}`);
+          }
           setDbActors((data ?? []) as DbActor[]);
         }
       } finally {

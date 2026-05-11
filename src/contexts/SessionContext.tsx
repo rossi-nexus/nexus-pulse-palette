@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -74,12 +75,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const fetchSessions = useCallback(async (uid: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("search_sessions")
       .select("id, name, status, created_at, updated_at, programme_id")
       .eq("user_id", uid)
       .eq("status", "active")
       .order("updated_at", { ascending: false });
+    if (error) {
+      toast.error(`Failed to load sessions: ${error.message}`);
+      return [] as SessionListItem[];
+    }
     return (data ?? []) as SessionListItem[];
   }, []);
 
@@ -91,43 +96,52 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     let cancelled = false;
     (async () => {
-      // Load role
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!cancelled) setIsAdmin(profile?.role === "admin");
+      try {
+        // Load role
+        const { data: profile, error: profErr } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profErr) throw profErr;
+        if (!cancelled) setIsAdmin(profile?.role === "admin");
 
-      // Load ABAC attributes
-      const { data: attrs } = await supabase
-        .from("user_attributes")
-        .select("key, value")
-        .eq("user_id", user.id);
-      if (!cancelled) {
-        const map: EffectiveAttributes = {};
-        for (const row of attrs ?? []) map[row.key] = row.value;
-        setDbAttributes(map);
-      }
-
-      const list = await fetchSessions(user.id);
-      if (cancelled) return;
-
-      if (list.length > 0) {
-        setSessions(list);
-        setSessionIdState(list[0].id);
-      } else {
-        const { data: created } = await supabase
-          .from("search_sessions")
-          .insert({ user_id: user.id, status: "active" })
-          .select("id, name, status, created_at, updated_at, programme_id")
-          .single();
-        if (created && !cancelled) {
-          setSessions([created as SessionListItem]);
-          setSessionIdState(created.id);
+        // Load ABAC attributes
+        const { data: attrs, error: attrErr } = await supabase
+          .from("user_attributes")
+          .select("key, value")
+          .eq("user_id", user.id);
+        if (attrErr) throw attrErr;
+        if (!cancelled) {
+          const map: EffectiveAttributes = {};
+          for (const row of attrs ?? []) map[row.key] = row.value;
+          setDbAttributes(map);
         }
+
+        const list = await fetchSessions(user.id);
+        if (cancelled) return;
+
+        if (list.length > 0) {
+          setSessions(list);
+          setSessionIdState(list[0].id);
+        } else {
+          const { data: created, error: createErr } = await supabase
+            .from("search_sessions")
+            .insert({ user_id: user.id, status: "active" })
+            .select("id, name, status, created_at, updated_at, programme_id")
+            .single();
+          if (createErr) {
+            toast.error(`Failed to create session: ${createErr.message}`);
+          } else if (created && !cancelled) {
+            setSessions([created as SessionListItem]);
+            setSessionIdState(created.id);
+          }
+        }
+      } catch (e: any) {
+        if (!cancelled) toast.error(`Session init failed: ${e?.message ?? "Unknown error"}`);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [user, fetchSessions]);
@@ -144,11 +158,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const createSession = useCallback(async () => {
     if (!user) return null;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("search_sessions")
       .insert({ user_id: user.id, status: "active" })
       .select("id, name, status, created_at, updated_at, programme_id")
       .single();
+    if (error) {
+      toast.error(`Failed to create session: ${error.message}`);
+      return null;
+    }
     if (data) {
       setSessions((prev) => [data as SessionListItem, ...prev]);
       setSessionIdState(data.id);
@@ -158,13 +176,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const renameSession = useCallback(async (id: string, name: string) => {
-    await supabase.from("search_sessions").update({ name }).eq("id", id);
+    const { error } = await supabase.from("search_sessions").update({ name }).eq("id", id);
+    if (error) {
+      toast.error(`Rename failed: ${error.message}`);
+      return;
+    }
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)));
   }, []);
 
   const assignSessionToProgramme = useCallback(
     async (id: string, programmeId: string | null) => {
-      await supabase.from("search_sessions").update({ programme_id: programmeId }).eq("id", id);
+      const { error } = await supabase.from("search_sessions").update({ programme_id: programmeId }).eq("id", id);
+      if (error) {
+        toast.error(`Failed to assign session: ${error.message}`);
+        return;
+      }
       setSessions((prev) =>
         prev.map((s) => (s.id === id ? { ...s, programme_id: programmeId } : s))
       );

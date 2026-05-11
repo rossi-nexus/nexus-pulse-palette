@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Interpretation, ClarificationPoint, SummaryPoint, Role, Constraints, ItemStatus } from "@/types/interpretation";
 import type { NeedDescription } from "@/types/need-description";
@@ -36,18 +37,23 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     if (!sessionId) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("session_step_states")
-        .select("*")
-        .eq("session_id", sessionId)
-        .eq("step", "A2")
-        .maybeSingle();
-      if (cancelled || !data) return;
-      const output = data.locked_output as { interpretation?: Interpretation; clarificationPoints?: ClarificationPoint[] } | null;
-      if (data.status === "locked" && output?.interpretation) {
-        setInterpretation(output.interpretation);
-        setClarificationPoints(output.clarificationPoints || []);
-        setStatus("locked");
+      try {
+        const { data, error } = await supabase
+          .from("session_step_states")
+          .select("*")
+          .eq("session_id", sessionId)
+          .eq("step", "A2")
+          .maybeSingle();
+        if (error) throw error;
+        if (cancelled || !data) return;
+        const output = data.locked_output as { interpretation?: Interpretation; clarificationPoints?: ClarificationPoint[] } | null;
+        if (data.status === "locked" && output?.interpretation) {
+          setInterpretation(output.interpretation);
+          setClarificationPoints(output.clarificationPoints || []);
+          setStatus("locked");
+        }
+      } catch (e: any) {
+        if (!cancelled) toast.error(`Failed to load Step 2 state: ${e?.message ?? "Unknown error"}`);
       }
     })();
     return () => { cancelled = true; };
@@ -367,25 +373,37 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     if (sessionId && interpretation) {
       const now = new Date().toISOString();
       const lockedOutput = { interpretation, clarificationPoints };
-      const { data: existing } = await supabase
+      const { data: existing, error: selErr } = await supabase
         .from("session_step_states")
         .select("id")
         .eq("session_id", sessionId)
         .eq("step", "A2")
         .maybeSingle();
+      if (selErr) {
+        toast.error(`Lock failed: ${selErr.message}`);
+        return;
+      }
       if (existing) {
-        await supabase
+        const { error } = await supabase
           .from("session_step_states")
           .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
           .eq("id", existing.id);
+        if (error) {
+          toast.error(`Lock failed: ${error.message}`);
+          return;
+        }
       } else {
-        await supabase.from("session_step_states").insert([{
+        const { error } = await supabase.from("session_step_states").insert([{
           session_id: sessionId,
           step: "A2",
           status: "locked",
           locked_output: lockedOutput as any,
           locked_at: now,
         }]);
+        if (error) {
+          toast.error(`Lock failed: ${error.message}`);
+          return;
+        }
       }
     }
     setStatus("locked");
@@ -393,11 +411,15 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
 
   const unlock = useCallback(async () => {
     if (sessionId) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "editing", locked_output: null, locked_at: null })
         .eq("session_id", sessionId)
         .eq("step", "A2");
+      if (error) {
+        toast.error(`Unlock failed: ${error.message}`);
+        return;
+      }
     }
     setStatus("editing");
   }, [sessionId]);
@@ -405,11 +427,12 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
   // Full reset — used by upstream cascade when Step 1 unlocks
   const reset = useCallback(async () => {
     if (sessionId) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "editing", locked_output: null, locked_at: null })
         .eq("session_id", sessionId)
         .eq("step", "A2");
+      if (error) toast.error(`Reset failed: ${error.message}`);
     }
     setInterpretation(null);
     setClarificationPoints([]);

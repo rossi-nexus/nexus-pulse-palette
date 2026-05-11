@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActorCardData, RoleSearchResult } from "@/hooks/useSearch";
 import type { Constraints, Role } from "@/types/interpretation";
@@ -94,19 +95,24 @@ export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null 
     if (!sessionId) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("session_step_states")
-        .select("*")
-        .eq("session_id", sessionId)
-        .eq("step", "A4")
-        .maybeSingle();
-      if (cancelled || !data) return;
-      const output = data.locked_output as { roleProgress?: RoleAnalysisProgress[] } | null;
-      if (data.status === "locked" && output?.roleProgress) {
-        const restored = new Map<string, RoleAnalysisProgress>();
-        for (const r of output.roleProgress) restored.set(r.role_id, r);
-        setRoleProgress(restored);
-        setStatus("locked");
+      try {
+        const { data, error } = await supabase
+          .from("session_step_states")
+          .select("*")
+          .eq("session_id", sessionId)
+          .eq("step", "A4")
+          .maybeSingle();
+        if (error) throw error;
+        if (cancelled || !data) return;
+        const output = data.locked_output as { roleProgress?: RoleAnalysisProgress[] } | null;
+        if (data.status === "locked" && output?.roleProgress) {
+          const restored = new Map<string, RoleAnalysisProgress>();
+          for (const r of output.roleProgress) restored.set(r.role_id, r);
+          setRoleProgress(restored);
+          setStatus("locked");
+        }
+      } catch (e: any) {
+        if (!cancelled) toast.error(`Failed to load Step 4 state: ${e?.message ?? "Unknown error"}`);
       }
     })();
     return () => { cancelled = true; };
@@ -287,25 +293,37 @@ export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null 
     if (sessionId) {
       const now = new Date().toISOString();
       const lockedOutput = { roleProgress: Array.from(roleProgress.values()) };
-      const { data: existing } = await supabase
+      const { data: existing, error: selErr } = await supabase
         .from("session_step_states")
         .select("id")
         .eq("session_id", sessionId)
         .eq("step", "A4")
         .maybeSingle();
+      if (selErr) {
+        toast.error(`Lock failed: ${selErr.message}`);
+        return;
+      }
       if (existing) {
-        await supabase
+        const { error } = await supabase
           .from("session_step_states")
           .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
           .eq("id", existing.id);
+        if (error) {
+          toast.error(`Lock failed: ${error.message}`);
+          return;
+        }
       } else {
-        await supabase.from("session_step_states").insert([{
+        const { error } = await supabase.from("session_step_states").insert([{
           session_id: sessionId,
           step: "A4",
           status: "locked",
           locked_output: lockedOutput as any,
           locked_at: now,
         }]);
+        if (error) {
+          toast.error(`Lock failed: ${error.message}`);
+          return;
+        }
       }
     }
     setStatus("locked");
@@ -313,11 +331,15 @@ export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null 
 
   const unlock = useCallback(async () => {
     if (sessionId) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "editing", locked_output: null, locked_at: null })
         .eq("session_id", sessionId)
         .eq("step", "A4");
+      if (error) {
+        toast.error(`Unlock failed: ${error.message}`);
+        return;
+      }
     }
     setStatus("complete");
   }, [sessionId]);
@@ -325,11 +347,12 @@ export function useAnalysis({ sessionId }: UseAnalysisProps = { sessionId: null 
   // Full reset — used by upstream cascade
   const reset = useCallback(async () => {
     if (sessionId) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "editing", locked_output: null, locked_at: null })
         .eq("session_id", sessionId)
         .eq("step", "A4");
+      if (error) toast.error(`Reset failed: ${error.message}`);
     }
     setStatus("not_started");
     setRoleProgress(new Map());
