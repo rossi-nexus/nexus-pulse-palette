@@ -85,14 +85,23 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
       if (text) {
         (async () => {
           const { supabase } = await import("@/integrations/supabase/client");
-          const { data: existing } = await supabase
+          const { toast } = await import("sonner");
+          const { data: existing, error: selErr } = await supabase
             .from("search_sessions")
             .select("name")
             .eq("id", sessionId)
             .maybeSingle();
+          if (selErr) {
+            toast.error(`Auto-name lookup failed: ${selErr.message}`);
+            return;
+          }
           if (existing && (!existing.name || existing.name.trim() === "")) {
             const name = text.substring(0, 50).trim();
-            await supabase.from("search_sessions").update({ name }).eq("id", sessionId);
+            const { error: upErr } = await supabase.from("search_sessions").update({ name }).eq("id", sessionId);
+            if (upErr) {
+              toast.error(`Auto-name failed: ${upErr.message}`);
+              return;
+            }
             await refreshSessions();
           }
         })();
