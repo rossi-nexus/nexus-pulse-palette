@@ -32,6 +32,7 @@ const ProgrammeView = () => {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<{ userId: string; isSelf: boolean } | null>(null);
+  const [removingMember, setRemovingMember] = useState(false);
 
   if (loading) {
     return (
@@ -57,18 +58,23 @@ const ProgrammeView = () => {
 
   const handleRemoveMember = async () => {
     if (!confirmRemove) return;
-    const { error } = await supabase
-      .from("programme_members")
-      .delete()
-      .eq("programme_id", programme.id)
-      .eq("user_id", confirmRemove.userId);
-    setConfirmRemove(null);
-    if (error) {
-      toast.error(error.message);
-      return;
+    setRemovingMember(true);
+    try {
+      const { error } = await supabase
+        .from("programme_members")
+        .delete()
+        .eq("programme_id", programme.id)
+        .eq("user_id", confirmRemove.userId);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(confirmRemove.isSelf ? "Left programme" : "Member removed");
+      setConfirmRemove(null);
+      refresh();
+    } finally {
+      setRemovingMember(false);
     }
-    toast.success(confirmRemove.isSelf ? "Left programme" : "Member removed");
-    refresh();
   };
 
   return (
