@@ -340,14 +340,14 @@ const OnboardingPage = () => {
       };
 
       const { data, error } = await supabase.rpc("fn_onboard_verified_actor", {
-        p_identity: identity,
-        p_ontology_items: ontologyItems,
+        p_identity: identity as never,
+        p_ontology_items: ontologyItems as never,
         p_verification: {
           evidence: cleanEvidence,
           decays_at,
           confidence,
           notes: notes.trim() || null,
-        },
+        } as never,
         p_programme_id: programmeId,
       });
 
