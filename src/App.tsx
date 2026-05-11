@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AUTH_BYPASS_ACTIVE } from "@/lib/devAuthBypass";
+import { DevModeAuthBypassBanner } from "@/components/DevModeAuthBypassBanner";
 import Index from "./pages/Index.tsx";
 import DesignSystem from "./pages/DesignSystem.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -18,11 +20,14 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/design-system" element={<DesignSystem />} />
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<Index />} />
-          </Routes>
+          <DevModeAuthBypassBanner />
+          <div className={AUTH_BYPASS_ACTIVE ? "pt-8" : ""}>
+            <Routes>
+              <Route path="/design-system" element={<DesignSystem />} />
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<Index />} />
+            </Routes>
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
