@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { DatabaseCheckResult, ExactMatch, SimilarActor } from "@/types/database-check";
 import type { ActorCardData, RoleSearchResult } from "@/hooks/useSearch";
@@ -139,21 +140,26 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
     if (!sessionId) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("session_step_states")
-        .select("*")
-        .eq("session_id", sessionId)
-        .eq("step", "A5")
-        .maybeSingle();
-      if (cancelled || !data) return;
-      const out = data.locked_output as
-        | { result?: DatabaseCheckResult; savedCount?: number }
-        | null;
-      if (data.status === "locked" && out?.result) {
-        setResult(out.result);
-        setSavedCount(out.savedCount || 0);
-        setPhase("done");
-        setStatus("locked");
+      try {
+        const { data, error } = await supabase
+          .from("session_step_states")
+          .select("*")
+          .eq("session_id", sessionId)
+          .eq("step", "A5")
+          .maybeSingle();
+        if (error) throw error;
+        if (cancelled || !data) return;
+        const out = data.locked_output as
+          | { result?: DatabaseCheckResult; savedCount?: number }
+          | null;
+        if (data.status === "locked" && out?.result) {
+          setResult(out.result);
+          setSavedCount(out.savedCount || 0);
+          setPhase("done");
+          setStatus("locked");
+        }
+      } catch (e: any) {
+        if (!cancelled) toast.error(`Failed to load Step 5 state: ${e?.message ?? "Unknown error"}`);
       }
     })();
     return () => {
@@ -336,12 +342,13 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
         // Dedupe-on-insert: check existing rows for this session by actor_name
         if (rows.length > 0) {
           const names = rows.map((r) => r.actor_name as string);
-          const { data: existing } = await supabase
+          const { data: existing, error: existingErr } = await supabase
             .from("user_personal_actors")
             .select("id, actor_name")
             .eq("user_id", user.id)
             .eq("source_session_id", sessionId)
             .in("actor_name", names);
+          if (existingErr) throw existingErr;
           const existingByName = new Map(
             (existing || []).map((e: any) => [e.actor_name as string, e.id as string]),
           );
@@ -385,19 +392,27 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
     if (!sessionId) return;
     const now = new Date().toISOString();
     const lockedOutput = { result, savedCount };
-    const { data: existing } = await supabase
+    const { data: existing, error: selErr } = await supabase
       .from("session_step_states")
       .select("id")
       .eq("session_id", sessionId)
       .eq("step", "A5")
       .maybeSingle();
+    if (selErr) {
+      toast.error(`Lock failed: ${selErr.message}`);
+      return;
+    }
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "locked", locked_output: lockedOutput as any, locked_at: now })
         .eq("id", existing.id);
+      if (error) {
+        toast.error(`Lock failed: ${error.message}`);
+        return;
+      }
     } else {
-      await supabase.from("session_step_states").insert([
+      const { error } = await supabase.from("session_step_states").insert([
         {
           session_id: sessionId,
           step: "A5",
@@ -406,28 +421,37 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
           locked_at: now,
         },
       ]);
+      if (error) {
+        toast.error(`Lock failed: ${error.message}`);
+        return;
+      }
     }
     setStatus("locked");
   }, [sessionId, result, savedCount]);
 
   const unlock = useCallback(async () => {
     if (!sessionId) return;
-    await supabase
+    const { error } = await supabase
       .from("session_step_states")
       .update({ status: "editing", locked_output: null, locked_at: null })
       .eq("session_id", sessionId)
       .eq("step", "A5");
+    if (error) {
+      toast.error(`Unlock failed: ${error.message}`);
+      return;
+    }
     // Return to "complete" if we had a result, otherwise "saved" if we had saved, else not_started
     setStatus(result ? "complete" : "not_started");
   }, [sessionId, result]);
 
   const reset = useCallback(async () => {
     if (sessionId) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "editing", locked_output: null, locked_at: null })
         .eq("session_id", sessionId)
         .eq("step", "A5");
+      if (error) toast.error(`Reset failed: ${error.message}`);
     }
     setStatus("not_started");
     setPhase("idle");

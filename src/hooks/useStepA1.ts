@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { NeedAttachment } from "@/types/need-description";
 import type { StepStatus } from "@/types/session";
@@ -32,23 +33,29 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
     }
 
     const load = async () => {
-      const { data } = await supabase
-        .from("session_step_states")
-        .select("*")
-        .eq("session_id", sessionId)
-        .eq("step", "A1")
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from("session_step_states")
+          .select("*")
+          .eq("session_id", sessionId)
+          .eq("step", "A1")
+          .maybeSingle();
+        if (error) throw error;
 
-      if (data) {
-        const output = data.locked_output as Record<string, unknown> | null;
-        setState({
-          contextText: (output?.context_text as string) || "",
-          attachments: (output?.attachments as NeedAttachment[]) || [],
-          status: data.status as StepStatus,
-          loading: false,
-          error: null,
-        });
-      } else {
+        if (data) {
+          const output = data.locked_output as Record<string, unknown> | null;
+          setState({
+            contextText: (output?.context_text as string) || "",
+            attachments: (output?.attachments as NeedAttachment[]) || [],
+            status: data.status as StepStatus,
+            loading: false,
+            error: null,
+          });
+        } else {
+          setState((s) => ({ ...s, loading: false }));
+        }
+      } catch (e: any) {
+        toast.error(`Failed to load Step 1 state: ${e?.message ?? "Unknown error"}`);
         setState((s) => ({ ...s, loading: false }));
       }
     };
@@ -72,9 +79,12 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
       const att = state.attachments[index];
       // If it's a file, also remove from storage
       if (att?.type === "file" && att.storage_path) {
-        await supabase.storage
+        const { error } = await supabase.storage
           .from("need-attachments")
           .remove([att.storage_path]);
+        if (error) {
+          toast.error(`Failed to remove file: ${error.message}`);
+        }
       }
       setState((s) => ({
         ...s,
@@ -106,15 +116,19 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
 
     const now = new Date().toISOString();
 
-    const { data: existing } = await supabase
+    const { data: existing, error: selErr } = await supabase
       .from("session_step_states")
       .select("id")
       .eq("session_id", sessionId)
       .eq("step", "A1")
       .maybeSingle();
+    if (selErr) {
+      toast.error(`Lock failed: ${selErr.message}`);
+      return;
+    }
 
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({
           status: "locked" as string,
@@ -122,14 +136,22 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
           locked_at: now,
         })
         .eq("id", existing.id);
+      if (error) {
+        toast.error(`Lock failed: ${error.message}`);
+        return;
+      }
     } else {
-      await supabase.from("session_step_states").insert([{
+      const { error } = await supabase.from("session_step_states").insert([{
         session_id: sessionId,
         step: "A1" as string,
         status: "locked" as string,
         locked_output: needDescription as any,
         locked_at: now,
       }]);
+      if (error) {
+        toast.error(`Lock failed: ${error.message}`);
+        return;
+      }
     }
 
     setState((s) => ({ ...s, status: "locked" }));
@@ -138,11 +160,15 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
   const unlock = useCallback(async () => {
     if (!sessionId) return;
 
-    await supabase
+    const { error } = await supabase
       .from("session_step_states")
       .update({ status: "editing", locked_output: null, locked_at: null })
       .eq("session_id", sessionId)
       .eq("step", "A1");
+    if (error) {
+      toast.error(`Unlock failed: ${error.message}`);
+      return;
+    }
 
     setState((s) => ({ ...s, status: "editing" }));
   }, [sessionId]);
@@ -150,11 +176,12 @@ export function useStepA1({ sessionId }: UseStepA1Props) {
   const reset = useCallback(async () => {
     // Step 1 has no upstream — reset clears the row and returns to a fresh editing state
     if (sessionId) {
-      await supabase
+      const { error } = await supabase
         .from("session_step_states")
         .update({ status: "editing", locked_output: null, locked_at: null })
         .eq("session_id", sessionId)
         .eq("step", "A1");
+      if (error) toast.error(`Reset failed: ${error.message}`);
     }
     setState({
       contextText: "",
