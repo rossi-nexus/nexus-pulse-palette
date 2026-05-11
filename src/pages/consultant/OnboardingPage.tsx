@@ -6,7 +6,7 @@
 //
 // B1-fix: wizard state persists in localStorage (key b1_onboarding_draft_v1)
 //         and programme assignment is optional.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw } from "lucide-react";
@@ -166,14 +166,16 @@ const OnboardingPage = () => {
   // Draft restore tracking
   const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  const hydratedRef = useRef(false);
+  // State-based hydration flag — guarantees the save effect only runs AFTER
+  // the restore-triggered re-render commits with the restored values, so it
+  // can never overwrite the freshly-restored draft with stale empties.
+  const [hydrated, setHydrated] = useState(false);
 
   // ---------- Restore draft on mount ----------
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (!raw) {
-        hydratedRef.current = true;
         return;
       }
       const draft = JSON.parse(raw) as DraftShape;
@@ -183,7 +185,6 @@ const OnboardingPage = () => {
         toast.info(
           `Cleared a stale onboarding draft from ${savedAt.toLocaleDateString?.() ?? "an earlier session"}.`,
         );
-        hydratedRef.current = true;
         return;
       }
       setStep(draft.step);
@@ -211,13 +212,16 @@ const OnboardingPage = () => {
       // corrupted draft — wipe.
       localStorage.removeItem(DRAFT_KEY);
     } finally {
-      hydratedRef.current = true;
+      // Set last — scheduled together with the setters above, so the save
+      // effect's first run sees BOTH `hydrated === true` AND the restored
+      // sections in the same committed render.
+      setHydrated(true);
     }
   }, []);
 
   // ---------- Persist draft on change (debounced) ----------
   useEffect(() => {
-    if (!hydratedRef.current) return;
+    if (!hydrated) return;
     const timer = setTimeout(() => {
       try {
         const draft: DraftShape = {
@@ -247,6 +251,7 @@ const OnboardingPage = () => {
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [
+    hydrated,
     step, legalName, country, orgNumber, websites, streetAddress, city, region,
     sections, evidence, decay, confidence, notes, programmeId,
   ]);
@@ -548,24 +553,31 @@ const OnboardingPage = () => {
         </div>
 
         {/* Draft restored indicator */}
-        {draftRestoredAt && (
-          <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground">
-            <span>
-              Draft restored from{" "}
-              <span className="font-mono">
-                {new Date(draftRestoredAt).toLocaleString()}
+        {draftRestoredAt && (() => {
+          const sectionsWithItems = SECTIONS.filter((s) => sections[s.key].accepted.length > 0).length;
+          const totalItems = SECTIONS.reduce((n, s) => n + sections[s.key].accepted.length, 0);
+          return (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground">
+              <span>
+                Draft restored from{" "}
+                <span className="font-mono">
+                  {new Date(draftRestoredAt).toLocaleString()}
+                </span>
+                .{" "}
+                {totalItems > 0
+                  ? `${totalItems} ontology item${totalItems === 1 ? "" : "s"} preserved across ${sectionsWithItems} section${sectionsWithItems === 1 ? "" : "s"}.`
+                  : "No ontology items captured yet."}
               </span>
-              .
-            </span>
-            <button
-              type="button"
-              onClick={() => setResetConfirmOpen(true)}
-              className="inline-flex items-center gap-1 text-info hover:underline"
-            >
-              <RotateCcw className="w-3 h-3" /> Reset
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={() => setResetConfirmOpen(true)}
+                className="inline-flex items-center gap-1 text-info hover:underline"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-8">
