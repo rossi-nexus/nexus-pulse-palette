@@ -3,6 +3,7 @@ import TopBar from "@/components/nexus/TopBar";
 import ConsultantSidebar from "@/components/consultant/ConsultantSidebar";
 import ConsultantProgrammesPage from "@/pages/consultant/ConsultantProgrammesPage";
 import VerificationWorkspacePage from "@/pages/consultant/VerificationWorkspacePage";
+import OnboardingPage from "@/pages/consultant/OnboardingPage";
 import ProgrammeAnalyticsPage from "@/pages/consultant/ProgrammeAnalyticsPage";
 import ProgrammeView from "@/pages/ProgrammeView";
 import { useConsultantAccess } from "@/hooks/useConsultantAccess";
