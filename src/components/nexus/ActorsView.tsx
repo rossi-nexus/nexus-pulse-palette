@@ -26,6 +26,7 @@ import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionD
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 /** Subset of DbActor verification fields needed to render the badge. */

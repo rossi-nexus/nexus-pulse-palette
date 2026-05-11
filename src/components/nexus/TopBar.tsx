@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LogOut } from "lucide-react";
 
 const TopBar = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, signingOut } = useAuth();
   const initials = user?.email?.[0]?.toUpperCase() || "U";
 
   return (
@@ -25,10 +25,12 @@ const TopBar = () => {
         </div>
         <button
           onClick={signOut}
-          className="text-foreground-muted hover:text-foreground transition-colors"
-          title="Sign out"
+          disabled={signingOut}
+          className="text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          title={signingOut ? "Signing out…" : "Sign out"}
         >
           <LogOut className="w-4 h-4" />
+          {signingOut && <span className="text-xs">Signing out…</span>}
         </button>
       </div>
     </header>
