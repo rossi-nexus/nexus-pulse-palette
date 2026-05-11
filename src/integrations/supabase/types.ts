@@ -1527,6 +1527,7 @@ export type Database = {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string
       }
+      fn_p36_diagnostic: { Args: never; Returns: Json }
       fn_programme_summary: {
         Args: { p_programme_id: string }
         Returns: {
