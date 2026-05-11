@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Routes, Route } from "react-router-dom";
+import { AUTH_BYPASS_ACTIVE } from "@/lib/devAuthBypass";
 import AppLayout from "@/components/nexus/AppLayout";
 import ConsultantLayout from "@/pages/ConsultantLayout";
 import LoginPage from "@/components/nexus/LoginPage";
@@ -15,7 +16,7 @@ const Index = () => {
     );
   }
 
-  if (!user) return <LoginPage />;
+  if (!AUTH_BYPASS_ACTIVE && !user) return <LoginPage />;
 
   return (
     <Routes>
