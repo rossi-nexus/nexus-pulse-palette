@@ -1,0 +1,5576 @@
+{
+  "schema_delta": {
+    "table": "public.ontology_categories",
+    "new_columns": [
+      {
+        "name": "keywords",
+        "type": "text[]",
+        "not_null": true,
+        "default": "{}"
+      },
+      {
+        "name": "example_entries",
+        "type": "text[]",
+        "not_null": true,
+        "default": "{}"
+      },
+      {
+        "name": "co_occurring_category_ids",
+        "type": "uuid[]",
+        "not_null": true,
+        "default": "{}"
+      }
+    ]
+  },
+  "new_categories": [
+    {
+      "type": "capability",
+      "normalized_name": "Business & Governance",
+      "description": "Strategy, compliance, regulatory affairs, programme governance, and export-control management. Capabilities related to running a defence, security, or critical-infrastructure business end-to-end — distinct from building or operating systems.",
+      "keywords": [
+        "strategy",
+        "compliance",
+        "governance",
+        "ITAR",
+        "EAR",
+        "dual-use",
+        "EU 2021/821",
+        "export control",
+        "NSM",
+        "security clearance",
+        "sikkerhetsklarering",
+        "EOS",
+        "programme management",
+        "BAFO",
+        "tender response",
+        "contract management",
+        "BRREG",
+        "GDPR",
+        "NIS2"
+      ],
+      "example_entries": [
+        "Strategic advisory",
+        "Regulatory compliance",
+        "Export control management",
+        "Programme governance",
+        "Risk & assurance"
+      ],
+      "co_occurring": [
+        {
+          "name": "Software, Systems & Integration",
+          "type": "capability"
+        },
+        {
+          "name": "Cybersecurity",
+          "type": "capability"
+        },
+        {
+          "name": "Regulatory & Compliance",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "C4ISR, Communications & PNT",
+      "description": "Command, control, communications, computers, intelligence, surveillance, reconnaissance, positioning, navigation, and timing — the joint information backbone of modern operations.",
+      "keywords": [
+        "C2",
+        "C4",
+        "C4I",
+        "C4ISR",
+        "C5ISR",
+        "ISR",
+        "comms",
+        "SATCOM",
+        "GNSS",
+        "GPS",
+        "Galileo",
+        "PNT",
+        "A-PNT",
+        "STANAG 4586",
+        "STANAG 5066",
+        "tactical data link",
+        "Link 16",
+        "Link 22",
+        "BLOS",
+        "beyond-line-of-sight",
+        "FMN",
+        "federated mission networking"
+      ],
+      "example_entries": [
+        "Command and control",
+        "Tactical data links",
+        "SATCOM operations",
+        "GNSS/INS integration",
+        "ISR fusion"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cybersecurity",
+          "type": "capability"
+        },
+        {
+          "name": "Electronic Warfare",
+          "type": "capability"
+        },
+        {
+          "name": "Space",
+          "type": "capability"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Cybersecurity",
+      "description": "Defensive and offensive cyber operations, secure software development, OT/ICS security, security operations centres, and incident response across IT and operational technology.",
+      "keywords": [
+        "cyber",
+        "cybersec",
+        "infosec",
+        "SOC",
+        "IR",
+        "SIEM",
+        "SOAR",
+        "zero-trust",
+        "OT security",
+        "ICS security",
+        "IT/OT convergence",
+        "ENISA",
+        "NIS2",
+        "CER directive",
+        "MITRE ATT&CK",
+        "threat intelligence",
+        "cryptography",
+        "ISO 27001",
+        "NSM grunnprinsipper"
+      ],
+      "example_entries": [
+        "Security operations centre",
+        "OT/ICS security",
+        "Secure software development",
+        "Incident response",
+        "Threat intelligence"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "capability"
+        },
+        {
+          "name": "Software, Systems & Integration",
+          "type": "capability"
+        },
+        {
+          "name": "Energy & Critical Infrastructure",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Electronic Warfare",
+      "description": "Electromagnetic spectrum operations — electronic support, electronic countermeasures, electronic counter-countermeasures, signals intelligence collection, and spectrum dominance.",
+      "keywords": [
+        "EW",
+        "ESM",
+        "ECM",
+        "ECCM",
+        "SIGINT",
+        "ELINT",
+        "COMINT",
+        "jamming",
+        "spoofing",
+        "spectrum dominance",
+        "spectrum management",
+        "RF deception",
+        "electromagnetic battle management",
+        "EMBM",
+        "low-probability-of-intercept"
+      ],
+      "example_entries": [
+        "Electronic support measures",
+        "Electronic countermeasures",
+        "Spectrum operations",
+        "SIGINT collection",
+        "RF deception"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "capability"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "capability"
+        },
+        {
+          "name": "Space",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Energy & Critical Infrastructure",
+      "description": "Power generation and distribution, SCADA and industrial control, grid resilience, water utilities, pipeline integrity, subsea cables, and telecom backbones — both military critical infrastructure and civil critical infrastructure within the meaning of NIS2 and CER directive.",
+      "keywords": [
+        "grid",
+        "SCADA",
+        "ICS",
+        "OT",
+        "NORSOK",
+        "NORSOK S-001",
+        "NORSOK U-100",
+        "NIS2",
+        "CER directive",
+        "critical infrastructure",
+        "kritisk infrastruktur",
+        "pipeline",
+        "water utility",
+        "vannverk",
+        "telecom backhaul",
+        "subsea cable",
+        "kraftforsyning",
+        "beredskapsforskriften",
+        "DSB"
+      ],
+      "example_entries": [
+        "Grid monitoring",
+        "SCADA hardening",
+        "Microgrid design",
+        "Pipeline integrity",
+        "Water utility resilience"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cybersecurity",
+          "type": "capability"
+        },
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "capability"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Logistics, Supply Chain & Mobility",
+      "description": "Movement of personnel, materiel, fuel, and equipment; deployable logistics; cold-chain handling; port, airport, and rail operations; host-nation support; strategic and tactical lift.",
+      "keywords": [
+        "logistics",
+        "supply chain",
+        "sustainment",
+        "deployable",
+        "cold-chain",
+        "HNS",
+        "host-nation support",
+        "port operations",
+        "airfield operations",
+        "strategic lift",
+        "tactical lift",
+        "third-party logistics",
+        "3PL",
+        "ROLE-1 to ROLE-4 logistics support",
+        "prepositioning"
+      ],
+      "example_entries": [
+        "Deployable logistics",
+        "Fuel & energy supply",
+        "Cold-chain logistics",
+        "Port and airfield operations",
+        "Strategic lift coordination"
+      ],
+      "co_occurring": [
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "capability"
+        },
+        {
+          "name": "Platforms (Air, Land, Sea, Unmanned)",
+          "type": "capability"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Manufacturing & Engineering",
+      "description": "Industrial production capabilities — machining, composites, additive manufacturing, welding, assembly, and qualification testing. The \"make it\" capability across components and platforms.",
+      "keywords": [
+        "manufacturing",
+        "machining",
+        "composites",
+        "additive",
+        "AM",
+        "3D printing",
+        "welding",
+        "NDT",
+        "non-destructive testing",
+        "EN 9100",
+        "AS9100",
+        "ISO 9001",
+        "qualification",
+        "certification",
+        "production engineering",
+        "supply-chain manufacturing",
+        "defence industrial base",
+        "DIB"
+      ],
+      "example_entries": [
+        "Precision machining",
+        "Composite manufacturing",
+        "Additive manufacturing",
+        "Welding & assembly",
+        "NDT inspection"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maintenance, Repair & Overhaul",
+          "type": "service"
+        },
+        {
+          "name": "Platforms (Air, Land, Sea, Unmanned)",
+          "type": "capability"
+        },
+        {
+          "name": "Weapons & Munitions",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Maritime & Subsea",
+      "description": "Surface vessel operations, sub-surface and subsea operations, port and harbour activities, offshore infrastructure, and subsea inspection and intervention — covering both naval/coastguard and offshore/oil-and-gas use cases.",
+      "keywords": [
+        "maritime",
+        "naval",
+        "subsea",
+        "offshore",
+        "ROV",
+        "AUV",
+        "USV",
+        "hydrographic",
+        "oseanografi",
+        "NORSOK U-100",
+        "NORSOK U-101",
+        "vessel operations",
+        "port security",
+        "anti-submarine warfare",
+        "ASW",
+        "anti-surface warfare",
+        "ASuW",
+        "mine countermeasures",
+        "MCM",
+        "Arctic maritime",
+        "Svalbard",
+        "Barents"
+      ],
+      "example_entries": [
+        "Hydrographic survey",
+        "ROV operations",
+        "Subsea inspection",
+        "Vessel operations",
+        "Anti-submarine warfare"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors & Detection",
+          "type": "capability"
+        },
+        {
+          "name": "Platforms (Air, Land, Sea, Unmanned)",
+          "type": "capability"
+        },
+        {
+          "name": "Energy & Critical Infrastructure",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Platforms (Air, Land, Sea, Unmanned)",
+      "description": "Design, integration, and operation of mobility platforms across air, land, sea, and unmanned domains. The \"vehicle\" side of the capability set, complementing the systems and effectors that ride on those platforms.",
+      "keywords": [
+        "platform",
+        "airframe",
+        "hull",
+        "chassis",
+        "UAV",
+        "UGV",
+        "USV",
+        "AUV",
+        "vessel",
+        "vehicle",
+        "aircraft",
+        "MOTS",
+        "COTS",
+        "modular platform",
+        "dual-use platform",
+        "mission modularity",
+        "openness",
+        "F-35",
+        "NH90",
+        "P-8"
+      ],
+      "example_entries": [
+        "Fixed-wing aircraft integration",
+        "Rotary-wing integration",
+        "UAV systems integration",
+        "Naval vessel design",
+        "Armoured vehicle integration"
+      ],
+      "co_occurring": [
+        {
+          "name": "Manufacturing & Engineering",
+          "type": "capability"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "capability"
+        },
+        {
+          "name": "Weapons & Munitions",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Preparedness, Response & Medical",
+      "description": "Civil protection, emergency preparedness, mass-casualty response, field medical and surgical capability, CBRN response, and search and rescue — covering Norwegian DSB \"samfunnssikkerhet\" remit and NATO RSOM-aligned medical capability.",
+      "keywords": [
+        "preparedness",
+        "beredskap",
+        "samfunnssikkerhet",
+        "civil protection",
+        "SAR",
+        "search and rescue",
+        "MCI",
+        "mass casualty incident",
+        "CBRN response",
+        "decontamination",
+        "field hospital",
+        "ROLE-2",
+        "ROLE-3",
+        "DSB",
+        "Sivilforsvaret",
+        "NORTAT",
+        "evacuation",
+        "crisis communications",
+        "Totalforsvar"
+      ],
+      "example_entries": [
+        "Mass-casualty response",
+        "Field medical",
+        "CBRN decontamination",
+        "Search & rescue coordination",
+        "Evacuation planning"
+      ],
+      "co_occurring": [
+        {
+          "name": "Logistics, Supply Chain & Mobility",
+          "type": "capability"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "capability"
+        },
+        {
+          "name": "Energy & Critical Infrastructure",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Sensors & Detection",
+      "description": "Sensing systems across electro-optical, infrared, radar, sonar, LiDAR, RF, environmental, and CBRN modalities. Both wide-area surveillance and close-range detection use cases.",
+      "keywords": [
+        "sensor",
+        "radar",
+        "sonar",
+        "LiDAR",
+        "EO",
+        "IR",
+        "EO/IR",
+        "hyperspectral",
+        "multispectral",
+        "CBRN detection",
+        "AIS",
+        "environmental monitoring",
+        "persistent surveillance",
+        "wide-area motion imagery",
+        "WAMI",
+        "ISR sensor",
+        "payload",
+        "gimbal"
+      ],
+      "example_entries": [
+        "Radar systems",
+        "EO/IR systems",
+        "Sonar",
+        "LiDAR systems",
+        "CBRN detection"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "capability"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "capability"
+        },
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Software, Systems & Integration",
+      "description": "Mission software engineering, systems-of-systems integration, model-based engineering, DevSecOps for defence, and the digital glue that ties sensors, effectors, and command systems together.",
+      "keywords": [
+        "software",
+        "systems integration",
+        "SoS",
+        "MBSE",
+        "DevSecOps",
+        "DevOps",
+        "agile",
+        "microservices",
+        "containers",
+        "Kubernetes",
+        "data fusion",
+        "middleware",
+        "API gateway",
+        "open architecture",
+        "FACE",
+        "OMS",
+        "UCS"
+      ],
+      "example_entries": [
+        "Mission systems software",
+        "Systems-of-systems integration",
+        "Model-based engineering",
+        "DevSecOps",
+        "Data fusion software"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cybersecurity",
+          "type": "capability"
+        },
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "capability"
+        },
+        {
+          "name": "Business & Governance",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Space",
+      "description": "Launch, satellite operations, ground segment, space situational awareness, earth observation, and SATCOM payload operations. Includes both space-based services and ground-based space-domain capabilities.",
+      "keywords": [
+        "space",
+        "satellite",
+        "SSA",
+        "space situational awareness",
+        "ground segment",
+        "launch",
+        "LEO",
+        "MEO",
+        "GEO",
+        "EO satellite",
+        "SATCOM",
+        "smallsat",
+        "cubesat",
+        "KSAT",
+        "Andøya Space",
+        "Telenor Satellite"
+      ],
+      "example_entries": [
+        "Satellite operations",
+        "Ground segment",
+        "Space situational awareness",
+        "Earth observation",
+        "SATCOM payloads"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "capability"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "capability"
+        },
+        {
+          "name": "Electronic Warfare",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Training & Simulation",
+      "description": "Live, virtual, constructive (LVC) training; synthetic environments; serious-game design; exercise planning; and computer-assisted exercise (CAX) support.",
+      "keywords": [
+        "training",
+        "simulation",
+        "LVC",
+        "live virtual constructive",
+        "synthetic environment",
+        "exercise",
+        "CAX",
+        "computer-assisted exercise",
+        "NATO CAX",
+        "JMSC",
+        "instructor-led",
+        "e-learning",
+        "AAR",
+        "after-action review"
+      ],
+      "example_entries": [
+        "Live training",
+        "Virtual simulation",
+        "Constructive simulation",
+        "Synthetic training environments",
+        "Exercise design"
+      ],
+      "co_occurring": [
+        {
+          "name": "Software, Systems & Integration",
+          "type": "capability"
+        },
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "capability"
+        },
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "capability",
+      "normalized_name": "Weapons & Munitions",
+      "description": "Effectors, munitions, fire-control systems, weapon-system integration, and explosive ordnance disposal — the \"kinetic\" side of the capability set.",
+      "keywords": [
+        "weapon",
+        "munition",
+        "missile",
+        "effector",
+        "fire control",
+        "EOD",
+        "IED",
+        "explosive ordnance disposal",
+        "propulsion",
+        "warhead",
+        "ammunition",
+        "small arms",
+        "artillery",
+        "air defence",
+        "anti-tank",
+        "anti-ship",
+        "NAMMO",
+        "KONGSBERG"
+      ],
+      "example_entries": [
+        "Missile systems",
+        "Small arms",
+        "Ordnance disposal (EOD)",
+        "Fire control systems",
+        "Ammunition"
+      ],
+      "co_occurring": [
+        {
+          "name": "Platforms (Air, Land, Sea, Unmanned)",
+          "type": "capability"
+        },
+        {
+          "name": "Manufacturing & Engineering",
+          "type": "capability"
+        },
+        {
+          "name": "Electronic Warfare",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Business & Governance",
+      "description": "Strategic, programme, and contract management expertise — running defence, security, and critical-infrastructure businesses. Distinct from #15 Regulatory & Compliance, which covers narrower specialist roles in compliance and certification.",
+      "keywords": [
+        "strategy",
+        "corporate development",
+        "programme management",
+        "contract management",
+        "BAFO",
+        "tender writing",
+        "partnership management",
+        "M&A",
+        "framework agreement",
+        "DPS-FA",
+        "defence procurement",
+        "executive leadership",
+        "board governance"
+      ],
+      "example_entries": [
+        "Strategic planning expertise",
+        "Programme management",
+        "Contract & framework management",
+        "Partnerships & alliance management",
+        "Executive & board governance"
+      ],
+      "co_occurring": [
+        {
+          "name": "Regulatory & Compliance",
+          "type": "competence"
+        },
+        {
+          "name": "Software, Systems & Integration",
+          "type": "competence"
+        },
+        {
+          "name": "Cybersecurity",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "C4ISR, Communications & PNT",
+      "description": "Engineering, integration, and operations expertise in command, control, communications, computers, ISR, positioning, navigation, and timing.",
+      "keywords": [
+        "C4I engineer",
+        "C4ISR architect",
+        "comms engineer",
+        "PNT specialist",
+        "SATCOM operator",
+        "RF engineer",
+        "tactical data link specialist",
+        "network engineer",
+        "signals officer",
+        "FMN engineer"
+      ],
+      "example_entries": [
+        "C4ISR systems engineering",
+        "Tactical data link engineering",
+        "PNT specialist",
+        "SATCOM engineering",
+        "ISR analyst"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cybersecurity",
+          "type": "competence"
+        },
+        {
+          "name": "Electronic Warfare",
+          "type": "competence"
+        },
+        {
+          "name": "Space",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Cybersecurity",
+      "description": "Offensive and defensive cyber expertise, secure-by-design engineering, OT/ICS security, and incident response specialism.",
+      "keywords": [
+        "cyber engineer",
+        "SOC analyst",
+        "incident responder",
+        "penetration tester",
+        "red teamer",
+        "threat hunter",
+        "security architect",
+        "OT security engineer",
+        "cryptographer",
+        "IEC 62443 specialist",
+        "ENISA practitioner"
+      ],
+      "example_entries": [
+        "Security architecture expertise",
+        "Penetration testing",
+        "SOC analysis",
+        "OT/ICS security engineering",
+        "Incident response"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "competence"
+        },
+        {
+          "name": "Software, Systems & Integration",
+          "type": "competence"
+        },
+        {
+          "name": "Regulatory & Compliance",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Electronic Warfare",
+      "description": "EW engineering, spectrum analysis, and electromagnetic battle management expertise. Both technical (system design) and operational (employment) specialisms.",
+      "keywords": [
+        "EW engineer",
+        "EW operator",
+        "spectrum analyst",
+        "SIGINT analyst",
+        "ELINT analyst",
+        "COMINT analyst",
+        "jamming specialist",
+        "RF engineer",
+        "EMBM specialist"
+      ],
+      "example_entries": [
+        "EW systems engineering",
+        "Spectrum analysis",
+        "SIGINT analysis",
+        "ELINT analysis",
+        "EW operator"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "competence"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "competence"
+        },
+        {
+          "name": "Space",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Energy & Critical Infrastructure",
+      "description": "Grid, OT, NORSOK, and critical-infrastructure engineering expertise. Civil engineering specialisms in power, water, telecom, and pipeline infrastructure resilience.",
+      "keywords": [
+        "grid engineer",
+        "SCADA engineer",
+        "OT engineer",
+        "NORSOK engineer",
+        "NORSOK S-001 specialist",
+        "NORSOK U-100 specialist",
+        "NIS2 specialist",
+        "CER directive specialist",
+        "critical infrastructure engineer",
+        "kraftverk",
+        "nettselskap",
+        "vannverk"
+      ],
+      "example_entries": [
+        "Grid engineering expertise",
+        "SCADA engineering",
+        "Microgrid design",
+        "Pipeline engineering",
+        "Water utility engineering"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cybersecurity",
+          "type": "competence"
+        },
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "competence"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Logistics, Supply Chain & Mobility",
+      "description": "Sustainment, deployable logistics, port and airfield operations, and mobility planning expertise.",
+      "keywords": [
+        "logistician",
+        "sustainment planner",
+        "deployable logistics specialist",
+        "cold-chain specialist",
+        "HNS planner",
+        "port operations specialist",
+        "airfield operations specialist",
+        "movement controller",
+        "materiel manager"
+      ],
+      "example_entries": [
+        "Deployable logistics expertise",
+        "Cold-chain logistics",
+        "Port operations",
+        "Airfield operations",
+        "Movement control"
+      ],
+      "co_occurring": [
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "competence"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "competence"
+        },
+        {
+          "name": "Platforms",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Manufacturing & Engineering",
+      "description": "Machining, composites, additive manufacturing, welding, and qualification engineering expertise.",
+      "keywords": [
+        "machinist",
+        "composite engineer",
+        "additive manufacturing specialist",
+        "AM engineer",
+        "welding engineer",
+        "NDT inspector",
+        "production engineer",
+        "EN 9100 specialist",
+        "qualification engineer",
+        "FAI inspector"
+      ],
+      "example_entries": [
+        "Precision machining expertise",
+        "Composite engineering",
+        "Additive manufacturing engineering",
+        "Welding engineering",
+        "NDT inspection"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maintenance, Repair & Overhaul",
+          "type": "service"
+        },
+        {
+          "name": "Platforms",
+          "type": "competence"
+        },
+        {
+          "name": "Regulatory & Compliance",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Maritime & Subsea",
+      "description": "Naval architecture, subsea engineering, port operations, and offshore engineering expertise.",
+      "keywords": [
+        "naval architect",
+        "marine engineer",
+        "subsea engineer",
+        "ROV pilot",
+        "hydrographic surveyor",
+        "port operations specialist",
+        "Arctic maritime specialist",
+        "ice-class engineer",
+        "NORSOK U-100 specialist"
+      ],
+      "example_entries": [
+        "Naval architecture",
+        "Marine engineering",
+        "Subsea engineering",
+        "ROV operations expertise",
+        "Hydrographic surveying"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors & Detection",
+          "type": "competence"
+        },
+        {
+          "name": "Platforms",
+          "type": "competence"
+        },
+        {
+          "name": "Energy & Critical Infrastructure",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Platforms",
+      "description": "Platform-engineering competence across air, land, sea, and unmanned domains. Includes airframe, hull, chassis, and unmanned-platform specialisms.",
+      "keywords": [
+        "aerospace engineer",
+        "airframe engineer",
+        "naval architect (platform)",
+        "vehicle engineer",
+        "UAV engineer",
+        "USV engineer",
+        "AUV engineer",
+        "payload integration engineer",
+        "mission-modularity specialist"
+      ],
+      "example_entries": [
+        "Aerospace engineering",
+        "Naval platform engineering",
+        "Vehicle engineering",
+        "UAV engineering",
+        "Payload integration"
+      ],
+      "co_occurring": [
+        {
+          "name": "Manufacturing & Engineering",
+          "type": "competence"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "competence"
+        },
+        {
+          "name": "Software, Systems & Integration",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Preparedness, Response & Medical",
+      "description": "First-responder, mass-casualty, field-medical, CBRN response, and civil-protection expertise. Norwegian DSB and Sivilforsvaret context included.",
+      "keywords": [
+        "first responder",
+        "beredskapskoordinator",
+        "MCI specialist",
+        "ROLE-1",
+        "ROLE-2",
+        "ROLE-3",
+        "field medic",
+        "TCCC specialist",
+        "CBRN responder",
+        "SAR specialist",
+        "redningstjeneste",
+        "DSB",
+        "Sivilforsvaret",
+        "Totalforsvar"
+      ],
+      "example_entries": [
+        "Mass-casualty response expertise",
+        "Field medical expertise",
+        "CBRN response",
+        "Search & rescue expertise",
+        "Crisis communications"
+      ],
+      "co_occurring": [
+        {
+          "name": "Logistics, Supply Chain & Mobility",
+          "type": "competence"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "competence"
+        },
+        {
+          "name": "Energy & Critical Infrastructure",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Sensors & Detection",
+      "description": "Sensor engineering and signal-processing expertise across radar, EO/IR, sonar, LiDAR, RF, and CBRN modalities.",
+      "keywords": [
+        "sensor engineer",
+        "radar engineer",
+        "sonar engineer",
+        "EO/IR engineer",
+        "LiDAR engineer",
+        "signal processing engineer",
+        "DSP engineer",
+        "payload engineer",
+        "CBRN sensor specialist",
+        "hyperspectral analyst"
+      ],
+      "example_entries": [
+        "Radar engineering",
+        "Sonar engineering",
+        "EO/IR engineering",
+        "Signal processing",
+        "Sensor payload integration"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "competence"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "competence"
+        },
+        {
+          "name": "Electronic Warfare",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Software, Systems & Integration",
+      "description": "Software, MBSE, and systems-integration engineering competence. DevSecOps, open architecture, and AI/ML for mission systems are first-class specialisms here.",
+      "keywords": [
+        "software engineer",
+        "systems engineer",
+        "MBSE engineer",
+        "SoS architect",
+        "DevSecOps engineer",
+        "agile coach",
+        "microservices architect",
+        "data fusion engineer",
+        "FACE / OMS / UCS specialist",
+        "AI/ML engineer"
+      ],
+      "example_entries": [
+        "Mission software engineering",
+        "MBSE engineering",
+        "Systems-of-systems architecture",
+        "DevSecOps engineering",
+        "Data fusion engineering"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cybersecurity",
+          "type": "competence"
+        },
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "competence"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Space",
+      "description": "Space-systems engineering, ground-segment operations, and earth-observation expertise. Norwegian context includes Svalbard / Tromsø / Andøya ground-segment specialism.",
+      "keywords": [
+        "space systems engineer",
+        "satellite engineer",
+        "ground segment engineer",
+        "SSA analyst",
+        "EO satellite engineer",
+        "SATCOM payload engineer",
+        "smallsat engineer",
+        "KSAT operator",
+        "Andøya Space specialist"
+      ],
+      "example_entries": [
+        "Space systems engineering",
+        "Ground segment engineering",
+        "Space situational awareness",
+        "EO satellite engineering",
+        "SATCOM payload engineering"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "competence"
+        },
+        {
+          "name": "Sensors & Detection",
+          "type": "competence"
+        },
+        {
+          "name": "Electronic Warfare",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Training & Simulation",
+      "description": "Training design, synthetic-environment engineering, instructor competence, and exercise-design specialism.",
+      "keywords": [
+        "training designer",
+        "instructional designer",
+        "simulation engineer",
+        "LVC architect",
+        "exercise planner",
+        "CAX planner",
+        "NATO CAX specialist",
+        "instructor",
+        "AAR specialist"
+      ],
+      "example_entries": [
+        "Training design",
+        "Simulation engineering",
+        "Synthetic environment engineering",
+        "Exercise design",
+        "CAX planning"
+      ],
+      "co_occurring": [
+        {
+          "name": "Software, Systems & Integration",
+          "type": "competence"
+        },
+        {
+          "name": "Preparedness, Response & Medical",
+          "type": "competence"
+        },
+        {
+          "name": "C4ISR, Communications & PNT",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "competence",
+      "normalized_name": "Regulatory & Compliance (NEW)",
+      "description": "Specialist competence in defence / dual-use export control, security clearance management, certification, and regulatory compliance. Distinct from #1 Business & Governance (broader strategic / commercial management) — this row captures the narrower specialist roles in export control, classification, certification, and compliance.",
+      "keywords": [
+        "export control specialist",
+        "ITAR specialist",
+        "EAR specialist",
+        "EU dual-use 2021/821",
+        "end-use certification",
+        "NSM clearance",
+        "sikkerhetsklarering",
+        "kontrollutvalget",
+        "NIS2 specialist",
+        "CER directive specialist",
+        "STANAG conformance",
+        "NATO accreditation",
+        "ISO 27001 lead auditor",
+        "ISO 9001 lead auditor",
+        "defence compliance officer"
+      ],
+      "example_entries": [
+        "Export control officer",
+        "NSM clearance management",
+        "STANAG conformance specialist",
+        "NIS2 / CER compliance specialist",
+        "Defence compliance officer"
+      ],
+      "co_occurring": [
+        {
+          "name": "Business & Governance",
+          "type": "competence"
+        },
+        {
+          "name": "Cybersecurity",
+          "type": "competence"
+        },
+        {
+          "name": "Manufacturing & Engineering",
+          "type": "competence"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Maritime & Coastal Operations",
+      "description": "Naval, coastguard, port, and coastal operations across surface, sub-surface, and littoral waters. Includes anti-submarine warfare, anti-surface warfare, port security, and coastal surveillance contexts.",
+      "keywords": [
+        "maritime",
+        "naval",
+        "coastguard",
+        "kystvakten",
+        "port security",
+        "harbour security",
+        "coastal surveillance",
+        "ASW",
+        "ASuW",
+        "littoral",
+        "brown water",
+        "blue water",
+        "EEZ",
+        "exclusive economic zone",
+        "Svalbard",
+        "Barents",
+        "fishery protection"
+      ],
+      "example_entries": [
+        "Coastal surveillance",
+        "Port security",
+        "Anti-submarine warfare",
+        "Maritime domain awareness",
+        "Fishery protection"
+      ],
+      "co_occurring": [
+        {
+          "name": "Arctic & High North Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Critical Infrastructure Protection",
+          "type": "domain"
+        },
+        {
+          "name": "Surveillance & Reconnaissance (ISR)",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Land Operations",
+      "description": "Ground manoeuvre, border security, convoy operations, urban operations, and force-protection contexts. Includes both conventional and asymmetric ground-domain operations.",
+      "keywords": [
+        "land operations",
+        "manoeuvre",
+        "ground forces",
+        "brigade",
+        "battalion",
+        "border security",
+        "grensevakt",
+        "convoy",
+        "urban operations",
+        "MOUT",
+        "force protection",
+        "base defence",
+        "perimeter security"
+      ],
+      "example_entries": [
+        "Border security",
+        "Convoy operations",
+        "Urban warfare",
+        "Force protection",
+        "Base defence"
+      ],
+      "co_occurring": [
+        {
+          "name": "Special Operations contexts (folded here)",
+          "type": "domain"
+        },
+        {
+          "name": "CBRN & Nuclear",
+          "type": "domain"
+        },
+        {
+          "name": "Surveillance & Reconnaissance (ISR)",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Air Operations (NEW)",
+      "description": "Manned and unmanned air operations — air policing, air-to-air refuelling support, BVLOS UAV operations, and counter-UAS. New domain row introduced because the existing 23 single-entry categories had no explicit Air domain.",
+      "keywords": [
+        "air operations",
+        "air policing",
+        "QRA",
+        "quick-reaction alert",
+        "air-to-air refuelling",
+        "AAR",
+        "BVLOS",
+        "beyond-visual-line-of-sight",
+        "UAV operations",
+        "counter-UAS",
+        "C-UAS",
+        "drone defence",
+        "airspace control"
+      ],
+      "example_entries": [
+        "Air policing",
+        "Air-to-air refuelling support",
+        "UAV BVLOS operations",
+        "Counter-UAS operations",
+        "Airspace control"
+      ],
+      "co_occurring": [
+        {
+          "name": "Surveillance & Reconnaissance (ISR)",
+          "type": "domain"
+        },
+        {
+          "name": "Space Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Arctic & High North Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Space Operations",
+      "description": "Space-based and space-domain operations — satellite operations, space situational awareness, earth observation, and counter-space contexts.",
+      "keywords": [
+        "space operations",
+        "space domain awareness",
+        "SDA",
+        "SSA",
+        "satellite operations",
+        "earth observation",
+        "EO",
+        "LEO operations",
+        "GEO operations",
+        "counter-space",
+        "space control",
+        "KSAT",
+        "Andøya Space",
+        "Svalbard"
+      ],
+      "example_entries": [
+        "LEO satellite operations",
+        "Space situational awareness",
+        "Earth observation",
+        "Counter-space operations",
+        "Polar ground-segment operations"
+      ],
+      "co_occurring": [
+        {
+          "name": "Air Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Surveillance & Reconnaissance (ISR)",
+          "type": "domain"
+        },
+        {
+          "name": "Cyber & Information Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Cyber & Information Operations",
+      "description": "Cyber defence, cyber offence, OSINT, information operations, and cognitive warfare contexts. Includes both technical cyber and influence/information operations.",
+      "keywords": [
+        "cyber operations",
+        "cyber defence",
+        "defensive cyber operations",
+        "DCO",
+        "OCO",
+        "offensive cyber",
+        "OSINT",
+        "open-source intelligence",
+        "information operations",
+        "InfoOps",
+        "psychological operations",
+        "PSYOPS",
+        "cognitive warfare",
+        "disinformation",
+        "hybrid threat"
+      ],
+      "example_entries": [
+        "Cyber defence operations",
+        "Cyber offensive operations",
+        "OSINT collection",
+        "Information operations",
+        "Hybrid threat response"
+      ],
+      "co_occurring": [
+        {
+          "name": "Critical Infrastructure Protection",
+          "type": "domain"
+        },
+        {
+          "name": "Surveillance & Reconnaissance (ISR)",
+          "type": "domain"
+        },
+        {
+          "name": "Law Enforcement & Public Safety",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Surveillance & Reconnaissance (ISR)",
+      "description": "Intelligence, surveillance, and reconnaissance operations across persistent ISR, maritime domain awareness, and wide-area motion imagery contexts.",
+      "keywords": [
+        "ISR",
+        "intelligence surveillance reconnaissance",
+        "persistent ISR",
+        "maritime domain awareness",
+        "MDA",
+        "WAMI",
+        "wide-area motion imagery",
+        "surveillance",
+        "reconnaissance",
+        "multi-INT",
+        "all-source intelligence"
+      ],
+      "example_entries": [
+        "Persistent ISR",
+        "Maritime domain awareness",
+        "Wide-area motion imagery",
+        "Multi-INT fusion",
+        "Reconnaissance operations"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maritime & Coastal Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Air Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Cyber & Information Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Critical Infrastructure Protection",
+      "description": "Protection of grid, pipeline, telecom, water, transport, and subsea cable infrastructure under NIS2 / CER directive and Norwegian beredskapsforskriften contexts.",
+      "keywords": [
+        "critical infrastructure protection",
+        "CIP",
+        "kritisk infrastruktur",
+        "NIS2",
+        "CER directive",
+        "beredskapsforskriften",
+        "grid protection",
+        "pipeline protection",
+        "telecom resilience",
+        "subsea cable protection",
+        "water utility protection",
+        "transport sector protection"
+      ],
+      "example_entries": [
+        "Grid protection",
+        "Pipeline protection",
+        "Telecom resilience",
+        "Subsea cable protection",
+        "Water utility protection"
+      ],
+      "co_occurring": [
+        {
+          "name": "Cyber & Information Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Civil Protection & Emergency Response",
+          "type": "domain"
+        },
+        {
+          "name": "Maritime & Coastal Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Civil Protection & Emergency Response",
+      "description": "Civil protection, mass-casualty response, natural-disaster response, evacuation operations, and search-and-rescue contexts. Norwegian DSB and Sivilforsvaret remit included.",
+      "keywords": [
+        "civil protection",
+        "samfunnssikkerhet",
+        "beredskap",
+        "DSB",
+        "Sivilforsvaret",
+        "mass casualty",
+        "MCI",
+        "natural disaster",
+        "evakuering",
+        "evacuation",
+        "SAR",
+        "search and rescue",
+        "redningstjeneste",
+        "Totalforsvar",
+        "civil emergency"
+      ],
+      "example_entries": [
+        "Mass-casualty response",
+        "Natural disaster response",
+        "Evacuation operations",
+        "SAR (land)",
+        "SAR (maritime)"
+      ],
+      "co_occurring": [
+        {
+          "name": "Healthcare & Medical Response",
+          "type": "domain"
+        },
+        {
+          "name": "CBRN & Nuclear",
+          "type": "domain"
+        },
+        {
+          "name": "Critical Infrastructure Protection",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "CBRN & Nuclear",
+      "description": "Chemical, biological, radiological, and nuclear operations — detection, decontamination, nuclear safeguarding, and CBRN incident management contexts.",
+      "keywords": [
+        "CBRN",
+        "chemical biological radiological nuclear",
+        "nuclear safeguarding",
+        "IAEA",
+        "radiological emergency",
+        "kjemisk biologisk",
+        "decontamination",
+        "CBRN reconnaissance",
+        "hazmat",
+        "hazmat response"
+      ],
+      "example_entries": [
+        "CBRN detection operations",
+        "CBRN decontamination operations",
+        "Nuclear safeguarding",
+        "Radiological emergency response",
+        "Hazmat response"
+      ],
+      "co_occurring": [
+        {
+          "name": "Civil Protection & Emergency Response",
+          "type": "domain"
+        },
+        {
+          "name": "Healthcare & Medical Response",
+          "type": "domain"
+        },
+        {
+          "name": "Land Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Law Enforcement & Public Safety",
+      "description": "Police support, counter-terrorism, border control, and public-safety operations. Distinct from civil protection — emphasises policing and enforcement context.",
+      "keywords": [
+        "law enforcement",
+        "policing",
+        "politi",
+        "counter-terrorism",
+        "CT",
+        "anti-terror",
+        "border control",
+        "grensekontroll",
+        "public safety",
+        "customs",
+        "toll",
+        "public order"
+      ],
+      "example_entries": [
+        "Counter-terrorism support",
+        "Border control",
+        "Police support operations",
+        "Public order operations",
+        "Customs interdiction"
+      ],
+      "co_occurring": [
+        {
+          "name": "Civil Protection & Emergency Response",
+          "type": "domain"
+        },
+        {
+          "name": "Cyber & Information Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Land Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Healthcare & Medical Response",
+      "description": "Field medical operations, hospital surge, aeromedical evacuation, and military medical operations. Distinct from #8 Civil Protection — focuses on the medical chain itself.",
+      "keywords": [
+        "healthcare",
+        "medical response",
+        "field medical",
+        "hospital surge",
+        "aeromedical evacuation",
+        "MEDEVAC",
+        "CASEVAC",
+        "ROLE-1",
+        "ROLE-2",
+        "ROLE-3",
+        "ROLE-4",
+        "military medicine",
+        "trauma response"
+      ],
+      "example_entries": [
+        "Field medical operations",
+        "Hospital surge",
+        "Aeromedical evacuation",
+        "ROLE-2 deployable hospital",
+        "Trauma response"
+      ],
+      "co_occurring": [
+        {
+          "name": "Civil Protection & Emergency Response",
+          "type": "domain"
+        },
+        {
+          "name": "CBRN & Nuclear",
+          "type": "domain"
+        },
+        {
+          "name": "Logistics, Supply Chain & Mobility",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "domain",
+      "normalized_name": "Arctic & High North Operations",
+      "description": "Arctic and High North operational context — Svalbard, Barents, Polar surveillance, cold-weather operations, and Arctic SAR. A Norway-strategic priority domain.",
+      "keywords": [
+        "Arctic",
+        "High North",
+        "nordområdene",
+        "Svalbard",
+        "Barents",
+        "Polar",
+        "Polarsirkel",
+        "polar code",
+        "cold-weather operations",
+        "Arctic SAR",
+        "Arctic surveillance",
+        "Arctic logistics",
+        "JRCC Bodø"
+      ],
+      "example_entries": [
+        "Arctic surveillance",
+        "Arctic SAR",
+        "High North logistics",
+        "Cold-weather operations",
+        "Svalbard support operations"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maritime & Coastal Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Space Operations",
+          "type": "domain"
+        },
+        {
+          "name": "Civil Protection & Emergency Response",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Sensors (EO/IR & LiDAR)",
+      "description": "Electro-optical, infrared, multispectral, hyperspectral, and LiDAR sensors — both standalone systems and stabilised payloads for manned and unmanned platforms.",
+      "keywords": [
+        "EO",
+        "IR",
+        "EO/IR",
+        "electro-optical",
+        "infrared",
+        "thermal",
+        "LiDAR",
+        "multispectral",
+        "hyperspectral",
+        "MWIR",
+        "LWIR",
+        "SWIR",
+        "gimbal",
+        "stabilised payload",
+        "FLIR",
+        "daylight camera",
+        "image intensifier",
+        "NVD"
+      ],
+      "example_entries": [
+        "Camera system (EO/IR)",
+        "LiDAR system",
+        "Thermal imager",
+        "Multispectral camera",
+        "Gimballed payload"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors (RF, Radar & SIGINT)",
+          "type": "product_type"
+        },
+        {
+          "name": "Sensors (Acoustic & Sonar)",
+          "type": "product_type"
+        },
+        {
+          "name": "Unmanned Air Platforms",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "description": "RF, radar, and SIGINT/ELINT/ESM/ECM hardware — coastal surveillance radars, counter-UAS radars, phased-array radars, SIGINT receivers, and spectrum analysers.",
+      "keywords": [
+        "radar",
+        "RF",
+        "SIGINT",
+        "ELINT",
+        "COMINT",
+        "ESM",
+        "ECM",
+        "phased array",
+        "AESA",
+        "coastal radar",
+        "counter-UAS radar",
+        "surveillance radar",
+        "fire-control radar",
+        "air-defence radar",
+        "spectrum analyser",
+        "RWR",
+        "radar warning receiver"
+      ],
+      "example_entries": [
+        "Radar system",
+        "Antenna system",
+        "Spectrum analyser",
+        "SIGINT receiver",
+        "Counter-UAS radar"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors (EO/IR & LiDAR)",
+          "type": "product_type"
+        },
+        {
+          "name": "Electronic Warfare & Cryptographic Systems",
+          "type": "product_type"
+        },
+        {
+          "name": "Communications & Networking",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Sensors (Acoustic & Sonar)",
+      "description": "Acoustic and sonar sensors across hull-mounted, towed-array, dipping, side-scan, and multi-beam configurations — for ASW, MCM, and hydrographic / subsea inspection use.",
+      "keywords": [
+        "sonar",
+        "acoustic",
+        "hull-mounted sonar",
+        "HMS",
+        "towed array",
+        "dipping sonar",
+        "side-scan sonar",
+        "multi-beam echo sounder",
+        "MBES",
+        "sub-bottom profiler",
+        "hydrophone",
+        "sonobuoy",
+        "ASW",
+        "MCM"
+      ],
+      "example_entries": [
+        "Sonar",
+        "Hull-mounted sonar",
+        "Towed array sonar",
+        "Multi-beam echo sounder",
+        "Sonobuoy"
+      ],
+      "co_occurring": [
+        {
+          "name": "Unmanned Surface & Subsea Platforms",
+          "type": "product_type"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "capability"
+        },
+        {
+          "name": "Sensors (RF, Radar & SIGINT)",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Unmanned Air Platforms",
+      "description": "Fixed-wing, rotary, hybrid, and tethered unmanned air platforms across micro, mini, tactical, MALE, and HALE classes — including loitering munitions.",
+      "keywords": [
+        "UAV",
+        "UAS",
+        "unmanned aerial vehicle",
+        "unmanned aerial system",
+        "drone",
+        "fixed-wing UAV",
+        "rotary UAV",
+        "multirotor",
+        "tactical UAV",
+        "MALE",
+        "HALE",
+        "loitering munition",
+        "tethered UAV",
+        "group 1",
+        "group 2",
+        "group 3"
+      ],
+      "example_entries": [
+        "UAV (fixed-wing)",
+        "UAV (rotary)",
+        "Tactical UAV",
+        "MALE UAV",
+        "Loitering munition"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors (EO/IR & LiDAR)",
+          "type": "product_type"
+        },
+        {
+          "name": "C4 & Mission Software",
+          "type": "product_type"
+        },
+        {
+          "name": "Air Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Unmanned Surface & Subsea Platforms",
+      "description": "Unmanned surface vessels (USV), autonomous underwater vehicles (AUV), and remotely operated vehicles (ROV) — across military, hydrographic, and offshore use.",
+      "keywords": [
+        "USV",
+        "AUV",
+        "ROV",
+        "unmanned surface vessel",
+        "autonomous underwater vehicle",
+        "remotely operated vehicle",
+        "mine-hunting USV",
+        "survey AUV",
+        "inspection ROV",
+        "work-class ROV",
+        "observation-class ROV"
+      ],
+      "example_entries": [
+        "USV",
+        "AUV",
+        "ROV",
+        "Mine-hunting USV",
+        "Survey AUV"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors (Acoustic & Sonar)",
+          "type": "product_type"
+        },
+        {
+          "name": "Maritime & Subsea",
+          "type": "capability"
+        },
+        {
+          "name": "C4 & Mission Software",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "description": "Manned platforms — naval vessels, ground vehicles, fixed-wing aircraft, and rotary aircraft used in defence, coastguard, and critical-infrastructure operations.",
+      "keywords": [
+        "vessel",
+        "ship",
+        "naval vessel",
+        "patrol vessel",
+        "coastal interceptor",
+        "frigate",
+        "corvette",
+        "armoured vehicle",
+        "AFV",
+        "IFV",
+        "MRAP",
+        "helicopter",
+        "fixed-wing aircraft",
+        "maritime patrol aircraft",
+        "MPA",
+        "transport aircraft"
+      ],
+      "example_entries": [
+        "Vessel",
+        "Patrol vessel",
+        "Armoured vehicle",
+        "Helicopter",
+        "Maritime patrol aircraft"
+      ],
+      "co_occurring": [
+        {
+          "name": "Sensors (EO/IR & LiDAR)",
+          "type": "product_type"
+        },
+        {
+          "name": "Weapons, Munitions & Effectors",
+          "type": "product_type"
+        },
+        {
+          "name": "C4 & Mission Software",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Communications & Networking",
+      "description": "Tactical, strategic, and satellite communications products — radios, data links, SATCOM terminals, AIS, mesh networking, and tactical routing.",
+      "keywords": [
+        "radio",
+        "tactical radio",
+        "VHF",
+        "UHF",
+        "HF",
+        "comms radio",
+        "data link",
+        "Link 16",
+        "Link 22",
+        "SATCOM",
+        "satcom terminal",
+        "AIS",
+        "mesh radio",
+        "BLOS terminal",
+        "tactical router",
+        "FMN node"
+      ],
+      "example_entries": [
+        "Communication radio",
+        "Data link",
+        "SATCOM terminal",
+        "AIS system",
+        "Tactical radio"
+      ],
+      "co_occurring": [
+        {
+          "name": "C4 & Mission Software",
+          "type": "product_type"
+        },
+        {
+          "name": "Electronic Warfare & Cryptographic Systems",
+          "type": "product_type"
+        },
+        {
+          "name": "Navigation & PNT Systems",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "C4 & Mission Software",
+      "description": "Mission software products — command and control, sensor fusion, mission planning, simulation, integration platforms, and common operating picture systems.",
+      "keywords": [
+        "C2",
+        "command and control",
+        "mission planning",
+        "sensor fusion",
+        "common operating picture",
+        "COP",
+        "data fusion platform",
+        "integration platform",
+        "simulation platform",
+        "mission system",
+        "decision support"
+      ],
+      "example_entries": [
+        "C2 software",
+        "Data fusion platform",
+        "Integration platform",
+        "Simulation platform",
+        "Common operating picture"
+      ],
+      "co_occurring": [
+        {
+          "name": "Communications & Networking",
+          "type": "product_type"
+        },
+        {
+          "name": "Sensors (RF, Radar & SIGINT)",
+          "type": "product_type"
+        },
+        {
+          "name": "Software, Systems & Integration",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Navigation & PNT Systems",
+      "description": "Navigation systems across GNSS, INS, alternate PNT, maritime navigation, and underwater positioning.",
+      "keywords": [
+        "navigation",
+        "PNT",
+        "A-PNT",
+        "GNSS",
+        "GPS",
+        "Galileo",
+        "GLONASS",
+        "BeiDou",
+        "INS",
+        "inertial navigation",
+        "dead reckoning",
+        "eLoran",
+        "anti-jam GNSS",
+        "M-code",
+        "maritime navigation",
+        "buoy",
+        "underwater positioning",
+        "USBL",
+        "LBL"
+      ],
+      "example_entries": [
+        "Navigation system (GNSS/INS)",
+        "Anti-jam GNSS",
+        "INS-only navigation system",
+        "Maritime navigation aid",
+        "Underwater positioning system"
+      ],
+      "co_occurring": [
+        {
+          "name": "Communications & Networking",
+          "type": "product_type"
+        },
+        {
+          "name": "Space Operations",
+          "type": "domain"
+        },
+        {
+          "name": "C4 & Mission Software",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "description": "EW effectors, cryptographic devices, and information-security hardware. Includes jammers, deception systems, HAIPE encryptors, and tactical crypto modules.",
+      "keywords": [
+        "EW system",
+        "jammer",
+        "RF jammer",
+        "GNSS jammer",
+        "counter-IED jammer",
+        "RF deception",
+        "encryption device",
+        "crypto module",
+        "HAIPE",
+        "type-1 crypto",
+        "COMSEC",
+        "TRANSEC",
+        "EMSEC"
+      ],
+      "example_entries": [
+        "Jammer",
+        "Encryption device",
+        "HAIPE encryptor",
+        "Counter-IED jammer",
+        "Tactical jammer"
+      ],
+      "co_occurring": [
+        {
+          "name": "Communications & Networking",
+          "type": "product_type"
+        },
+        {
+          "name": "Sensors (RF, Radar & SIGINT)",
+          "type": "product_type"
+        },
+        {
+          "name": "Cybersecurity",
+          "type": "capability"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Weapons, Munitions & Effectors",
+      "description": "Weapon systems, munitions, missiles, ammunition, and effectors across air, land, sea, and counter-UAS use.",
+      "keywords": [
+        "weapon",
+        "missile",
+        "anti-ship missile",
+        "anti-air missile",
+        "air-defence missile",
+        "anti-tank missile",
+        "anti-tank guided weapon",
+        "ATGW",
+        "MANPADS",
+        "small arms",
+        "mortar",
+        "artillery",
+        "ammunition",
+        "loitering effector",
+        "counter-UAS effector",
+        "NAMMO",
+        "KONGSBERG"
+      ],
+      "example_entries": [
+        "Missile / effector system",
+        "Anti-ship missile",
+        "Air-defence missile",
+        "Small-arms ammunition",
+        "Loitering effector"
+      ],
+      "co_occurring": [
+        {
+          "name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+          "type": "product_type"
+        },
+        {
+          "name": "Unmanned Air Platforms",
+          "type": "product_type"
+        },
+        {
+          "name": "Sensors (RF, Radar & SIGINT)",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Power & Energy Systems",
+      "description": "Battery, fuel-cell, microgrid, generator, and hybrid power systems for tactical, deployable, and forward-base power.",
+      "keywords": [
+        "battery",
+        "energy storage",
+        "fuel cell",
+        "microgrid",
+        "generator",
+        "genset",
+        "hybrid power",
+        "solar / wind hybrid",
+        "tactical battery",
+        "deployable power",
+        "forward-base power",
+        "off-grid"
+      ],
+      "example_entries": [
+        "Battery / energy storage",
+        "Fuel cell / microgrid",
+        "Generator / power supply",
+        "Hybrid genset",
+        "Deployable microgrid"
+      ],
+      "co_occurring": [
+        {
+          "name": "Energy & Critical Infrastructure",
+          "type": "capability"
+        },
+        {
+          "name": "Logistics, Supply Chain & Mobility",
+          "type": "capability"
+        },
+        {
+          "name": "Personal & Field Equipment",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "CBRN, Medical & Life Support Systems",
+      "description": "CBRN detection and decontamination equipment, field medical systems, water purification, and personal life-support equipment.",
+      "keywords": [
+        "CBRN detector",
+        "chemical detector",
+        "biological detector",
+        "radiological detector",
+        "decontamination",
+        "decon",
+        "field hospital",
+        "ROLE-2 hospital",
+        "ROLE-3 hospital",
+        "water purification",
+        "life support",
+        "PPE",
+        "personal protective ensemble",
+        "mask",
+        "respirator"
+      ],
+      "example_entries": [
+        "Decontamination system",
+        "Field hospital / medical unit",
+        "Water purification system",
+        "CBRN detector",
+        "Personal protective ensemble"
+      ],
+      "co_occurring": [
+        {
+          "name": "CBRN & Nuclear",
+          "type": "domain"
+        },
+        {
+          "name": "Healthcare & Medical Response",
+          "type": "domain"
+        },
+        {
+          "name": "Personal & Field Equipment",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Personal & Field Equipment",
+      "description": "Soldier-borne and team-level field equipment — body armour, helmets, load-bearing equipment, shelters, and tactical clothing.",
+      "keywords": [
+        "body armour",
+        "ballistic vest",
+        "plate carrier",
+        "tactical helmet",
+        "ballistic helmet",
+        "load-bearing equipment",
+        "LBE",
+        "MOLLE",
+        "tactical pack",
+        "shelter",
+        "modular shelter",
+        "tent system",
+        "soldier system",
+        "dismounted soldier"
+      ],
+      "example_entries": [
+        "Body armour / protective equipment",
+        "Shelter / temporary structure",
+        "Tactical helmet",
+        "Load-bearing equipment",
+        "Modular shelter system"
+      ],
+      "co_occurring": [
+        {
+          "name": "Power & Energy Systems",
+          "type": "product_type"
+        },
+        {
+          "name": "CBRN, Medical & Life Support Systems",
+          "type": "product_type"
+        },
+        {
+          "name": "Land Operations",
+          "type": "domain"
+        }
+      ]
+    },
+    {
+      "type": "product_type",
+      "normalized_name": "Components & Sub-Assemblies",
+      "description": "Components and sub-assemblies that go into larger systems — circuit boards, composite components, machined parts, optical assemblies, power electronics, cable assemblies.",
+      "keywords": [
+        "PCB",
+        "circuit board",
+        "FPGA",
+        "composite component",
+        "machined component",
+        "optical assembly",
+        "cable assembly",
+        "power electronics",
+        "antenna element",
+        "sub-assembly",
+        "COTS component",
+        "MIL-STD component"
+      ],
+      "example_entries": [
+        "PCB / circuit board",
+        "Composite component",
+        "Machined component (metal)",
+        "Cable assembly",
+        "Optical assembly"
+      ],
+      "co_occurring": [
+        {
+          "name": "Manufacturing & Engineering",
+          "type": "capability"
+        },
+        {
+          "name": "Communications & Networking",
+          "type": "product_type"
+        },
+        {
+          "name": "Sensors (EO/IR & LiDAR)",
+          "type": "product_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Advisory & Consulting",
+      "description": "Advisory and consulting services — strategy advisory, programme advisory, acquisition advisory, risk assessment, security advisory, EW assessment, and tender support.",
+      "keywords": [
+        "advisory",
+        "consulting",
+        "strategy advisory",
+        "programme advisory",
+        "acquisition advisory",
+        "tender support",
+        "BAFO support",
+        "security advisory",
+        "EW assessment",
+        "risk assessment",
+        "gap analysis",
+        "due diligence"
+      ],
+      "example_entries": [
+        "Programme advisory",
+        "Tender support",
+        "Acquisition advisory",
+        "Risk assessment",
+        "Security advisory"
+      ],
+      "co_occurring": [
+        {
+          "name": "Project & Programme Management",
+          "type": "service_type"
+        },
+        {
+          "name": "Design & Engineering Services",
+          "type": "service_type"
+        },
+        {
+          "name": "Cyber & Information Security Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Design & Engineering Services",
+      "description": "Engineering design services — system architecture, naval architecture, network design, secure design, cyber-physical design, HMI/UX, and platform / vessel design.",
+      "keywords": [
+        "design",
+        "engineering services",
+        "system architecture",
+        "naval architecture",
+        "network design",
+        "secure network design",
+        "cyber-physical design",
+        "HMI design",
+        "UX design",
+        "vessel design",
+        "MBSE"
+      ],
+      "example_entries": [
+        "System architecture",
+        "Naval architecture",
+        "Secure network design",
+        "Cyber-physical design",
+        "Vessel design"
+      ],
+      "co_occurring": [
+        {
+          "name": "Systems Integration & Installation",
+          "type": "service_type"
+        },
+        {
+          "name": "Testing, Validation & Certification",
+          "type": "service_type"
+        },
+        {
+          "name": "Advisory & Consulting",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Systems Integration & Installation",
+      "description": "Systems integration and installation services — mission-system integration, sensor integration, comms integration, vessel and vehicle installation.",
+      "keywords": [
+        "systems integration",
+        "integration",
+        "installation",
+        "mission system integration",
+        "sensor integration",
+        "comms integration",
+        "vessel installation",
+        "vehicle installation",
+        "commissioning",
+        "factory acceptance testing",
+        "FAT",
+        "site acceptance testing",
+        "SAT"
+      ],
+      "example_entries": [
+        "Mission-system integration",
+        "Sensor integration",
+        "Comms integration",
+        "Vessel installation",
+        "FAT / SAT support"
+      ],
+      "co_occurring": [
+        {
+          "name": "Design & Engineering Services",
+          "type": "service_type"
+        },
+        {
+          "name": "Testing, Validation & Certification",
+          "type": "service_type"
+        },
+        {
+          "name": "Maintenance, Repair & Overhaul (MRO)",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Testing, Validation & Certification",
+      "description": "Testing, validation, certification, and calibration services — type approval, environmental testing, STANAG conformance, EMC / EMI, and calibration.",
+      "keywords": [
+        "testing",
+        "validation",
+        "verification",
+        "V&V",
+        "type approval",
+        "environmental testing",
+        "MIL-STD-810",
+        "EMC",
+        "EMI",
+        "STANAG conformance",
+        "STANAG 4586 conformance",
+        "calibration",
+        "certification",
+        "qualification testing"
+      ],
+      "example_entries": [
+        "Type approval testing",
+        "Environmental testing",
+        "STANAG conformance test",
+        "Calibration",
+        "EMC / EMI testing"
+      ],
+      "co_occurring": [
+        {
+          "name": "Inspection & Survey",
+          "type": "service_type"
+        },
+        {
+          "name": "Systems Integration & Installation",
+          "type": "service_type"
+        },
+        {
+          "name": "Design & Engineering Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Inspection & Survey",
+      "description": "Inspection and survey services — subsea inspection, structural NDT, hydrographic survey, pipeline inspection, and aerial / aerial-drone survey.",
+      "keywords": [
+        "inspection",
+        "survey",
+        "subsea inspection",
+        "NDT",
+        "non-destructive testing",
+        "hydrographic survey",
+        "pipeline inspection",
+        "structural inspection",
+        "aerial survey",
+        "drone survey",
+        "photogrammetry"
+      ],
+      "example_entries": [
+        "Subsea inspection",
+        "Structural NDT",
+        "Hydrographic survey",
+        "Pipeline inspection",
+        "Aerial survey"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maintenance, Repair & Overhaul (MRO)",
+          "type": "service_type"
+        },
+        {
+          "name": "Testing, Validation & Certification",
+          "type": "service_type"
+        },
+        {
+          "name": "Operations & Platform Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "description": "MRO services across airframes, vessels, vehicles, sensors, and field-level maintenance. Covers depot-level and field-level activity.",
+      "keywords": [
+        "MRO",
+        "maintenance",
+        "repair",
+        "overhaul",
+        "depot maintenance",
+        "field maintenance",
+        "airframe MRO",
+        "vessel MRO",
+        "vehicle MRO",
+        "sensor MRO",
+        "level 1 / 2 / 3 / 4 maintenance",
+        "scheduled maintenance",
+        "unscheduled maintenance"
+      ],
+      "example_entries": [
+        "Airframe MRO",
+        "Vessel MRO",
+        "Vehicle MRO",
+        "Sensor MRO",
+        "Field-level maintenance"
+      ],
+      "co_occurring": [
+        {
+          "name": "Systems Integration & Installation",
+          "type": "service_type"
+        },
+        {
+          "name": "Logistics & Transport",
+          "type": "service_type"
+        },
+        {
+          "name": "Operations & Platform Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Operations & Platform Services",
+      "description": "Operations-as-a-service — UAV operations, vessel operations, crew leasing, fleet management, and platform operations on behalf of customer.",
+      "keywords": [
+        "operations",
+        "platform operations",
+        "UAV operations as-a-service",
+        "vessel operations",
+        "crew leasing",
+        "fleet management",
+        "ISR-as-a-service",
+        "surveillance services",
+        "contractor-operated"
+      ],
+      "example_entries": [
+        "UAV operations as-a-service",
+        "Vessel operations",
+        "Crew leasing",
+        "Fleet management",
+        "Surveillance-as-a-service"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maintenance, Repair & Overhaul (MRO)",
+          "type": "service_type"
+        },
+        {
+          "name": "Inspection & Survey",
+          "type": "service_type"
+        },
+        {
+          "name": "Training & Exercise Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Logistics & Transport",
+      "description": "Logistics and transport services — strategic lift, hazardous-cargo transport, cold-chain transport, port and airport handling.",
+      "keywords": [
+        "logistics services",
+        "transport",
+        "strategic lift",
+        "hazardous cargo",
+        "hazmat transport",
+        "cold-chain transport",
+        "port handling",
+        "airport handling",
+        "freight forwarding",
+        "customs clearance"
+      ],
+      "example_entries": [
+        "Strategic lift",
+        "Hazardous-cargo transport",
+        "Cold-chain transport",
+        "Port handling",
+        "Airport handling"
+      ],
+      "co_occurring": [
+        {
+          "name": "Maintenance, Repair & Overhaul (MRO)",
+          "type": "service_type"
+        },
+        {
+          "name": "Emergency & Crisis Response",
+          "type": "service_type"
+        },
+        {
+          "name": "Operations & Platform Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Emergency & Crisis Response",
+      "description": "Emergency response services — oil-spill response, mass-casualty response, CBRN decontamination, evacuation operations, and crisis response.",
+      "keywords": [
+        "emergency response",
+        "crisis response",
+        "oil spill response",
+        "OPRC",
+        "mass casualty response",
+        "CBRN decontamination",
+        "evacuation services",
+        "hazmat response",
+        "IMO OPRC",
+        "response on call"
+      ],
+      "example_entries": [
+        "Oil-spill response",
+        "Mass-casualty response",
+        "CBRN decontamination",
+        "Evacuation operations",
+        "Hazmat response"
+      ],
+      "co_occurring": [
+        {
+          "name": "Medical & Health Services",
+          "type": "service_type"
+        },
+        {
+          "name": "Logistics & Transport",
+          "type": "service_type"
+        },
+        {
+          "name": "Cyber & Information Security Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Medical & Health Services",
+      "description": "Field medical, aeromedical evacuation, telemedicine, and contracted medical services.",
+      "keywords": [
+        "medical services",
+        "field medical",
+        "aeromedical evacuation",
+        "telemedicine",
+        "contracted medical",
+        "ROLE-2 service",
+        "hospital surge service",
+        "medical staffing"
+      ],
+      "example_entries": [
+        "Field medical services",
+        "Aeromedical evacuation",
+        "Telemedicine",
+        "Contracted ROLE-2 service",
+        "Medical staffing"
+      ],
+      "co_occurring": [
+        {
+          "name": "Emergency & Crisis Response",
+          "type": "service_type"
+        },
+        {
+          "name": "Operations & Platform Services",
+          "type": "service_type"
+        },
+        {
+          "name": "Training & Exercise Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Training & Exercise Services",
+      "description": "Training and exercise services — operator training, maintainer training, exercise design, red-teaming, computer-assisted exercise support.",
+      "keywords": [
+        "training service",
+        "operator training",
+        "maintainer training",
+        "instructor service",
+        "exercise design",
+        "red team",
+        "red-teaming",
+        "CAX support",
+        "NATO CAX",
+        "exercise control",
+        "AAR support"
+      ],
+      "example_entries": [
+        "Operator training",
+        "Maintainer training",
+        "Exercise design",
+        "Red-teaming",
+        "CAX support"
+      ],
+      "co_occurring": [
+        {
+          "name": "Advisory & Consulting",
+          "type": "service_type"
+        },
+        {
+          "name": "Operations & Platform Services",
+          "type": "service_type"
+        },
+        {
+          "name": "Medical & Health Services",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Project & Programme Management",
+      "description": "Project and programme management services — programme management office, schedule management, earned-value management, risk management.",
+      "keywords": [
+        "project management",
+        "programme management",
+        "PMO",
+        "programme management office",
+        "schedule management",
+        "earned value management",
+        "EVM",
+        "risk management",
+        "change management"
+      ],
+      "example_entries": [
+        "Programme management office",
+        "Schedule management",
+        "Earned-value management",
+        "Risk management",
+        "Change management"
+      ],
+      "co_occurring": [
+        {
+          "name": "Advisory & Consulting",
+          "type": "service_type"
+        },
+        {
+          "name": "Design & Engineering Services",
+          "type": "service_type"
+        },
+        {
+          "name": "Maintenance, Repair & Overhaul (MRO)",
+          "type": "service_type"
+        }
+      ]
+    },
+    {
+      "type": "service_type",
+      "normalized_name": "Cyber & Information Security Services",
+      "description": "Cyber and information-security services — penetration testing, vulnerability assessment, SOC-as-a-service, spectrum management, incident response retainer.",
+      "keywords": [
+        "cyber services",
+        "penetration testing",
+        "pentest",
+        "vulnerability assessment",
+        "SOC-as-a-service",
+        "MSSP",
+        "managed security service",
+        "incident response retainer",
+        "spectrum management",
+        "spectrum monitoring"
+      ],
+      "example_entries": [
+        "Penetration testing",
+        "Vulnerability assessment",
+        "SOC-as-a-service",
+        "Spectrum monitoring",
+        "Incident-response retainer"
+      ],
+      "co_occurring": [
+        {
+          "name": "Advisory & Consulting",
+          "type": "service_type"
+        },
+        {
+          "name": "Testing, Validation & Certification",
+          "type": "service_type"
+        },
+        {
+          "name": "Emergency & Crisis Response",
+          "type": "service_type"
+        }
+      ]
+    }
+  ],
+  "new_entries": [
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Strategic advisory & corporate development",
+      "description": "long-range planning, M&A, partnerships for defence/security businesses"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Export control management",
+      "description": "ITAR / EAR / EU dual-use 2021/821 administration, end-use certification"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Risk, assurance & internal audit",
+      "description": "enterprise risk, NSM compliance audit, ISO 9001/27001 assurance"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Tender & acquisition management",
+      "description": "BAFO preparation, framework agreement management, Norwegian DPS-FA support"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "C4ISR, Communications & PNT",
+      "raw_name": "Federated Mission Networking (FMN) integration",
+      "description": "NATO FMN spiral compliance, coalition information sharing"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "C4ISR, Communications & PNT",
+      "raw_name": "Alternate PNT (A-PNT)",
+      "description": "anti-jam, eLoran, INS-only navigation, signals of opportunity"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "C4ISR, Communications & PNT",
+      "raw_name": "Beyond-line-of-sight (BLOS) communications",
+      "description": "HF, SATCOM, mesh networking for long-range coordination"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "OT/ICS security engineering",
+      "description": "SCADA, PLC, DCS hardening; IEC 62443 alignment"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "Threat intelligence & hunting",
+      "description": "adversary tracking, MITRE ATT&CK mapping, OSINT-driven hunt"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "Cryptographic engineering",
+      "description": "key management, HSM integration, post-quantum readiness"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "NSM grunnprinsipper compliance",
+      "description": "Norwegian \"basic ICT security principles\" implementation and assurance"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Electronic Warfare",
+      "raw_name": "Counter-UAS electromagnetic effects",
+      "description": "RF detection, RF jamming, GNSS denial for hostile UAV"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Electronic Warfare",
+      "raw_name": "Electromagnetic battle management (EMBM)",
+      "description": "spectrum deconfliction, emissions control, coalition EW coordination"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Energy & Critical Infrastructure",
+      "raw_name": "Subsea cable protection",
+      "description": "power and telecom cable monitoring, route surveillance, repair coordination"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Energy & Critical Infrastructure",
+      "raw_name": "Microgrid & islanded operations",
+      "description": "deployable power, hybrid renewable integration, military forward-base power"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Energy & Critical Infrastructure",
+      "raw_name": "NORSOK-aligned offshore infrastructure resilience",
+      "description": "S-001 working environment, U-100 manned underwater, Z-008 risk-based maintenance"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Logistics, Supply Chain & Mobility",
+      "raw_name": "Host-nation support (HNS) coordination",
+      "description": "receiving NATO forces in Norway, infrastructure access, fuel and movement permits"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Logistics, Supply Chain & Mobility",
+      "raw_name": "Arctic / High North logistics",
+      "description": "cold-weather sustainment, ice-class shipping, austere-base operations"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Manufacturing & Engineering",
+      "raw_name": "Defence-grade additive manufacturing",
+      "description": "qualified AM for spares, austere-base production, classified parts"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Manufacturing & Engineering",
+      "raw_name": "Industrial qualification & first-article inspection",
+      "description": "EN 9100, AS9100, FAI, source approval for defence procurement"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Maritime & Subsea",
+      "raw_name": "Subsea inspection, maintenance & repair (IMR)",
+      "description": "NORSOK-aligned ROV operations on offshore infrastructure"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Maritime & Subsea",
+      "raw_name": "Arctic and High North maritime operations",
+      "description": "ice-strengthened vessel ops, Polar Code compliance, Svalbard support"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Maritime & Subsea",
+      "raw_name": "Mine countermeasures (MCM)",
+      "description": "sonar-based mine hunting, USV-borne MCM, naval mine clearance"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Platforms (Air, Land, Sea, Unmanned)",
+      "raw_name": "Unmanned platform integration (multi-domain)",
+      "description": "common payload bays, modular mission systems, swarm-ready architectures"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Platforms (Air, Land, Sea, Unmanned)",
+      "raw_name": "Modular & mission-reconfigurable platforms",
+      "description": "STANAG 4754, container-based mission modules, role-switch design"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Preparedness, Response & Medical",
+      "raw_name": "Totalforsvar (Total Defence) integration",
+      "description": "civil-military coordination per Norwegian Totalforsvarsprogrammet"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Preparedness, Response & Medical",
+      "raw_name": "Tactical combat casualty care (TCCC)",
+      "description": "pre-hospital battlefield medicine, ROLE-1 forward medical"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Preparedness, Response & Medical",
+      "raw_name": "CBRN incident response",
+      "description": "DSB / Sivilforsvaret coordinated CBRN incident management"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Sensors & Detection",
+      "raw_name": "Multi-sensor data fusion",
+      "description": "sensor-agnostic fusion across radar/EO/IR/SIGINT/AIS for common operating picture"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Sensors & Detection",
+      "raw_name": "Persistent ISR & wide-area motion imagery (WAMI)",
+      "description": "long-dwell aerial and maritime surveillance"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Software, Systems & Integration",
+      "raw_name": "Open mission systems (OMS) / UCS / FACE architectures",
+      "description": "open-standard payload and software interfaces"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Software, Systems & Integration",
+      "raw_name": "AI / ML for mission systems",
+      "description": "model integration, evaluation, and assurance for ISR fusion and decision support"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Space",
+      "raw_name": "Polar / High North ground segment",
+      "description": "Svalbard, Tromsø, Andøya teleport and tracking station operations"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Space",
+      "raw_name": "Small-satellite ISR & SATCOM",
+      "description": "smallsat / cubesat platforms for tactical ISR and resilient comms"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Training & Simulation",
+      "raw_name": "Computer-assisted exercise (CAX) support",
+      "description": "NATO CAX, JEMM / JTLS / JCATS integration, exercise control cell"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Training & Simulation",
+      "raw_name": "Synthetic training environment (STE) engineering",
+      "description": "federated LVC, OneSAF / VBS / JCATS interoperability"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Weapons & Munitions",
+      "raw_name": "Loitering munitions / one-way effectors",
+      "description": "single-use UAVs with terminal warhead, swarm coordination"
+    },
+    {
+      "category_type": "capability",
+      "category_normalized_name": "Weapons & Munitions",
+      "raw_name": "Counter-UAS effectors",
+      "description": "kinetic and non-kinetic effectors against hostile UAV"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Defence acquisition expertise",
+      "description": "Norwegian Forsvarsmateriell processes, NATO acquisition cycles"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Tender & bid management expertise",
+      "description": "competitive dialogue, BAFO preparation, framework call-off"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Business & Governance",
+      "raw_name": "Industrial cooperation & offset expertise",
+      "description": "Norwegian gjenkjøp / industrial cooperation agreements"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "C4ISR, Communications & PNT",
+      "raw_name": "Federated Mission Networking (FMN) engineer",
+      "description": "NATO FMN spiral specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "C4ISR, Communications & PNT",
+      "raw_name": "Alternate PNT engineer",
+      "description": "anti-jam GNSS, INS-only, eLoran specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "OT/ICS security engineering",
+      "description": "SCADA, PLC, DCS hardening expertise per IEC 62443"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "Threat intelligence & hunting analyst",
+      "description": "adversary tracking, MITRE ATT&CK mapping"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Cybersecurity",
+      "raw_name": "Cryptographic engineering",
+      "description": "key management, HSM design, post-quantum migration"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Electronic Warfare",
+      "raw_name": "Counter-UAS electromagnetic specialist",
+      "description": "RF detection and effects against hostile UAV"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Electronic Warfare",
+      "raw_name": "Electromagnetic battle management (EMBM) specialist",
+      "description": "spectrum deconfliction, emissions control"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Energy & Critical Infrastructure",
+      "raw_name": "NORSOK engineering specialism",
+      "description": "S-, U-, Z-series compliance engineering"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Energy & Critical Infrastructure",
+      "raw_name": "Subsea cable engineering",
+      "description": "power and telecom cable design and protection"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Logistics, Supply Chain & Mobility",
+      "raw_name": "Host-nation support (HNS) planner",
+      "description": "receiving NATO forces in Norway"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Logistics, Supply Chain & Mobility",
+      "raw_name": "Arctic / High North logistics specialist",
+      "description": "cold-weather sustainment, ice-class shipping"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Manufacturing & Engineering",
+      "raw_name": "Defence-grade additive manufacturing specialist",
+      "description": "qualified AM, classified parts"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Manufacturing & Engineering",
+      "raw_name": "First-article inspection / qualification engineer",
+      "description": "EN 9100, AS9100, source approval"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Maritime & Subsea",
+      "raw_name": "Subsea IMR (inspection, maintenance, repair) engineer",
+      "description": "NORSOK-aligned ROV ops"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Maritime & Subsea",
+      "raw_name": "Arctic / High North maritime engineering",
+      "description": "Polar Code, ice-class design"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Maritime & Subsea",
+      "raw_name": "Mine countermeasures (MCM) engineer / operator",
+      "description": "sonar-based mine hunting"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Platforms",
+      "raw_name": "Unmanned platform integration engineer",
+      "description": "multi-domain, swarm-ready architecture specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Platforms",
+      "raw_name": "Modular & mission-reconfigurable platform engineer",
+      "description": "STANAG 4754, container-based mission module specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Preparedness, Response & Medical",
+      "raw_name": "Totalforsvar (Total Defence) coordinator",
+      "description": "civil-military coordination per Norwegian Totalforsvarsprogrammet"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Preparedness, Response & Medical",
+      "raw_name": "Tactical combat casualty care (TCCC) specialist",
+      "description": "pre-hospital battlefield medicine"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Preparedness, Response & Medical",
+      "raw_name": "CBRN response specialist",
+      "description": "DSB / Sivilforsvaret-aligned incident response"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Sensors & Detection",
+      "raw_name": "Multi-sensor data-fusion engineer",
+      "description": "sensor-agnostic fusion specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Sensors & Detection",
+      "raw_name": "Persistent ISR / WAMI analyst",
+      "description": "wide-area motion imagery and long-dwell ISR expertise"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Software, Systems & Integration",
+      "raw_name": "Open mission systems (OMS / UCS / FACE) engineer",
+      "description": "open-standard architecture specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Software, Systems & Integration",
+      "raw_name": "AI / ML engineer for mission systems",
+      "description": "model integration, evaluation, assurance specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Space",
+      "raw_name": "Polar / High North ground-segment engineer",
+      "description": "Svalbard, Tromsø, Andøya teleport specialism"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Space",
+      "raw_name": "Small-satellite / cubesat engineer",
+      "description": "tactical ISR and resilient comms smallsat specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Training & Simulation",
+      "raw_name": "Computer-assisted exercise (CAX) planner",
+      "description": "NATO CAX specialism, JEMM / JTLS / JCATS expertise"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Training & Simulation",
+      "raw_name": "Synthetic training environment (STE) engineer",
+      "description": "federated LVC, OneSAF / VBS interoperability"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Regulatory & Compliance (NEW)",
+      "raw_name": "Export control officer",
+      "description": "ITAR / EAR / EU 2021/821 specialist"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Regulatory & Compliance (NEW)",
+      "raw_name": "NSM clearance management",
+      "description": "Norwegian sikkerhetsklarering and access control administration"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Regulatory & Compliance (NEW)",
+      "raw_name": "STANAG conformance & NATO accreditation specialist",
+      "description": "STANAG 4586 / 4774 / 5066 conformance certification"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Regulatory & Compliance (NEW)",
+      "raw_name": "NIS2 / CER directive compliance specialist",
+      "description": "EU critical-infrastructure directive implementation"
+    },
+    {
+      "category_type": "competence",
+      "category_normalized_name": "Regulatory & Compliance (NEW)",
+      "raw_name": "ISO 27001 / 9001 lead auditor",
+      "description": "defence-grade quality and information security audit"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Maritime & Coastal Operations",
+      "raw_name": "Coastal surveillance operations",
+      "description": "multi-sensor coastal monitoring along Norwegian baseline"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Maritime & Coastal Operations",
+      "raw_name": "Port and harbour security",
+      "description": "civilian and military port-protection operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Maritime & Coastal Operations",
+      "raw_name": "Arctic maritime operations",
+      "description": "Polar Code, ice-class operations, High North surface presence"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Maritime & Coastal Operations",
+      "raw_name": "Anti-piracy and maritime interdiction",
+      "description": "boarding, search, anti-trafficking operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Land Operations",
+      "raw_name": "Border security operations",
+      "description": "Norwegian–Russian / Norwegian–Finnish / Norwegian–Swedish border surveillance"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Land Operations",
+      "raw_name": "Convoy and route-security operations",
+      "description": "mobility along contested or austere routes"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Land Operations",
+      "raw_name": "Urban and built-environment operations",
+      "description": "MOUT, civilian-presence considerations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Land Operations",
+      "raw_name": "Force protection and base defence",
+      "description": "perimeter sensors, entry control, counter-intrusion"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Air Operations (NEW)",
+      "raw_name": "Air policing",
+      "description": "Norwegian QRA, NATO air policing rotations, Iceland air policing detachment"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Air Operations (NEW)",
+      "raw_name": "Air-to-air refuelling support",
+      "description": "strategic and tactical AAR operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Air Operations (NEW)",
+      "raw_name": "BVLOS UAV operations",
+      "description": "beyond-visual-line-of-sight unmanned operations in segregated and integrated airspace"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Air Operations (NEW)",
+      "raw_name": "Counter-UAS operations",
+      "description": "detect-track-identify-defeat of hostile UAV"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Space Operations",
+      "raw_name": "LEO operations",
+      "description": "low-earth-orbit ISR and comms satellite operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Space Operations",
+      "raw_name": "Space situational awareness",
+      "description": "SDA, tracking, conjunction analysis"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Space Operations",
+      "raw_name": "Counter-space operations",
+      "description": "offensive and defensive counter-space context"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Cyber & Information Operations",
+      "raw_name": "Defensive cyber operations (DCO)",
+      "description": "protect own and partner networks"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Cyber & Information Operations",
+      "raw_name": "Offensive cyber operations (OCO)",
+      "description": "adversary network effects"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Cyber & Information Operations",
+      "raw_name": "Open-source intelligence (OSINT)",
+      "description": "open-source collection and analysis"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Cyber & Information Operations",
+      "raw_name": "Information operations and counter-disinformation",
+      "description": "InfoOps in hybrid-threat context"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Surveillance & Reconnaissance (ISR)",
+      "raw_name": "Persistent ISR",
+      "description": "long-dwell surveillance operations (UAV, aerostat, satellite)"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Surveillance & Reconnaissance (ISR)",
+      "raw_name": "Maritime domain awareness (MDA)",
+      "description": "multi-sensor MDA across Norwegian-relevant waters"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Surveillance & Reconnaissance (ISR)",
+      "raw_name": "Wide-area motion imagery (WAMI)",
+      "description": "area-persistent overhead imagery"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Critical Infrastructure Protection",
+      "raw_name": "Grid protection",
+      "description": "power grid surveillance and protection operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Critical Infrastructure Protection",
+      "raw_name": "Pipeline protection",
+      "description": "onshore and offshore pipeline integrity and surveillance"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Critical Infrastructure Protection",
+      "raw_name": "Telecom resilience",
+      "description": "telecom network resilience under NIS2 / CER"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Critical Infrastructure Protection",
+      "raw_name": "Subsea cable protection",
+      "description": "power and telecom cable monitoring, route surveillance"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Critical Infrastructure Protection",
+      "raw_name": "Water utility protection",
+      "description": "drinking-water infrastructure protection per Norwegian framework"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Civil Protection & Emergency Response",
+      "raw_name": "Mass-casualty incident response",
+      "description": "MCI coordination and field operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Civil Protection & Emergency Response",
+      "raw_name": "Natural disaster response",
+      "description": "flood, landslide, avalanche, storm response (Norwegian context)"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Civil Protection & Emergency Response",
+      "raw_name": "Evacuation operations",
+      "description": "civilian and personnel evacuation under threat"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Civil Protection & Emergency Response",
+      "raw_name": "Search and rescue (land)",
+      "description": "alpine, forest, urban SAR coordination"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Civil Protection & Emergency Response",
+      "raw_name": "Search and rescue (maritime)",
+      "description": "JRCC Bodø / JRCC Stavanger aligned SAR operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "CBRN & Nuclear",
+      "raw_name": "CBRN detection and reconnaissance operations",
+      "description": "field CBRN sensing and characterisation"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "CBRN & Nuclear",
+      "raw_name": "CBRN decontamination operations",
+      "description": "personnel and equipment decon"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "CBRN & Nuclear",
+      "raw_name": "Nuclear safeguarding",
+      "description": "IAEA-aligned nuclear material accountability"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Law Enforcement & Public Safety",
+      "raw_name": "Counter-terrorism support",
+      "description": "technical and operational CT support"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Law Enforcement & Public Safety",
+      "raw_name": "Border control operations",
+      "description": "Schengen external border, customs and immigration control"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Law Enforcement & Public Safety",
+      "raw_name": "Police support operations",
+      "description": "technical and tactical police support"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Healthcare & Medical Response",
+      "raw_name": "Field medical operations",
+      "description": "ROLE-1 / ROLE-2 deployable medical operations"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Healthcare & Medical Response",
+      "raw_name": "Hospital surge operations",
+      "description": "civilian hospital surge response under crisis"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Healthcare & Medical Response",
+      "raw_name": "Aeromedical evacuation",
+      "description": "MEDEVAC / CASEVAC by rotary and fixed-wing"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Arctic & High North Operations",
+      "raw_name": "Arctic surveillance",
+      "description": "multi-sensor surveillance across Arctic maritime and land approaches"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Arctic & High North Operations",
+      "raw_name": "Arctic search and rescue",
+      "description": "JRCC Bodø long-range Arctic SAR coordination"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Arctic & High North Operations",
+      "raw_name": "High North logistics",
+      "description": "sustainment in austere High North environments"
+    },
+    {
+      "category_type": "domain",
+      "category_normalized_name": "Arctic & High North Operations",
+      "raw_name": "Svalbard support operations",
+      "description": "operations supporting Norwegian Svalbard presence"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Cooled MWIR thermal imager",
+      "description": "long-range thermal sensor"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Uncooled LWIR thermal imager",
+      "description": "short-to-medium range thermal sensor"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Multispectral camera",
+      "description": "VNIR / VIS-NIR multispectral imaging"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Hyperspectral sensor",
+      "description": "push-broom or staring hyperspectral"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Gimballed EO/IR payload",
+      "description": "stabilised airborne / shipborne payload"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Long-range surveillance camera",
+      "description": "coastal / land long-range optical surveillance"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Image-intensified night vision",
+      "description": "NVG / image-intensifier device"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Aerial LiDAR",
+      "description": "airborne topographic / bathymetric LiDAR"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "raw_name": "Terrestrial / mobile LiDAR",
+      "description": "ground or vehicle-mounted LiDAR"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Coastal surveillance radar",
+      "description": "long-range maritime surveillance radar"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Counter-UAS radar",
+      "description": "small / micro-UAS detection radar"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Air-defence radar",
+      "description": "short / medium / long range air-defence radar"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Maritime navigation radar",
+      "description": "civil and military marine radar"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Phased-array / AESA radar",
+      "description": "multi-function active electronically scanned array"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Fire-control radar",
+      "description": "engagement radar for air-defence / naval weapons"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "ESM / ELINT receiver",
+      "description": "wideband electronic-support receiver"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "COMINT receiver",
+      "description": "communications-intelligence receiver"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "raw_name": "Spectrum monitoring system",
+      "description": "fixed and mobile spectrum monitoring"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (Acoustic & Sonar)",
+      "raw_name": "Hull-mounted sonar (HMS)",
+      "description": "vessel-installed primary sonar"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (Acoustic & Sonar)",
+      "raw_name": "Towed array sonar",
+      "description": "passive / active towed array"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (Acoustic & Sonar)",
+      "raw_name": "Dipping sonar",
+      "description": "helicopter ASW dipping sonar"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (Acoustic & Sonar)",
+      "raw_name": "Side-scan sonar",
+      "description": "survey / MCM side-scan"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (Acoustic & Sonar)",
+      "raw_name": "Multi-beam echo sounder (MBES)",
+      "description": "hydrographic survey sounder"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Sensors (Acoustic & Sonar)",
+      "raw_name": "Sonobuoy",
+      "description": "active / passive deployable acoustic sensor"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "Micro / mini UAV",
+      "description": "group-1 small UAV systems"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "Tactical UAV (fixed-wing)",
+      "description": "group-3 tactical reconnaissance UAV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "MALE UAV",
+      "description": "medium-altitude long-endurance UAV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "HALE UAV",
+      "description": "high-altitude long-endurance UAV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "Multirotor UAV",
+      "description": "quadcopter / hexacopter / octocopter"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "Loitering munition",
+      "description": "single-use UAV with terminal warhead"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "Tethered UAV",
+      "description": "long-endurance tethered surveillance UAV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Air Platforms",
+      "raw_name": "VTOL fixed-wing UAV",
+      "description": "hybrid take-off and forward-flight UAV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "raw_name": "Mine-hunting USV",
+      "description": "autonomous MCM surface vessel"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "raw_name": "Survey AUV",
+      "description": "bathymetric and hydrographic AUV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "raw_name": "Inspection-class ROV",
+      "description": "observation ROV for IMR"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "raw_name": "Work-class ROV",
+      "description": "heavy-duty ROV with manipulator"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "raw_name": "Coastal-surveillance USV",
+      "description": "long-endurance coastal patrol USV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "raw_name": "Subsea-resident AUV",
+      "description": "docked / persistent subsea AUV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Patrol vessel",
+      "description": "offshore / coastal patrol vessel"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Coastal interceptor",
+      "description": "fast coastal interceptor"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Frigate / corvette",
+      "description": "multi-role surface combatant"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Armoured vehicle (AFV / IFV)",
+      "description": "armoured / infantry fighting vehicle"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "MRAP",
+      "description": "mine-resistant ambush-protected vehicle"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Light utility helicopter",
+      "description": "utility / liaison helicopter"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Medium / heavy transport helicopter",
+      "description": "troop / cargo helicopter"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Fixed-wing transport aircraft",
+      "description": "tactical / strategic airlift"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "raw_name": "Maritime patrol aircraft (MPA)",
+      "description": "P-3 / P-8 / equivalent"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Tactical radio (VHF/UHF/HF)",
+      "description": "software-defined tactical radio"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Mesh radio",
+      "description": "multi-hop mesh networking radio"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Beyond-line-of-sight (BLOS) terminal",
+      "description": "HF / SATCOM BLOS terminal"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Tactical router / FMN node",
+      "description": "federated mission networking router"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Maritime VHF / DSC radio",
+      "description": "civilian / coastguard maritime VHF"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "AIS transponder / receiver",
+      "description": "Class A / Class B AIS"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Tactical Link 16 / Link 22 terminal",
+      "description": "NATO tactical data-link terminal"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Communications & Networking",
+      "raw_name": "Cellular / 4G / 5G base station (tactical)",
+      "description": "deployable cellular base"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "Common operating picture (COP)",
+      "description": "multi-sensor fused operating picture"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "Sensor fusion middleware",
+      "description": "sensor-agnostic fusion engine"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "Mission planning suite",
+      "description": "air / land / maritime mission planning"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "Decision support system",
+      "description": "AI-assisted operational decision support"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "Tactical data fusion",
+      "description": "tactical-level sensor fusion"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "Simulation / training platform",
+      "description": "synthetic environment platform"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "C4 & Mission Software",
+      "raw_name": "AI / ML model deployment platform",
+      "description": "ML model serving for mission systems"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Navigation & PNT Systems",
+      "raw_name": "Anti-jam GNSS",
+      "description": "controlled-radiation-pattern antenna (CRPA) anti-jam receiver"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Navigation & PNT Systems",
+      "raw_name": "M-code GNSS",
+      "description": "military M-code GPS receiver"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Navigation & PNT Systems",
+      "raw_name": "Alternate PNT (eLoran / signals-of-opportunity)",
+      "description": "non-GNSS PNT solution"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Navigation & PNT Systems",
+      "raw_name": "INS-only navigation system",
+      "description": "high-grade inertial-only navigation"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Navigation & PNT Systems",
+      "raw_name": "Maritime navigation buoy / marker",
+      "description": "fixed / floating navigation aid"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Navigation & PNT Systems",
+      "raw_name": "Underwater positioning system (USBL / LBL)",
+      "description": "acoustic underwater positioning"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "raw_name": "Tactical RF jammer",
+      "description": "tactical-level RF jamming system"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "raw_name": "Counter-IED jammer",
+      "description": "RF-detonated IED jammer"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "raw_name": "GNSS / counter-UAS jammer",
+      "description": "UAV-directed RF / GNSS denial"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "raw_name": "HAIPE encryptor",
+      "description": "high-assurance IP encryptor"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "raw_name": "Tactical crypto module",
+      "description": "type-1 / type-2 crypto module"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "raw_name": "Bulk-encryption device",
+      "description": "high-throughput link encryption"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Anti-ship missile",
+      "description": "naval-launched / coastal anti-ship missile"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Air-defence missile",
+      "description": "short / medium / long range surface-to-air missile"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Anti-tank guided weapon (ATGW)",
+      "description": "vehicle / dismounted ATGW"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "MANPADS",
+      "description": "man-portable air-defence system"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Small-arms ammunition",
+      "description": "rifle / pistol / machine-gun ammunition"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Artillery / mortar ammunition",
+      "description": "155mm / 81mm / 120mm rounds"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Loitering munition",
+      "description": "single-use UAV with warhead"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Counter-UAS kinetic effector",
+      "description": "kinetic kill against hostile UAV"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Weapons, Munitions & Effectors",
+      "raw_name": "Anti-personnel / anti-armour mine",
+      "description": "defensive mine systems"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Power & Energy Systems",
+      "raw_name": "Tactical battery / portable energy storage",
+      "description": "dismounted soldier and equipment power"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Power & Energy Systems",
+      "raw_name": "Hybrid genset (diesel + battery)",
+      "description": "fuel-efficient hybrid power"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Power & Energy Systems",
+      "raw_name": "Deployable microgrid",
+      "description": "multi-source forward-base microgrid"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Power & Energy Systems",
+      "raw_name": "Solar / wind hybrid power",
+      "description": "renewable-augmented field power"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Power & Energy Systems",
+      "raw_name": "Fuel cell power module",
+      "description": "hydrogen / methanol fuel cell module"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Power & Energy Systems",
+      "raw_name": "Wearable / soldier power",
+      "description": "soldier-borne power management"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "CBRN detector kit",
+      "description": "handheld / vehicle-mounted CBRN detector"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "Chemical agent monitor",
+      "description": "handheld chemical detection"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "Biological detection system",
+      "description": "biological agent identifier"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "Radiological detector / dosimeter",
+      "description": "gamma / neutron detector"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "Personal protective ensemble (CBRN PPE)",
+      "description": "CBRN suit / mask / boots / gloves"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "Field surgical unit (ROLE-2)",
+      "description": "deployable surgical capability"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "CBRN, Medical & Life Support Systems",
+      "raw_name": "Casualty evacuation kit",
+      "description": "litter / blood / triage kit"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Personal & Field Equipment",
+      "raw_name": "Body armour / plate carrier",
+      "description": "ballistic protective vest with plate inserts"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Personal & Field Equipment",
+      "raw_name": "Tactical / ballistic helmet",
+      "description": "soldier-borne ballistic helmet"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Personal & Field Equipment",
+      "raw_name": "Load-bearing equipment (MOLLE)",
+      "description": "soldier load-carriage system"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Personal & Field Equipment",
+      "raw_name": "Modular shelter system",
+      "description": "deployable shelter / tent system"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Personal & Field Equipment",
+      "raw_name": "Climate-controlled shelter",
+      "description": "environmentally controlled deployable shelter"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Personal & Field Equipment",
+      "raw_name": "Cold-weather clothing system",
+      "description": "Arctic / High North clothing"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Components & Sub-Assemblies",
+      "raw_name": "Power electronics module",
+      "description": "DC-DC / inverter / motor-drive module"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Components & Sub-Assemblies",
+      "raw_name": "Optical assembly",
+      "description": "lens / mirror / coating assembly"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Components & Sub-Assemblies",
+      "raw_name": "Cable / harness assembly",
+      "description": "defence-grade cable assembly"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Components & Sub-Assemblies",
+      "raw_name": "Antenna element / array element",
+      "description": "primary radiating element"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Components & Sub-Assemblies",
+      "raw_name": "FPGA / ASIC sub-assembly",
+      "description": "programmable / custom silicon sub-assembly"
+    },
+    {
+      "category_type": "product_type",
+      "category_normalized_name": "Components & Sub-Assemblies",
+      "raw_name": "Machined / cast structural component",
+      "description": "load-bearing structural sub-assembly"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Advisory & Consulting",
+      "raw_name": "Programme advisory",
+      "description": "long-running advisory engagement supporting customer programme"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Advisory & Consulting",
+      "raw_name": "Tender / BAFO support",
+      "description": "tender authoring, BAFO preparation, response review"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Advisory & Consulting",
+      "raw_name": "Acquisition advisory",
+      "description": "major-acquisition strategy and option analysis"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Advisory & Consulting",
+      "raw_name": "Risk assessment",
+      "description": "operational, technical, and compliance risk assessment"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Advisory & Consulting",
+      "raw_name": "Capability gap analysis",
+      "description": "capability portfolio gap identification"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Advisory & Consulting",
+      "raw_name": "Due diligence",
+      "description": "technical / commercial due diligence for M&A"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Design & Engineering Services",
+      "raw_name": "System / mission system architecture design",
+      "description": "architecture across hardware, software, integration"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Design & Engineering Services",
+      "raw_name": "Naval architecture / vessel design",
+      "description": "naval and commercial vessel design service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Design & Engineering Services",
+      "raw_name": "Secure / classified network design",
+      "description": "defence-grade network design"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Design & Engineering Services",
+      "raw_name": "Cyber-physical system design",
+      "description": "OT / ICS / IoT system design"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Design & Engineering Services",
+      "raw_name": "HMI / UX design service",
+      "description": "operator interface design"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Systems Integration & Installation",
+      "raw_name": "Mission-system integration",
+      "description": "end-to-end mission system integration"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Systems Integration & Installation",
+      "raw_name": "Sensor integration onto platform",
+      "description": "sensor payload integration"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Systems Integration & Installation",
+      "raw_name": "Communications integration",
+      "description": "tactical / strategic comms integration"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Systems Integration & Installation",
+      "raw_name": "Vessel / vehicle installation",
+      "description": "platform installation and commissioning"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Testing, Validation & Certification",
+      "raw_name": "Type approval / qualification testing",
+      "description": "formal type approval per applicable standard"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Testing, Validation & Certification",
+      "raw_name": "Environmental testing (MIL-STD-810)",
+      "description": "shock, vibration, temperature, humidity testing"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Testing, Validation & Certification",
+      "raw_name": "EMC / EMI testing",
+      "description": "electromagnetic compatibility and interference testing"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Testing, Validation & Certification",
+      "raw_name": "STANAG conformance testing",
+      "description": "STANAG 4586 / 4609 / 4774 / 5066 conformance"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Testing, Validation & Certification",
+      "raw_name": "Calibration services",
+      "description": "metrological calibration of test / sensor equipment"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Inspection & Survey",
+      "raw_name": "Subsea inspection (ROV)",
+      "description": "ROV-based subsea infrastructure inspection"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Inspection & Survey",
+      "raw_name": "Structural NDT",
+      "description": "non-destructive testing of structural components"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Inspection & Survey",
+      "raw_name": "Hydrographic / bathymetric survey",
+      "description": "hydrographic survey services"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Inspection & Survey",
+      "raw_name": "Pipeline / cable route inspection",
+      "description": "onshore and offshore pipeline / cable inspection"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "raw_name": "Airframe MRO",
+      "description": "fixed / rotary aircraft depot and intermediate maintenance"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "raw_name": "Vessel MRO",
+      "description": "naval and commercial vessel docking, refit, maintenance"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "raw_name": "Vehicle MRO",
+      "description": "armoured / wheeled vehicle maintenance"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "raw_name": "Sensor MRO",
+      "description": "sensor and electronics depot maintenance"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "raw_name": "Field-level maintenance",
+      "description": "first / second-line field maintenance service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Operations & Platform Services",
+      "raw_name": "UAV / ISR operations as-a-service",
+      "description": "contractor-operated UAV / ISR sortie service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Operations & Platform Services",
+      "raw_name": "Vessel operations as-a-service",
+      "description": "contractor crewed and operated vessel service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Operations & Platform Services",
+      "raw_name": "Crew leasing",
+      "description": "flight / vessel crew leasing"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Operations & Platform Services",
+      "raw_name": "Fleet management",
+      "description": "multi-platform fleet management service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Logistics & Transport",
+      "raw_name": "Strategic lift",
+      "description": "air / sea / land strategic lift service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Logistics & Transport",
+      "raw_name": "Hazardous-cargo (hazmat) transport",
+      "description": "IATA / IMDG / ADR hazmat transport"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Logistics & Transport",
+      "raw_name": "Cold-chain transport",
+      "description": "temperature-controlled transport"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Logistics & Transport",
+      "raw_name": "Port / airport ground handling",
+      "description": "receipt, storage, onward movement"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Emergency & Crisis Response",
+      "raw_name": "Oil-spill response",
+      "description": "IMO OPRC-aligned oil-spill response service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Emergency & Crisis Response",
+      "raw_name": "Mass-casualty incident response",
+      "description": "MCI on-call response service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Emergency & Crisis Response",
+      "raw_name": "CBRN decontamination service",
+      "description": "on-call CBRN decontamination"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Emergency & Crisis Response",
+      "raw_name": "Evacuation services",
+      "description": "civilian / non-combatant evacuation service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Medical & Health Services",
+      "raw_name": "Field medical services",
+      "description": "deployable field medical service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Medical & Health Services",
+      "raw_name": "Aeromedical / casualty evacuation",
+      "description": "MEDEVAC / CASEVAC service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Medical & Health Services",
+      "raw_name": "Telemedicine support",
+      "description": "remote clinical support service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Medical & Health Services",
+      "raw_name": "Contracted ROLE-2 deployable hospital",
+      "description": "contractor-staffed ROLE-2"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Training & Exercise Services",
+      "raw_name": "Operator training",
+      "description": "platform / system operator training delivery"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Training & Exercise Services",
+      "raw_name": "Maintainer training",
+      "description": "depot / field maintainer training delivery"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Training & Exercise Services",
+      "raw_name": "Exercise design and evaluation",
+      "description": "exercise scenario design and AAR"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Training & Exercise Services",
+      "raw_name": "Red-teaming",
+      "description": "security / cyber / OPFOR red-teaming service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Project & Programme Management",
+      "raw_name": "Programme management office (PMO)",
+      "description": "embedded PMO for customer programme"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Project & Programme Management",
+      "raw_name": "Schedule management",
+      "description": "schedule integration and analysis"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Project & Programme Management",
+      "raw_name": "Earned-value management (EVM)",
+      "description": "EVM-compliant performance reporting"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Project & Programme Management",
+      "raw_name": "Risk and change management",
+      "description": "programme risk and change management service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Cyber & Information Security Services",
+      "raw_name": "Penetration testing",
+      "description": "application / network / OT pentest service"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Cyber & Information Security Services",
+      "raw_name": "Vulnerability assessment",
+      "description": "periodic vulnerability scan and analysis"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Cyber & Information Security Services",
+      "raw_name": "SOC-as-a-service / managed detection and response",
+      "description": "outsourced SOC"
+    },
+    {
+      "category_type": "service_type",
+      "category_normalized_name": "Cyber & Information Security Services",
+      "raw_name": "Incident response retainer",
+      "description": "pre-arranged IR response service"
+    }
+  ],
+  "reparenting_map": [
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Business & Strategy",
+      "new_normalized_name": "Business & Governance",
+      "confidence": "medium",
+      "notes": "name match approximate; may also be \"Strategy & Governance\" or similar"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "C4ISR",
+      "new_normalized_name": "C4ISR, Communications & PNT",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Communications",
+      "new_normalized_name": "C4ISR, Communications & PNT",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Navigation & Positioning",
+      "new_normalized_name": "C4ISR, Communications & PNT",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Cybersecurity",
+      "new_normalized_name": "Cybersecurity",
+      "confidence": "high",
+      "notes": "1:1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Electronic Warfare",
+      "new_normalized_name": "Electronic Warfare",
+      "confidence": "high",
+      "notes": "1:1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Energy & Infrastructure",
+      "new_normalized_name": "Energy & Critical Infrastructure",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Infrastructure",
+      "new_normalized_name": "Energy & Critical Infrastructure",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Logistics",
+      "new_normalized_name": "Logistics, Supply Chain & Mobility",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Manufacturing",
+      "new_normalized_name": "Manufacturing & Engineering",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Maritime",
+      "new_normalized_name": "Maritime & Subsea",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Water & Subsea",
+      "new_normalized_name": "Maritime & Subsea",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Platforms",
+      "new_normalized_name": "Platforms (Air, Land, Sea, Unmanned)",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Preparedness",
+      "new_normalized_name": "Preparedness, Response & Medical",
+      "confidence": "high",
+      "notes": "explicit fold per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Healthcare & Medical",
+      "new_normalized_name": "Preparedness, Response & Medical",
+      "confidence": "high",
+      "notes": "explicit fold per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Sensors",
+      "new_normalized_name": "Sensors & Detection",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Environmental Monitoring",
+      "new_normalized_name": "Sensors & Detection",
+      "confidence": "high",
+      "notes": "explicit fold per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Integration & Systems",
+      "new_normalized_name": "Software, Systems & Integration",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Software & Digital",
+      "new_normalized_name": "Software, Systems & Integration",
+      "confidence": "high",
+      "notes": "explicit merge per §3.1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Space",
+      "new_normalized_name": "Space",
+      "confidence": "high",
+      "notes": "1:1"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Training",
+      "new_normalized_name": "Training & Simulation",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "capability",
+      "old_normalized_name": "Weapons",
+      "new_normalized_name": "Weapons & Munitions",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Business & Strategy",
+      "new_normalized_name": "Business & Governance",
+      "confidence": "medium",
+      "notes": "inferred — may differ"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "C4ISR",
+      "new_normalized_name": "C4ISR, Communications & PNT",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Communications",
+      "new_normalized_name": "C4ISR, Communications & PNT",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Navigation & Positioning",
+      "new_normalized_name": "C4ISR, Communications & PNT",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Cybersecurity",
+      "new_normalized_name": "Cybersecurity",
+      "confidence": "high",
+      "notes": "1:1"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Electronic Warfare",
+      "new_normalized_name": "Electronic Warfare",
+      "confidence": "high",
+      "notes": "1:1"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Energy & Infrastructure",
+      "new_normalized_name": "Energy & Critical Infrastructure",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Infrastructure",
+      "new_normalized_name": "Energy & Critical Infrastructure",
+      "confidence": "medium",
+      "notes": "may or may not be in competence"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Logistics",
+      "new_normalized_name": "Logistics, Supply Chain & Mobility",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Manufacturing",
+      "new_normalized_name": "Manufacturing & Engineering",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Maritime",
+      "new_normalized_name": "Maritime & Subsea",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Water & Subsea",
+      "new_normalized_name": "Maritime & Subsea",
+      "confidence": "medium",
+      "notes": "may or may not be in competence"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Platforms",
+      "new_normalized_name": "Platforms",
+      "confidence": "high",
+      "notes": "rename (no domain suffix on competence)"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Preparedness",
+      "new_normalized_name": "Preparedness, Response & Medical",
+      "confidence": "high",
+      "notes": "fold mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Healthcare & Medical",
+      "new_normalized_name": "Preparedness, Response & Medical",
+      "confidence": "high",
+      "notes": "fold mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Sensors",
+      "new_normalized_name": "Sensors & Detection",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Environmental Monitoring",
+      "new_normalized_name": "Sensors & Detection",
+      "confidence": "medium",
+      "notes": "may or may not be in competence"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Integration & Systems",
+      "new_normalized_name": "Software, Systems & Integration",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Software & Digital",
+      "new_normalized_name": "Software, Systems & Integration",
+      "confidence": "high",
+      "notes": "merge mirror"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Space",
+      "new_normalized_name": "Space",
+      "confidence": "high",
+      "notes": "1:1"
+    },
+    {
+      "old_type": "competence",
+      "old_normalized_name": "Training",
+      "new_normalized_name": "Training & Simulation",
+      "confidence": "high",
+      "notes": "rename"
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Maritime",
+      "new_normalized_name": "Maritime & Coastal Operations",
+      "confidence": "",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Offshore & Subsea",
+      "new_normalized_name": "Maritime & Coastal Operations",
+      "confidence": "",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Land Operations",
+      "new_normalized_name": "Land Operations",
+      "confidence": "",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Special Operations",
+      "new_normalized_name": "Land Operations",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Urban & Built Environment",
+      "new_normalized_name": "Land Operations",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Space",
+      "new_normalized_name": "Space Operations",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Cyber",
+      "new_normalized_name": "Cyber & Information Operations",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Intelligence",
+      "new_normalized_name": "Cyber & Information Operations",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Surveillance & Reconnaissance",
+      "new_normalized_name": "Surveillance & Reconnaissance (ISR)",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Critical Infrastructure",
+      "new_normalized_name": "Critical Infrastructure Protection",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Energy",
+      "new_normalized_name": "Critical Infrastructure Protection",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Pipeline & Transport",
+      "new_normalized_name": "Critical Infrastructure Protection",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Telecom",
+      "new_normalized_name": "Critical Infrastructure Protection",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Civil Protection",
+      "new_normalized_name": "Civil Protection & Emergency Response",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Humanitarian & Disaster Relief",
+      "new_normalized_name": "Civil Protection & Emergency Response",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Search & Rescue",
+      "new_normalized_name": "Civil Protection & Emergency Response",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "CBRN",
+      "new_normalized_name": "CBRN & Nuclear",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Nuclear",
+      "new_normalized_name": "CBRN & Nuclear",
+      "confidence": "folded",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Law Enforcement",
+      "new_normalized_name": "Law Enforcement & Public Safety",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Medical & Health",
+      "new_normalized_name": "Healthcare & Medical Response",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Arctic Operations",
+      "new_normalized_name": "Arctic & High North Operations",
+      "confidence": "rename",
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Camera system (EO/IR)",
+      "new_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "LiDAR",
+      "new_normalized_name": "Sensors (EO/IR & LiDAR)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Radar",
+      "new_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Antenna system",
+      "new_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Spectrum analyzer",
+      "new_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "SIGINT receiver",
+      "new_normalized_name": "Sensors (RF, Radar & SIGINT)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Sonar",
+      "new_normalized_name": "Sensors (Acoustic & Sonar)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "UAV (fixed-wing)",
+      "new_normalized_name": "Unmanned Air Platforms",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "UAV (rotary)",
+      "new_normalized_name": "Unmanned Air Platforms",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "USV",
+      "new_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "AUV",
+      "new_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "ROV",
+      "new_normalized_name": "Unmanned Surface & Subsea Platforms",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Vessel",
+      "new_normalized_name": "Manned Platforms (Vessels, Vehicles, Aircraft)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Communication radio",
+      "new_normalized_name": "Communications & Networking",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Data link",
+      "new_normalized_name": "Communications & Networking",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "SATCOM terminal",
+      "new_normalized_name": "Communications & Networking",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "AIS system",
+      "new_normalized_name": "Communications & Networking",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "C2 software",
+      "new_normalized_name": "C4 & Mission Software",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Data fusion platform",
+      "new_normalized_name": "C4 & Mission Software",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Integration platform",
+      "new_normalized_name": "C4 & Mission Software",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Simulation platform",
+      "new_normalized_name": "C4 & Mission Software",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Navigation system (GNSS/INS)",
+      "new_normalized_name": "Navigation & PNT Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Buoy",
+      "new_normalized_name": "Navigation & PNT Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Jammer",
+      "new_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Encryption device",
+      "new_normalized_name": "Electronic Warfare & Cryptographic Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Missile / effector system",
+      "new_normalized_name": "Weapons, Munitions & Effectors",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Ammunition",
+      "new_normalized_name": "Weapons, Munitions & Effectors",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Battery / energy storage",
+      "new_normalized_name": "Power & Energy Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Fuel cell / microgrid",
+      "new_normalized_name": "Power & Energy Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Generator / power supply",
+      "new_normalized_name": "Power & Energy Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Decontamination system",
+      "new_normalized_name": "CBRN, Medical & Life Support Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Field hospital / medical unit",
+      "new_normalized_name": "CBRN, Medical & Life Support Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Water purification system",
+      "new_normalized_name": "CBRN, Medical & Life Support Systems",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Body armor / protective equipment",
+      "new_normalized_name": "Personal & Field Equipment",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Shelter / temporary structure",
+      "new_normalized_name": "Personal & Field Equipment",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "PCB / circuit board",
+      "new_normalized_name": "Components & Sub-Assemblies",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Composite component",
+      "new_normalized_name": "Components & Sub-Assemblies",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "product_type",
+      "old_normalized_name": "Machined component (metal)",
+      "new_normalized_name": "Components & Sub-Assemblies",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Consulting & advisory",
+      "new_normalized_name": "Advisory & Consulting",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Security advisory",
+      "new_normalized_name": "Advisory & Consulting",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "EW assessment",
+      "new_normalized_name": "Advisory & Consulting",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Architecture design",
+      "new_normalized_name": "Design & Engineering Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Network design",
+      "new_normalized_name": "Design & Engineering Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Secure network design",
+      "new_normalized_name": "Design & Engineering Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Vessel design",
+      "new_normalized_name": "Design & Engineering Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Systems integration",
+      "new_normalized_name": "Systems Integration & Installation",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Installation",
+      "new_normalized_name": "Systems Integration & Installation",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Testing & validation",
+      "new_normalized_name": "Testing, Validation & Certification",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Calibration",
+      "new_normalized_name": "Testing, Validation & Certification",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Inspection (subsea/structural)",
+      "new_normalized_name": "Inspection & Survey",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Maintenance & repair",
+      "new_normalized_name": "Maintenance, Repair & Overhaul (MRO)",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Platform operation (vessel/aircraft/drone)",
+      "new_normalized_name": "Operations & Platform Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Fleet management",
+      "new_normalized_name": "Operations & Platform Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Logistics & transport",
+      "new_normalized_name": "Logistics & Transport",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Emergency response",
+      "new_normalized_name": "Emergency & Crisis Response",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Evacuation service",
+      "new_normalized_name": "Emergency & Crisis Response",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Decontamination service",
+      "new_normalized_name": "Emergency & Crisis Response",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Medical support",
+      "new_normalized_name": "Medical & Health Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Training & education",
+      "new_normalized_name": "Training & Exercise Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Exercise design & evaluation",
+      "new_normalized_name": "Training & Exercise Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Project management",
+      "new_normalized_name": "Project & Programme Management",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Penetration testing",
+      "new_normalized_name": "Cyber & Information Security Services",
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "old_type": "service_type",
+      "old_normalized_name": "Spectrum management",
+      "new_normalized_name": "Cyber & Information Security Services",
+      "confidence": null,
+      "notes": null
+    }
+  ],
+  "domain_drops": [
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Environmental Monitoring",
+      "notes": "DROP from domain. Re-categorise as capability/Sensors & Detection. See note below."
+    },
+    {
+      "old_type": "domain",
+      "old_normalized_name": "Training & Exercise",
+      "notes": "DROP from domain. Re-categorise as service_type/Training & Exercise Services. See note below."
+    }
+  ],
+  "summary": {
+    "new_categories_count": 70,
+    "new_entries_count": 285,
+    "reparenting_rules_count": 127,
+    "domain_drops_count": 2,
+    "categories_by_type": {
+      "capability": 15,
+      "competence": 15,
+      "domain": 12,
+      "product_type": 15,
+      "service_type": 13
+    },
+    "entries_by_type": {
+      "capability": 38,
+      "competence": 37,
+      "domain": 45,
+      "product_type": 108,
+      "service_type": 57
+    }
+  }
+}
