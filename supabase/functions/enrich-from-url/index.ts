@@ -77,9 +77,11 @@ const PROPOSALS_TOOL_SCHEMA = {
           items: {
             type: "object",
             properties: {
-              entry_name: { type: "string" },
+              entry_name: { type: "string", description: "The name of the capability/competence/etc. If you are mapping to an existing ontology entry, use that entry's exact raw_name. If you are proposing a new entry, this is your suggested name." },
               evidence: { type: "string" },
               confidence: { type: "string", enum: ["high", "medium", "low"] },
+              matched_entry_id: { type: "string", description: "If this proposal corresponds to an existing ontology entry (case-insensitive name match or strong semantic match within a category), include that entry's id here. Omit or set to null if this is a genuinely new concept." },
+              proposed_category_id: { type: "string", description: "Required when matched_entry_id is not set. The id of the existing sub-category this new entry should live under." },
             },
             required: ["entry_name", "evidence", "confidence"],
           },
