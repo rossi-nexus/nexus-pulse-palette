@@ -425,7 +425,7 @@ serve(async (req) => {
       entryByName.set(e.raw_name.trim().toLowerCase(), e);
       entryById.set(e.id, e);
     }
-    const catById = new Map<string, OntoCategory & { co_occurring_category_ids: string[] }>();
+    const catById = new Map<string, OntoCategory>();
     for (const c of categories) catById.set(c.id, c);
 
     const proposals = rawProposals
