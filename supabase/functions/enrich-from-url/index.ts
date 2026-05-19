@@ -16,6 +16,15 @@ type SectionKey =
   | "products"
   | "services";
 
+// Maps wizard section_key → ontology_categories.type
+const SECTION_TO_TYPE: Record<SectionKey, string> = {
+  capabilities: "capability",
+  competences: "competence",
+  domains: "domain",
+  products: "product_type",
+  services: "service_type",
+};
+
 interface SectionConfig {
   description: string;
   noun: string;
