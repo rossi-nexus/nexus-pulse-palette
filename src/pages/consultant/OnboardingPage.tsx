@@ -141,8 +141,9 @@ interface DraftShape {
     city: string;
     region: string;
   };
-  // Section accepted items only — proposals/loading/error are transient.
+  // Section accepted items + consultant decisions; proposals/loading/error are transient.
   accepted: Record<SectionKey, AcceptedItem[]>;
+  decisions: Record<SectionKey, ConsultantDecision[]>;
   scraped: Record<SectionKey, boolean>;
   verification: {
     evidence: VerificationEvidenceItem[];
