@@ -600,14 +600,19 @@ const OnboardingPage = () => {
       const cleanEvidence = evidence.filter((e) => e.source_url || e.note);
 
       const ontologyItems = SECTIONS.flatMap((s) =>
-        sections[s.key].accepted.map((a) => ({
-          entry_name: a.entry_name,
-          source: a.source,
-          confidence: a.confidence,
-          evidence: a.evidence ?? null,
-          source_url: a.source_url ?? null,
-        })),
+        sections[s.key].accepted
+          // Exclude UI-only markers from accept-as-new; those tag via decisions.
+          .filter((a) => !a.entry_name.endsWith(" (proposed)"))
+          .map((a) => ({
+            entry_name: a.entry_name,
+            source: a.source,
+            confidence: a.confidence,
+            evidence: a.evidence ?? null,
+            source_url: a.source_url ?? null,
+          })),
       );
+
+      const consultantDecisions = SECTIONS.flatMap((s) => sections[s.key].decisions);
 
       const identity = {
         legal_name: legalName.trim(),
@@ -629,6 +634,7 @@ const OnboardingPage = () => {
           notes: notes.trim() || null,
         } as never,
         p_programme_id: programmeId || null,
+        p_consultant_decisions: consultantDecisions as never,
       });
 
       if (error) throw new Error(error.message);
