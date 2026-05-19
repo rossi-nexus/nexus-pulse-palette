@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/select";
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
-import { MapToExistingPanel, type MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
+import { type MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
+import { ProposedNewCard } from "@/components/ontology/ProposedNewCard";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { cn } from "@/lib/utils";
 import type { VerificationEvidenceItem, VerifierConfidence } from "@/types/verification";
@@ -66,6 +67,7 @@ interface ConsultantDecision {
   proposed_category_id: string | null;
   mapped_to_entry_id: string | null;
   mapped_to_entry_name?: string | null;
+  proposed_description?: string | null;
 }
 
 interface AcceptedItem {
@@ -496,7 +498,7 @@ const OnboardingPage = () => {
     );
   };
 
-  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal) => {
+  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal, description: string | null) => {
     if (!proposal.proposed_category_id) {
       toast.error("No proposed category set; cannot accept as new.");
       return;
@@ -509,9 +511,8 @@ const OnboardingPage = () => {
         proposed_name: proposal.entry_name,
         proposed_category_id: proposal.proposed_category_id,
         mapped_to_entry_id: null,
+        proposed_description: description,
       },
-      // The new proposed entry is server-created; we surface it locally as accepted
-      // for visual confirmation. The RPC creates the row and tags the actor.
       { entry_name: proposal.entry_name + " (proposed)", source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
     );
   };
@@ -539,9 +540,6 @@ const OnboardingPage = () => {
       mapped_to_entry_id: null,
     });
   };
-
-  const dismissAll = (key: SectionKey) =>
-    setSections((prev) => ({ ...prev, [key]: { ...prev[key], proposals: [] } }));
 
   const removeAccepted = (key: SectionKey, idx: number) =>
     setSections((prev) => ({
@@ -990,7 +988,7 @@ const OnboardingPage = () => {
                       proposal={p}
                       categoryType={s.ontoType}
                       onMap={(pick) => handleMapToExisting(s.key, p, pick)}
-                      onAcceptNew={() => handleAcceptAsNew(s.key, p)}
+                      onAcceptNew={(desc) => handleAcceptAsNew(s.key, p, desc)}
                       onMapAndPropose={(pick) => handleMapAndPropose(s.key, p, pick)}
                       onReject={() => handleReject(s.key, p)}
                     />
