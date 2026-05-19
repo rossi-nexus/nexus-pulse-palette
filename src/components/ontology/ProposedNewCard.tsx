@@ -10,8 +10,10 @@
 //
 // Keyboard: Tab cycles the four buttons in order; Esc closes any expanded panel.
 import { useEffect, useRef, useState } from "react";
+import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MapToExistingPanel, type MapToExistingResult } from "./MapToExistingPanel";
 import { cn } from "@/lib/utils";
@@ -155,7 +157,30 @@ export const ProposedNewCard = ({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="pt-1 space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+            Choose how to handle this AI-proposed entry
+          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Action guide"
+                className="text-foreground-muted hover:text-foreground focus:text-foreground outline-none"
+              >
+                <HelpCircle className="h-3 w-3" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-80 text-xs space-y-2">
+              <p><span className="font-semibold text-foreground">Map to existing</span> — This is already in our ontology under a different name. Link the actor to the existing entry.</p>
+              <p><span className="font-semibold text-foreground">Accept as new</span> — This is a real thing we don't have yet. Add it to the ontology (pending admin review) and tag the actor with it.</p>
+              <p><span className="font-semibold text-foreground">Map and propose</span> — Link to an existing entry now AND record a new proposal for admin to consider later.</p>
+              <p><span className="font-semibold text-foreground">Reject</span> — Not a real thing / not relevant. Discard the proposal.</p>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="flex flex-wrap gap-2">
         <Button
           ref={mapBtnRef}
           size="sm"
@@ -183,6 +208,7 @@ export const ProposedNewCard = ({
         <Button size="sm" variant="ghost" onClick={onReject}>
           Reject
         </Button>
+        </div>
       </div>
 
       {(mode === "map" || mode === "map-and-propose") && (
