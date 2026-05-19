@@ -143,6 +143,40 @@ async function fetchUrlText(url: string): Promise<string> {
     : text;
 }
 
+interface OntoCategory {
+  id: string;
+  normalized_name: string;
+  description: string | null;
+  keywords: string[] | null;
+  example_entries: string[] | null;
+}
+interface OntoEntry {
+  id: string;
+  raw_name: string;
+  category_id: string;
+}
+
+function buildOntologyBlock(categories: OntoCategory[], entries: OntoEntry[]): string {
+  const entriesByCat = new Map<string, OntoEntry[]>();
+  for (const e of entries) {
+    if (!entriesByCat.has(e.category_id)) entriesByCat.set(e.category_id, []);
+    entriesByCat.get(e.category_id)!.push(e);
+  }
+  const parts: string[] = [];
+  for (const c of categories) {
+    const ents = entriesByCat.get(c.id) ?? [];
+    parts.push(
+      `- Category: "${c.normalized_name}" (id: ${c.id})\n` +
+      (c.description ? `  Description: ${c.description}\n` : "") +
+      (c.keywords && c.keywords.length ? `  Keywords: ${c.keywords.join(", ")}\n` : "") +
+      (c.example_entries && c.example_entries.length ? `  Example entries: ${c.example_entries.join(", ")}\n` : "") +
+      `  Entries:\n` +
+      ents.map((e) => `    - "${e.raw_name}" (id: ${e.id})`).join("\n")
+    );
+  }
+  return parts.join("\n\n");
+}
+
 function buildPrompt(args: {
   sectionKey: SectionKey;
   url: string;
@@ -151,6 +185,7 @@ function buildPrompt(args: {
   country?: string | null;
   existingItems: string[];
   extractedText: string;
+  ontologyBlock: string;
 }) {
   const cfg = SECTION_CONFIG[args.sectionKey];
   const existing =
@@ -168,6 +203,9 @@ ${args.extractedText}
 Already on file (do not propose duplicates):
 ${existing}
 
+Available ontology for this section (sub-categories and their existing entries):
+${args.ontologyBlock}
+
 Your task: identify ${cfg.noun} this company has based on the source text.
 ${cfg.guidance}
 
@@ -178,6 +216,10 @@ Rules:
 - 3-10 proposals typical. It is acceptable to return 0 if nothing relevant is found.
 - Do not invent items. Do not include items that are obviously unrelated to this company.
 - Do not propose items already in the "Already on file" list.
+- For each proposal, decide:
+    * If it clearly corresponds to an existing entry above (same concept, name match or strong semantic equivalent), set "matched_entry_id" to that entry's id and use that entry's exact raw_name as entry_name.
+    * Otherwise it's a NEW concept: omit matched_entry_id, set "proposed_category_id" to the id of the sub-category it best fits under, and use your suggested name as entry_name.
+- A proposal must have either matched_entry_id OR proposed_category_id — never both, never neither.
 
 Respond using the submit_proposals tool.`;
 }
