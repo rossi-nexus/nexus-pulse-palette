@@ -25,18 +25,48 @@ import {
 } from "@/components/ui/select";
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import { MapToExistingPanel, type MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { cn } from "@/lib/utils";
 import type { VerificationEvidenceItem, VerifierConfidence } from "@/types/verification";
 
 type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
-const SECTIONS: { key: SectionKey; label: string }[] = [
-  { key: "capabilities", label: "Capabilities" },
-  { key: "competences", label: "Competences" },
-  { key: "domains", label: "Domains" },
-  { key: "products", label: "Product types" },
-  { key: "services", label: "Service types" },
+const SECTIONS: { key: SectionKey; label: string; ontoType: "capability" | "competence" | "domain" | "product_type" | "service_type" }[] = [
+  { key: "capabilities", label: "Capabilities", ontoType: "capability" },
+  { key: "competences", label: "Competences", ontoType: "competence" },
+  { key: "domains", label: "Domains", ontoType: "domain" },
+  { key: "products", label: "Product types", ontoType: "product_type" },
+  { key: "services", label: "Service types", ontoType: "service_type" },
 ];
+
+/** Extra metadata returned by enrich-from-url for proposed-new items. */
+interface ProposedCategoryMeta {
+  id: string;
+  normalized_name: string;
+  description: string | null;
+  keywords: string[];
+  example_entries: string[];
+  co_occurring: Array<{ id: string; name: string; type: string }>;
+}
+
+/** Per-proposal extension on top of the shared ReviewProposal shape. */
+interface EnrichedProposal extends ReviewProposal {
+  matched_entry_id: string | null;
+  is_proposed_new: boolean;
+  proposed_category_id: string | null;
+  proposed_category_meta: ProposedCategoryMeta | null;
+}
+
+type ConsultantAction = "map-to-existing" | "accept-as-new" | "map-and-propose" | "reject";
+
+/** Consultant decision recorded for a proposed-new item; flushed to the RPC on submit. */
+interface ConsultantDecision {
+  action: ConsultantAction;
+  proposed_name: string;
+  proposed_category_id: string | null;
+  mapped_to_entry_id: string | null;
+  mapped_to_entry_name?: string | null;
+}
 
 interface AcceptedItem {
   entry_name: string;
@@ -49,8 +79,9 @@ interface AcceptedItem {
 type SectionState = {
   loading: boolean;
   error: string | null;
-  proposals: ReviewProposal[];
+  proposals: EnrichedProposal[];
   accepted: AcceptedItem[];
+  decisions: ConsultantDecision[];
   scraped: boolean;
 };
 
@@ -59,6 +90,7 @@ const emptySection = (): SectionState => ({
   error: null,
   proposals: [],
   accepted: [],
+  decisions: [],
   scraped: false,
 });
 
