@@ -208,6 +208,7 @@ export const ProposedNewCard = ({
         <Button size="sm" variant="ghost" onClick={onReject}>
           Reject
         </Button>
+        </div>
       </div>
 
       {(mode === "map" || mode === "map-and-propose") && (
