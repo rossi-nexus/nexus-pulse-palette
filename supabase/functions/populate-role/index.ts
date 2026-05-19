@@ -50,6 +50,8 @@ const TOOL_SCHEMA = {
             properties: {
               category_type: { type: "string", enum: ["capabilities", "competences", "domains", "product_types", "service_types"] },
               proposed_name: { type: "string" },
+              proposed_category_id: { type: "string", description: "UUID of the sub-category from the ONTOLOGY block this proposal best fits under." },
+              matched_entry_id: { type: "string", description: "Optional: UUID of an existing entry from the ONTOLOGY block if the proposed name closely matches it. Prefer mapping over proposing when the match is strong." },
             },
             required: ["category_type", "proposed_name"],
           },
