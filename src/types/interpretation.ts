@@ -23,6 +23,18 @@ export interface OntologySelection {
   status: ItemStatus;
   is_proposed_new?: boolean;
   proposed_name?: string;
+  /** UUID of the sub-category the AI says this proposed-new item best fits under. */
+  proposed_category_id?: string;
+  /** UUID of an existing ontology entry the AI matched to (instead of proposing new). */
+  matched_entry_id?: string;
+  /** Optional resolved metadata for the proposed category — populated by surfaces that fetch it (e.g. enrich-from-url wizard). */
+  proposed_category_meta?: {
+    normalized_name: string;
+    description: string | null;
+    keywords: string[];
+    example_entries: string[];
+    co_occurring: { id: string; type: string; normalized_name: string }[];
+  };
 }
 
 export interface RoleTargets {

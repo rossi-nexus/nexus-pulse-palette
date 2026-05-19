@@ -143,39 +143,11 @@ async function fetchUrlText(url: string): Promise<string> {
     : text;
 }
 
-interface OntoCategory {
-  id: string;
-  normalized_name: string;
-  description: string | null;
-  keywords: string[] | null;
-  example_entries: string[] | null;
-}
-interface OntoEntry {
-  id: string;
-  raw_name: string;
-  category_id: string;
-}
-
-function buildOntologyBlock(categories: OntoCategory[], entries: OntoEntry[]): string {
-  const entriesByCat = new Map<string, OntoEntry[]>();
-  for (const e of entries) {
-    if (!entriesByCat.has(e.category_id)) entriesByCat.set(e.category_id, []);
-    entriesByCat.get(e.category_id)!.push(e);
-  }
-  const parts: string[] = [];
-  for (const c of categories) {
-    const ents = entriesByCat.get(c.id) ?? [];
-    parts.push(
-      `- Category: "${c.normalized_name}" (id: ${c.id})\n` +
-      (c.description ? `  Description: ${c.description}\n` : "") +
-      (c.keywords && c.keywords.length ? `  Keywords: ${c.keywords.join(", ")}\n` : "") +
-      (c.example_entries && c.example_entries.length ? `  Example entries: ${c.example_entries.join(", ")}\n` : "") +
-      `  Entries:\n` +
-      ents.map((e) => `    - "${e.raw_name}" (id: ${e.id})`).join("\n")
-    );
-  }
-  return parts.join("\n\n");
-}
+import {
+  buildOntologyBlock,
+  type OntoCategory,
+  type OntoEntry,
+} from "../_shared/ontology-prompt.ts";
 
 function buildPrompt(args: {
   sectionKey: SectionKey;
@@ -380,7 +352,7 @@ serve(async (req) => {
       .eq("status", "active")
       .order("sort_order");
     if (catErr) throw new Error(`Failed to load ontology categories: ${catErr.message}`);
-    const categories = (catRows ?? []) as Array<OntoCategory & { co_occurring_category_ids: string[] }>;
+    const categories = (catRows ?? []) as Array<OntoCategory>;
     const categoryIds = categories.map((c) => c.id);
     const { data: entryRows, error: entErr } = categoryIds.length
       ? await supabaseAuth
@@ -393,18 +365,26 @@ serve(async (req) => {
     if (entErr) throw new Error(`Failed to load ontology entries: ${entErr.message}`);
     const entries = (entryRows ?? []) as OntoEntry[];
 
-    // Resolve all referenced category names (for co_occurring chip labels). Pull
-    // every active category once so we can label cross-headline pairings too.
+    // Resolve all referenced category names (for co_occurring chip labels in the
+    // wizard response payload AND for cross-section name resolution in the prompt block).
     const { data: allCatRows } = await supabaseAuth
       .from("ontology_categories")
       .select("id, normalized_name, type")
       .eq("status", "active");
+    const allCats = (allCatRows ?? []) as Array<{ id: string; normalized_name: string; type: string }>;
     const catNameById = new Map<string, { name: string; type: string }>();
-    for (const c of (allCatRows ?? []) as Array<{ id: string; normalized_name: string; type: string }>) {
+    for (const c of allCats) {
       catNameById.set(c.id, { name: c.normalized_name, type: c.type });
     }
 
-    const ontologyBlock = buildOntologyBlock(categories, entries);
+    const ontologyBlock = buildOntologyBlock(
+      categories as unknown as OntoCategory[],
+      entries,
+      {
+        groupByType: false,
+        nameLookupCategories: allCats,
+      },
+    );
 
     const prompt = buildPrompt({
       sectionKey: section_key,
@@ -445,7 +425,7 @@ serve(async (req) => {
       entryByName.set(e.raw_name.trim().toLowerCase(), e);
       entryById.set(e.id, e);
     }
-    const catById = new Map<string, OntoCategory & { co_occurring_category_ids: string[] }>();
+    const catById = new Map<string, OntoCategory>();
     for (const c of categories) catById.set(c.id, c);
 
     const proposals = rawProposals
