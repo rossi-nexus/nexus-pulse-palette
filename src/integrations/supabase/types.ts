@@ -779,9 +779,12 @@ export type Database = {
       }
       ontology_categories: {
         Row: {
+          co_occurring_category_ids: string[]
           created_at: string
           description: string | null
+          example_entries: string[]
           id: string
+          keywords: string[]
           normalized_name: string
           sort_order: number
           status: string
@@ -789,9 +792,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          co_occurring_category_ids?: string[]
           created_at?: string
           description?: string | null
+          example_entries?: string[]
           id?: string
+          keywords?: string[]
           normalized_name: string
           sort_order?: number
           status?: string
@@ -799,9 +805,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          co_occurring_category_ids?: string[]
           created_at?: string
           description?: string | null
+          example_entries?: string[]
           id?: string
+          keywords?: string[]
           normalized_name?: string
           sort_order?: number
           status?: string
