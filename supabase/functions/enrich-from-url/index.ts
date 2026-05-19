@@ -371,6 +371,41 @@ serve(async (req) => {
       ? existing_items.filter((s: unknown): s is string => typeof s === "string")
       : [];
 
+    // Load ontology for this section_key (the user's JWT honours RLS — active rows only).
+    const categoryType = SECTION_TO_TYPE[section_key as SectionKey];
+    const { data: catRows, error: catErr } = await supabaseAuth
+      .from("ontology_categories")
+      .select("id, normalized_name, description, keywords, example_entries, co_occurring_category_ids")
+      .eq("type", categoryType)
+      .eq("status", "active")
+      .order("sort_order");
+    if (catErr) throw new Error(`Failed to load ontology categories: ${catErr.message}`);
+    const categories = (catRows ?? []) as Array<OntoCategory & { co_occurring_category_ids: string[] }>;
+    const categoryIds = categories.map((c) => c.id);
+    const { data: entryRows, error: entErr } = categoryIds.length
+      ? await supabaseAuth
+          .from("ontology_entries")
+          .select("id, raw_name, category_id")
+          .in("category_id", categoryIds)
+          .eq("status", "active")
+          .order("raw_name")
+      : { data: [] as OntoEntry[], error: null };
+    if (entErr) throw new Error(`Failed to load ontology entries: ${entErr.message}`);
+    const entries = (entryRows ?? []) as OntoEntry[];
+
+    // Resolve all referenced category names (for co_occurring chip labels). Pull
+    // every active category once so we can label cross-headline pairings too.
+    const { data: allCatRows } = await supabaseAuth
+      .from("ontology_categories")
+      .select("id, normalized_name, type")
+      .eq("status", "active");
+    const catNameById = new Map<string, { name: string; type: string }>();
+    for (const c of (allCatRows ?? []) as Array<{ id: string; normalized_name: string; type: string }>) {
+      catNameById.set(c.id, { name: c.normalized_name, type: c.type });
+    }
+
+    const ontologyBlock = buildOntologyBlock(categories, entries);
+
     const prompt = buildPrompt({
       sectionKey: section_key,
       url,
@@ -379,13 +414,13 @@ serve(async (req) => {
       country: actor_context.country ?? null,
       existingItems: existingList,
       extractedText,
+      ontologyBlock,
     });
 
     let aiResult: { proposals?: unknown; extraction_summary?: string };
     try {
       aiResult = await callAi(prompt, lovableApiKey);
-    } catch (e) {
-      // Single retry with stricter reminder
+    } catch (_e) {
       try {
         aiResult = await callAi(
           prompt + "\n\nReminder: respond ONLY via the submit_proposals tool with valid arguments.",
@@ -394,10 +429,7 @@ serve(async (req) => {
       } catch (e2) {
         return new Response(
           JSON.stringify({ error: (e2 as Error).message }),
-          {
-            status: 502,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
     }
@@ -406,19 +438,82 @@ serve(async (req) => {
       ? (aiResult.proposals as Array<Record<string, unknown>>)
       : [];
 
-    const existingLower = new Set(
-      existingList.map((s) => s.trim().toLowerCase()),
-    );
+    const existingLower = new Set(existingList.map((s) => s.trim().toLowerCase()));
+    const entryByName = new Map<string, OntoEntry>();
+    const entryById = new Map<string, OntoEntry>();
+    for (const e of entries) {
+      entryByName.set(e.raw_name.trim().toLowerCase(), e);
+      entryById.set(e.id, e);
+    }
+    const catById = new Map<string, OntoCategory & { co_occurring_category_ids: string[] }>();
+    for (const c of categories) catById.set(c.id, c);
 
     const proposals = rawProposals
-      .map((p) => ({
-        entry_name: typeof p.entry_name === "string" ? p.entry_name.trim() : "",
-        evidence: typeof p.evidence === "string" ? p.evidence : "",
-        confidence:
+      .map((p) => {
+        const entry_name = typeof p.entry_name === "string" ? p.entry_name.trim() : "";
+        const evidence = typeof p.evidence === "string" ? p.evidence : "";
+        const confidence: "high" | "medium" | "low" =
           p.confidence === "high" || p.confidence === "medium" || p.confidence === "low"
             ? p.confidence
-            : "medium",
-      }))
+            : "medium";
+        let matched_entry_id =
+          typeof p.matched_entry_id === "string" && p.matched_entry_id ? p.matched_entry_id : null;
+        let proposed_category_id =
+          typeof p.proposed_category_id === "string" && p.proposed_category_id
+            ? p.proposed_category_id
+            : null;
+
+        // Safety net: if the AI omitted matched_entry_id but the name exactly
+        // matches an existing entry within this section, treat it as matched.
+        if (!matched_entry_id) {
+          const hit = entryByName.get(entry_name.toLowerCase());
+          if (hit) matched_entry_id = hit.id;
+        }
+        // Validate matched_entry_id belongs to this section's entries
+        if (matched_entry_id && !entryById.has(matched_entry_id)) {
+          matched_entry_id = null;
+        }
+        // Validate proposed_category_id belongs to this section
+        if (proposed_category_id && !catById.has(proposed_category_id)) {
+          proposed_category_id = null;
+        }
+
+        const is_proposed_new = !matched_entry_id;
+        // If proposed-new but no valid category, fall back to first category to
+        // avoid dropping the signal entirely; wizard lets the consultant retarget.
+        if (is_proposed_new && !proposed_category_id && categories.length > 0) {
+          proposed_category_id = categories[0].id;
+        }
+
+        // Attach category metadata for the wizard UI
+        let proposed_category_meta: Record<string, unknown> | null = null;
+        if (is_proposed_new && proposed_category_id) {
+          const c = catById.get(proposed_category_id)!;
+          proposed_category_meta = {
+            id: c.id,
+            normalized_name: c.normalized_name,
+            description: c.description,
+            keywords: c.keywords ?? [],
+            example_entries: c.example_entries ?? [],
+            co_occurring: (c.co_occurring_category_ids ?? [])
+              .map((id) => {
+                const m = catNameById.get(id);
+                return m ? { id, name: m.name, type: m.type } : null;
+              })
+              .filter(Boolean),
+          };
+        }
+
+        return {
+          entry_name,
+          evidence,
+          confidence,
+          matched_entry_id,
+          is_proposed_new,
+          proposed_category_id,
+          proposed_category_meta,
+        };
+      })
       .filter(
         (p) =>
           p.entry_name.length > 0 &&
