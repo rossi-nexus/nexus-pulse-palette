@@ -575,6 +575,8 @@ When you fill any role's proposed_new[] array, you MUST also include:
         const catType = p.category_type === "product_types" ? "productTypes"
           : p.category_type === "service_types" ? "serviceTypes"
           : p.category_type;
+        const proposed_category_id = typeof p.proposed_category_id === "string" && p.proposed_category_id ? p.proposed_category_id : undefined;
+        const matched_entry_id = typeof p.matched_entry_id === "string" && p.matched_entry_id ? p.matched_entry_id : undefined;
         return {
           id: crypto.randomUUID(),
           entryId: `proposed-${crypto.randomUUID()}`,
@@ -585,6 +587,8 @@ When you fill any role's proposed_new[] array, you MUST also include:
           status: "pending" as const,
           is_proposed_new: true,
           proposed_name: p.proposed_name,
+          ...(proposed_category_id ? { proposed_category_id } : {}),
+          ...(matched_entry_id ? { matched_entry_id } : {}),
         };
       });
 
