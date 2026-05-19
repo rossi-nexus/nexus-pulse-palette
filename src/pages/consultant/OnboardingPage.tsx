@@ -407,7 +407,7 @@ const OnboardingPage = () => {
     }
   };
 
-  const acceptProposal = (key: SectionKey, proposal: ReviewProposal) => {
+  const acceptProposal = (key: SectionKey, proposal: EnrichedProposal) => {
     const url = cleanWebsites()[0] ?? null;
     setSections((prev) => ({
       ...prev,
@@ -439,7 +439,11 @@ const OnboardingPage = () => {
     const url = cleanWebsites()[0] ?? null;
     setSections((prev) => {
       const sec = prev[key];
-      const newAccepted = sec.proposals.map((p) => ({
+      // Bulk accept only applies to AI-matched proposals; proposed-new items
+      // require a per-item consultant decision and stay in the queue.
+      const matched = sec.proposals.filter((p) => !p.is_proposed_new);
+      const remaining = sec.proposals.filter((p) => p.is_proposed_new);
+      const newAccepted = matched.map((p) => ({
         entry_name: p.entry_name,
         source: "url_scrape" as const,
         source_url: p.source_url ?? url,
@@ -448,8 +452,91 @@ const OnboardingPage = () => {
       }));
       return {
         ...prev,
-        [key]: { ...sec, accepted: [...sec.accepted, ...newAccepted], proposals: [] },
+        [key]: { ...sec, accepted: [...sec.accepted, ...newAccepted], proposals: remaining },
       };
+    });
+  };
+
+  // ---- Four-action consultant decisions on proposed-new items ----
+  const recordDecision = (key: SectionKey, proposal: EnrichedProposal, decision: ConsultantDecision, alsoTag?: { entry_name: string; source_url?: string | null }) => {
+    setSections((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        decisions: [...prev[key].decisions, decision],
+        accepted: alsoTag
+          ? [
+              ...prev[key].accepted,
+              {
+                entry_name: alsoTag.entry_name,
+                source: "url_scrape",
+                source_url: alsoTag.source_url ?? null,
+                evidence: proposal.evidence,
+                confidence: proposal.confidence,
+              },
+            ]
+          : prev[key].accepted,
+        proposals: prev[key].proposals.filter((p) => p !== proposal),
+      },
+    }));
+  };
+
+  const handleMapToExisting = (key: SectionKey, proposal: EnrichedProposal, pick: MapToExistingResult) => {
+    recordDecision(
+      key,
+      proposal,
+      {
+        action: "map-to-existing",
+        proposed_name: proposal.entry_name,
+        proposed_category_id: proposal.proposed_category_id,
+        mapped_to_entry_id: pick.entry_id,
+        mapped_to_entry_name: pick.entry_name,
+      },
+      { entry_name: pick.entry_name, source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
+    );
+  };
+
+  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal) => {
+    if (!proposal.proposed_category_id) {
+      toast.error("No proposed category set; cannot accept as new.");
+      return;
+    }
+    recordDecision(
+      key,
+      proposal,
+      {
+        action: "accept-as-new",
+        proposed_name: proposal.entry_name,
+        proposed_category_id: proposal.proposed_category_id,
+        mapped_to_entry_id: null,
+      },
+      // The new proposed entry is server-created; we surface it locally as accepted
+      // for visual confirmation. The RPC creates the row and tags the actor.
+      { entry_name: proposal.entry_name + " (proposed)", source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
+    );
+  };
+
+  const handleMapAndPropose = (key: SectionKey, proposal: EnrichedProposal, pick: MapToExistingResult) => {
+    recordDecision(
+      key,
+      proposal,
+      {
+        action: "map-and-propose",
+        proposed_name: proposal.entry_name,
+        proposed_category_id: proposal.proposed_category_id,
+        mapped_to_entry_id: pick.entry_id,
+        mapped_to_entry_name: pick.entry_name,
+      },
+      { entry_name: pick.entry_name, source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
+    );
+  };
+
+  const handleReject = (key: SectionKey, proposal: EnrichedProposal) => {
+    recordDecision(key, proposal, {
+      action: "reject",
+      proposed_name: proposal.entry_name,
+      proposed_category_id: proposal.proposed_category_id,
+      mapped_to_entry_id: null,
     });
   };
 
