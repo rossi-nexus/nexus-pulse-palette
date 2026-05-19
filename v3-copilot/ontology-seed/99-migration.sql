@@ -782,9 +782,11 @@ BEGIN
     ('service_type','Cyber & Information Security Services')
   )
   DELETE FROM public.ontology_categories oc
-  USING _old_cat_ids old
-  LEFT JOIN new_names nn ON nn.type = old.type AND nn.normalized_name = old.normalized_name
-  WHERE oc.id = old.id AND nn.normalized_name IS NULL;
+  WHERE oc.id IN (
+    SELECT old.id FROM _old_cat_ids old
+    LEFT JOIN new_names nn ON nn.type = old.type AND nn.normalized_name = old.normalized_name
+    WHERE nn.normalized_name IS NULL
+  );
 END $del$;
 
 -- STEP 6: insert 285 new entries
