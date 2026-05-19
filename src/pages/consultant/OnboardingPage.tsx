@@ -67,6 +67,7 @@ interface ConsultantDecision {
   proposed_category_id: string | null;
   mapped_to_entry_id: string | null;
   mapped_to_entry_name?: string | null;
+  proposed_description?: string | null;
 }
 
 interface AcceptedItem {
