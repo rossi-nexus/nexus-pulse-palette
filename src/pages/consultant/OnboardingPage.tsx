@@ -386,7 +386,7 @@ const OnboardingPage = () => {
         },
       });
       if (error) throw new Error(error.message);
-      const proposals = (data?.proposals ?? []) as ReviewProposal[];
+      const proposals = (data?.proposals ?? []) as EnrichedProposal[];
       setSections((prev) => ({
         ...prev,
         [key]: { ...prev[key], loading: false, proposals, scraped: true },
