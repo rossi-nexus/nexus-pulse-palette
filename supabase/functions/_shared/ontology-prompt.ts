@@ -93,11 +93,11 @@ export function buildOntologyBlock(
   entries: OntoEntry[],
   options: BuildOntologyBlockOptions = {},
 ): string {
-  const opts: Required<BuildOntologyBlockOptions> = {
+  const opts = {
     includeMetadata: options.includeMetadata ?? true,
     includeCoOccurring: options.includeCoOccurring ?? true,
     groupByType: options.groupByType ?? true,
-  };
+  } as Required<Omit<BuildOntologyBlockOptions, "nameLookupCategories">>;
 
   const entriesByCat = new Map<string, OntoEntry[]>();
   for (const e of entries) {
@@ -106,6 +106,7 @@ export function buildOntologyBlock(
   }
 
   const catNameById = new Map<string, string>();
+  for (const c of options.nameLookupCategories ?? []) catNameById.set(c.id, c.normalized_name);
   for (const c of categories) catNameById.set(c.id, c.normalized_name);
 
   if (!opts.groupByType) {
