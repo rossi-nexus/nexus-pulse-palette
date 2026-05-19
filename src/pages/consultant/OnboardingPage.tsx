@@ -541,9 +541,6 @@ const OnboardingPage = () => {
     });
   };
 
-  const dismissAll = (key: SectionKey) =>
-    setSections((prev) => ({ ...prev, [key]: { ...prev[key], proposals: [] } }));
-
   const removeAccepted = (key: SectionKey, idx: number) =>
     setSections((prev) => ({
       ...prev,
