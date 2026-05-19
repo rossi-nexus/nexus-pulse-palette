@@ -32,6 +32,12 @@ export interface BuildOntologyBlockOptions {
   includeCoOccurring?: boolean;
   /** Group categories under TYPE headlines (CAPABILITIES, COMPETENCES, …). Default true. */
   groupByType?: boolean;
+  /**
+   * Extra categories used only for resolving co_occurring_category_ids to display names
+   * (e.g. when the rendered block is scoped to one section but co-occurring categories
+   * sit in other sections). Not rendered.
+   */
+  nameLookupCategories?: Pick<OntoCategory, "id" | "normalized_name">[];
 }
 
 const TYPE_LABELS: Record<string, string> = {
