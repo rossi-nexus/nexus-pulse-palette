@@ -498,7 +498,7 @@ const OnboardingPage = () => {
     );
   };
 
-  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal) => {
+  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal, description: string | null) => {
     if (!proposal.proposed_category_id) {
       toast.error("No proposed category set; cannot accept as new.");
       return;
@@ -511,9 +511,8 @@ const OnboardingPage = () => {
         proposed_name: proposal.entry_name,
         proposed_category_id: proposal.proposed_category_id,
         mapped_to_entry_id: null,
+        proposed_description: description,
       },
-      // The new proposed entry is server-created; we surface it locally as accepted
-      // for visual confirmation. The RPC creates the row and tags the actor.
       { entry_name: proposal.entry_name + " (proposed)", source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
     );
   };
