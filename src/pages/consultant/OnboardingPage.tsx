@@ -947,19 +947,53 @@ const OnboardingPage = () => {
                     </div>
                   )}
 
-                  {sec.proposals.length > 0 && (
+                  {/* AI-matched proposals: classic accept/dismiss */}
+                  {sec.proposals.filter((p) => !p.is_proposed_new).length > 0 && (
                     <ProposalReviewList
-                      proposals={sec.proposals}
+                      proposals={sec.proposals.filter((p) => !p.is_proposed_new)}
                       acceptingIdx={null}
                       bulkAccepting={false}
-                      onAcceptOne={(p) => acceptProposal(s.key, p)}
-                      onDismissOne={(idx) => dismissProposal(s.key, idx)}
+                      onAcceptOne={(p) => acceptProposal(s.key, p as EnrichedProposal)}
+                      onDismissOne={(idx) => {
+                        // map filtered idx back to full index
+                        const matched = sec.proposals.filter((p) => !p.is_proposed_new);
+                        const target = matched[idx];
+                        const realIdx = sec.proposals.indexOf(target);
+                        if (realIdx >= 0) dismissProposal(s.key, realIdx);
+                      }}
                       onAcceptAll={() => acceptAll(s.key)}
-                      onDismissAll={() => dismissAll(s.key)}
+                      onDismissAll={() =>
+                        setSections((prev) => ({
+                          ...prev,
+                          [s.key]: { ...prev[s.key], proposals: prev[s.key].proposals.filter((p) => p.is_proposed_new) },
+                        }))
+                      }
                       onClose={() =>
-                        setSections((prev) => ({ ...prev, [s.key]: { ...prev[s.key], proposals: [] } }))
+                        setSections((prev) => ({
+                          ...prev,
+                          [s.key]: { ...prev[s.key], proposals: prev[s.key].proposals.filter((p) => p.is_proposed_new) },
+                        }))
                       }
                     />
+                  )}
+
+                  {/* Proposed-new items: four-action consultant UX */}
+                  {sec.proposals.filter((p) => p.is_proposed_new).map((p) => (
+                    <ProposedNewCard
+                      key={`${p.entry_name}-${p.proposed_category_id ?? "none"}`}
+                      proposal={p}
+                      categoryType={s.ontoType}
+                      onMap={(pick) => handleMapToExisting(s.key, p, pick)}
+                      onAcceptNew={() => handleAcceptAsNew(s.key, p)}
+                      onMapAndPropose={(pick) => handleMapAndPropose(s.key, p, pick)}
+                      onReject={() => handleReject(s.key, p)}
+                    />
+                  ))}
+
+                  {sec.decisions.length > 0 && (
+                    <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                      {sec.decisions.length} consultant decision{sec.decisions.length === 1 ? "" : "s"} recorded
+                    </div>
                   )}
 
                   {!sec.loading && sec.scraped && sec.proposals.length === 0 && sec.accepted.length === 0 && (
