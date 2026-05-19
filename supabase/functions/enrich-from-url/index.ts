@@ -365,18 +365,26 @@ serve(async (req) => {
     if (entErr) throw new Error(`Failed to load ontology entries: ${entErr.message}`);
     const entries = (entryRows ?? []) as OntoEntry[];
 
-    // Resolve all referenced category names (for co_occurring chip labels). Pull
-    // every active category once so we can label cross-headline pairings too.
+    // Resolve all referenced category names (for co_occurring chip labels in the
+    // wizard response payload AND for cross-section name resolution in the prompt block).
     const { data: allCatRows } = await supabaseAuth
       .from("ontology_categories")
       .select("id, normalized_name, type")
       .eq("status", "active");
+    const allCats = (allCatRows ?? []) as Array<{ id: string; normalized_name: string; type: string }>;
     const catNameById = new Map<string, { name: string; type: string }>();
-    for (const c of (allCatRows ?? []) as Array<{ id: string; normalized_name: string; type: string }>) {
+    for (const c of allCats) {
       catNameById.set(c.id, { name: c.normalized_name, type: c.type });
     }
 
-    const ontologyBlock = buildOntologyBlock(categories, entries);
+    const ontologyBlock = buildOntologyBlock(
+      categories as unknown as OntoCategory[],
+      entries,
+      {
+        groupByType: false,
+        nameLookupCategories: allCats,
+      },
+    );
 
     const prompt = buildPrompt({
       sectionKey: section_key,
