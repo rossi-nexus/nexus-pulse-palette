@@ -10,8 +10,10 @@
 //
 // Keyboard: Tab cycles the four buttons in order; Esc closes any expanded panel.
 import { useEffect, useRef, useState } from "react";
+import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MapToExistingPanel, type MapToExistingResult } from "./MapToExistingPanel";
 import { cn } from "@/lib/utils";
