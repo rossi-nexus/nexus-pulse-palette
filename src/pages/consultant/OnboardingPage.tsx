@@ -26,6 +26,7 @@ import {
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import { MapToExistingPanel, type MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
+import { ProposedNewCard } from "@/components/ontology/ProposedNewCard";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { cn } from "@/lib/utils";
 import type { VerificationEvidenceItem, VerifierConfidence } from "@/types/verification";
