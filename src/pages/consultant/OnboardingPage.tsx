@@ -25,18 +25,48 @@ import {
 } from "@/components/ui/select";
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import { MapToExistingPanel, type MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { cn } from "@/lib/utils";
 import type { VerificationEvidenceItem, VerifierConfidence } from "@/types/verification";
 
 type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
-const SECTIONS: { key: SectionKey; label: string }[] = [
-  { key: "capabilities", label: "Capabilities" },
-  { key: "competences", label: "Competences" },
-  { key: "domains", label: "Domains" },
-  { key: "products", label: "Product types" },
-  { key: "services", label: "Service types" },
+const SECTIONS: { key: SectionKey; label: string; ontoType: "capability" | "competence" | "domain" | "product_type" | "service_type" }[] = [
+  { key: "capabilities", label: "Capabilities", ontoType: "capability" },
+  { key: "competences", label: "Competences", ontoType: "competence" },
+  { key: "domains", label: "Domains", ontoType: "domain" },
+  { key: "products", label: "Product types", ontoType: "product_type" },
+  { key: "services", label: "Service types", ontoType: "service_type" },
 ];
+
+/** Extra metadata returned by enrich-from-url for proposed-new items. */
+interface ProposedCategoryMeta {
+  id: string;
+  normalized_name: string;
+  description: string | null;
+  keywords: string[];
+  example_entries: string[];
+  co_occurring: Array<{ id: string; name: string; type: string }>;
+}
+
+/** Per-proposal extension on top of the shared ReviewProposal shape. */
+interface EnrichedProposal extends ReviewProposal {
+  matched_entry_id: string | null;
+  is_proposed_new: boolean;
+  proposed_category_id: string | null;
+  proposed_category_meta: ProposedCategoryMeta | null;
+}
+
+type ConsultantAction = "map-to-existing" | "accept-as-new" | "map-and-propose" | "reject";
+
+/** Consultant decision recorded for a proposed-new item; flushed to the RPC on submit. */
+interface ConsultantDecision {
+  action: ConsultantAction;
+  proposed_name: string;
+  proposed_category_id: string | null;
+  mapped_to_entry_id: string | null;
+  mapped_to_entry_name?: string | null;
+}
 
 interface AcceptedItem {
   entry_name: string;
@@ -49,8 +79,9 @@ interface AcceptedItem {
 type SectionState = {
   loading: boolean;
   error: string | null;
-  proposals: ReviewProposal[];
+  proposals: EnrichedProposal[];
   accepted: AcceptedItem[];
+  decisions: ConsultantDecision[];
   scraped: boolean;
 };
 
@@ -59,6 +90,7 @@ const emptySection = (): SectionState => ({
   error: null,
   proposals: [],
   accepted: [],
+  decisions: [],
   scraped: false,
 });
 
@@ -109,8 +141,9 @@ interface DraftShape {
     city: string;
     region: string;
   };
-  // Section accepted items only — proposals/loading/error are transient.
+  // Section accepted items + consultant decisions; proposals/loading/error are transient.
   accepted: Record<SectionKey, AcceptedItem[]>;
+  decisions: Record<SectionKey, ConsultantDecision[]>;
   scraped: Record<SectionKey, boolean>;
   verification: {
     evidence: VerificationEvidenceItem[];
@@ -196,11 +229,11 @@ const OnboardingPage = () => {
       setCity(draft.identity.city ?? "");
       setRegion(draft.identity.region ?? "");
       setSections({
-        capabilities: { ...emptySection(), accepted: draft.accepted?.capabilities ?? [], scraped: !!draft.scraped?.capabilities },
-        competences: { ...emptySection(), accepted: draft.accepted?.competences ?? [], scraped: !!draft.scraped?.competences },
-        domains: { ...emptySection(), accepted: draft.accepted?.domains ?? [], scraped: !!draft.scraped?.domains },
-        products: { ...emptySection(), accepted: draft.accepted?.products ?? [], scraped: !!draft.scraped?.products },
-        services: { ...emptySection(), accepted: draft.accepted?.services ?? [], scraped: !!draft.scraped?.services },
+        capabilities: { ...emptySection(), accepted: draft.accepted?.capabilities ?? [], decisions: draft.decisions?.capabilities ?? [], scraped: !!draft.scraped?.capabilities },
+        competences: { ...emptySection(), accepted: draft.accepted?.competences ?? [], decisions: draft.decisions?.competences ?? [], scraped: !!draft.scraped?.competences },
+        domains: { ...emptySection(), accepted: draft.accepted?.domains ?? [], decisions: draft.decisions?.domains ?? [], scraped: !!draft.scraped?.domains },
+        products: { ...emptySection(), accepted: draft.accepted?.products ?? [], decisions: draft.decisions?.products ?? [], scraped: !!draft.scraped?.products },
+        services: { ...emptySection(), accepted: draft.accepted?.services ?? [], decisions: draft.decisions?.services ?? [], scraped: !!draft.scraped?.services },
       });
       setEvidence(draft.verification?.evidence?.length ? draft.verification.evidence : [{}]);
       setDecay(draft.verification?.decay ?? "90");
@@ -234,6 +267,13 @@ const OnboardingPage = () => {
             domains: sections.domains.accepted,
             products: sections.products.accepted,
             services: sections.services.accepted,
+          },
+          decisions: {
+            capabilities: sections.capabilities.decisions,
+            competences: sections.competences.decisions,
+            domains: sections.domains.decisions,
+            products: sections.products.decisions,
+            services: sections.services.decisions,
           },
           scraped: {
             capabilities: sections.capabilities.scraped,
@@ -346,7 +386,7 @@ const OnboardingPage = () => {
         },
       });
       if (error) throw new Error(error.message);
-      const proposals = (data?.proposals ?? []) as ReviewProposal[];
+      const proposals = (data?.proposals ?? []) as EnrichedProposal[];
       setSections((prev) => ({
         ...prev,
         [key]: { ...prev[key], loading: false, proposals, scraped: true },
@@ -367,7 +407,7 @@ const OnboardingPage = () => {
     }
   };
 
-  const acceptProposal = (key: SectionKey, proposal: ReviewProposal) => {
+  const acceptProposal = (key: SectionKey, proposal: EnrichedProposal) => {
     const url = cleanWebsites()[0] ?? null;
     setSections((prev) => ({
       ...prev,
@@ -399,7 +439,11 @@ const OnboardingPage = () => {
     const url = cleanWebsites()[0] ?? null;
     setSections((prev) => {
       const sec = prev[key];
-      const newAccepted = sec.proposals.map((p) => ({
+      // Bulk accept only applies to AI-matched proposals; proposed-new items
+      // require a per-item consultant decision and stay in the queue.
+      const matched = sec.proposals.filter((p) => !p.is_proposed_new);
+      const remaining = sec.proposals.filter((p) => p.is_proposed_new);
+      const newAccepted = matched.map((p) => ({
         entry_name: p.entry_name,
         source: "url_scrape" as const,
         source_url: p.source_url ?? url,
@@ -408,8 +452,91 @@ const OnboardingPage = () => {
       }));
       return {
         ...prev,
-        [key]: { ...sec, accepted: [...sec.accepted, ...newAccepted], proposals: [] },
+        [key]: { ...sec, accepted: [...sec.accepted, ...newAccepted], proposals: remaining },
       };
+    });
+  };
+
+  // ---- Four-action consultant decisions on proposed-new items ----
+  const recordDecision = (key: SectionKey, proposal: EnrichedProposal, decision: ConsultantDecision, alsoTag?: { entry_name: string; source_url?: string | null }) => {
+    setSections((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        decisions: [...prev[key].decisions, decision],
+        accepted: alsoTag
+          ? [
+              ...prev[key].accepted,
+              {
+                entry_name: alsoTag.entry_name,
+                source: "url_scrape",
+                source_url: alsoTag.source_url ?? null,
+                evidence: proposal.evidence,
+                confidence: proposal.confidence,
+              },
+            ]
+          : prev[key].accepted,
+        proposals: prev[key].proposals.filter((p) => p !== proposal),
+      },
+    }));
+  };
+
+  const handleMapToExisting = (key: SectionKey, proposal: EnrichedProposal, pick: MapToExistingResult) => {
+    recordDecision(
+      key,
+      proposal,
+      {
+        action: "map-to-existing",
+        proposed_name: proposal.entry_name,
+        proposed_category_id: proposal.proposed_category_id,
+        mapped_to_entry_id: pick.entry_id,
+        mapped_to_entry_name: pick.entry_name,
+      },
+      { entry_name: pick.entry_name, source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
+    );
+  };
+
+  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal) => {
+    if (!proposal.proposed_category_id) {
+      toast.error("No proposed category set; cannot accept as new.");
+      return;
+    }
+    recordDecision(
+      key,
+      proposal,
+      {
+        action: "accept-as-new",
+        proposed_name: proposal.entry_name,
+        proposed_category_id: proposal.proposed_category_id,
+        mapped_to_entry_id: null,
+      },
+      // The new proposed entry is server-created; we surface it locally as accepted
+      // for visual confirmation. The RPC creates the row and tags the actor.
+      { entry_name: proposal.entry_name + " (proposed)", source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
+    );
+  };
+
+  const handleMapAndPropose = (key: SectionKey, proposal: EnrichedProposal, pick: MapToExistingResult) => {
+    recordDecision(
+      key,
+      proposal,
+      {
+        action: "map-and-propose",
+        proposed_name: proposal.entry_name,
+        proposed_category_id: proposal.proposed_category_id,
+        mapped_to_entry_id: pick.entry_id,
+        mapped_to_entry_name: pick.entry_name,
+      },
+      { entry_name: pick.entry_name, source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
+    );
+  };
+
+  const handleReject = (key: SectionKey, proposal: EnrichedProposal) => {
+    recordDecision(key, proposal, {
+      action: "reject",
+      proposed_name: proposal.entry_name,
+      proposed_category_id: proposal.proposed_category_id,
+      mapped_to_entry_id: null,
     });
   };
 
@@ -473,14 +600,19 @@ const OnboardingPage = () => {
       const cleanEvidence = evidence.filter((e) => e.source_url || e.note);
 
       const ontologyItems = SECTIONS.flatMap((s) =>
-        sections[s.key].accepted.map((a) => ({
-          entry_name: a.entry_name,
-          source: a.source,
-          confidence: a.confidence,
-          evidence: a.evidence ?? null,
-          source_url: a.source_url ?? null,
-        })),
+        sections[s.key].accepted
+          // Exclude UI-only markers from accept-as-new; those tag via decisions.
+          .filter((a) => !a.entry_name.endsWith(" (proposed)"))
+          .map((a) => ({
+            entry_name: a.entry_name,
+            source: a.source,
+            confidence: a.confidence,
+            evidence: a.evidence ?? null,
+            source_url: a.source_url ?? null,
+          })),
       );
+
+      const consultantDecisions = SECTIONS.flatMap((s) => sections[s.key].decisions);
 
       const identity = {
         legal_name: legalName.trim(),
@@ -502,6 +634,7 @@ const OnboardingPage = () => {
           notes: notes.trim() || null,
         } as never,
         p_programme_id: programmeId || null,
+        p_consultant_decisions: consultantDecisions as never,
       });
 
       if (error) throw new Error(error.message);
@@ -820,19 +953,53 @@ const OnboardingPage = () => {
                     </div>
                   )}
 
-                  {sec.proposals.length > 0 && (
+                  {/* AI-matched proposals: classic accept/dismiss */}
+                  {sec.proposals.filter((p) => !p.is_proposed_new).length > 0 && (
                     <ProposalReviewList
-                      proposals={sec.proposals}
+                      proposals={sec.proposals.filter((p) => !p.is_proposed_new)}
                       acceptingIdx={null}
                       bulkAccepting={false}
-                      onAcceptOne={(p) => acceptProposal(s.key, p)}
-                      onDismissOne={(idx) => dismissProposal(s.key, idx)}
+                      onAcceptOne={(p) => acceptProposal(s.key, p as EnrichedProposal)}
+                      onDismissOne={(idx) => {
+                        // map filtered idx back to full index
+                        const matched = sec.proposals.filter((p) => !p.is_proposed_new);
+                        const target = matched[idx];
+                        const realIdx = sec.proposals.indexOf(target);
+                        if (realIdx >= 0) dismissProposal(s.key, realIdx);
+                      }}
                       onAcceptAll={() => acceptAll(s.key)}
-                      onDismissAll={() => dismissAll(s.key)}
+                      onDismissAll={() =>
+                        setSections((prev) => ({
+                          ...prev,
+                          [s.key]: { ...prev[s.key], proposals: prev[s.key].proposals.filter((p) => p.is_proposed_new) },
+                        }))
+                      }
                       onClose={() =>
-                        setSections((prev) => ({ ...prev, [s.key]: { ...prev[s.key], proposals: [] } }))
+                        setSections((prev) => ({
+                          ...prev,
+                          [s.key]: { ...prev[s.key], proposals: prev[s.key].proposals.filter((p) => p.is_proposed_new) },
+                        }))
                       }
                     />
+                  )}
+
+                  {/* Proposed-new items: four-action consultant UX */}
+                  {sec.proposals.filter((p) => p.is_proposed_new).map((p) => (
+                    <ProposedNewCard
+                      key={`${p.entry_name}-${p.proposed_category_id ?? "none"}`}
+                      proposal={p}
+                      categoryType={s.ontoType}
+                      onMap={(pick) => handleMapToExisting(s.key, p, pick)}
+                      onAcceptNew={() => handleAcceptAsNew(s.key, p)}
+                      onMapAndPropose={(pick) => handleMapAndPropose(s.key, p, pick)}
+                      onReject={() => handleReject(s.key, p)}
+                    />
+                  ))}
+
+                  {sec.decisions.length > 0 && (
+                    <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                      {sec.decisions.length} consultant decision{sec.decisions.length === 1 ? "" : "s"} recorded
+                    </div>
                   )}
 
                   {!sec.loading && sec.scraped && sec.proposals.length === 0 && sec.accepted.length === 0 && (
