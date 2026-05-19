@@ -352,7 +352,7 @@ serve(async (req) => {
       .eq("status", "active")
       .order("sort_order");
     if (catErr) throw new Error(`Failed to load ontology categories: ${catErr.message}`);
-    const categories = (catRows ?? []) as Array<OntoCategory & { co_occurring_category_ids: string[] }>;
+    const categories = (catRows ?? []) as Array<OntoCategory>;
     const categoryIds = categories.map((c) => c.id);
     const { data: entryRows, error: entErr } = categoryIds.length
       ? await supabaseAuth
