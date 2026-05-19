@@ -365,51 +365,18 @@ serve(async (req) => {
       });
     }
 
-    // Group entries by category type
     const categoryMap = new Map(categories.map((c: any) => [c.id, c]));
-    const typeGroups: Record<string, { category: any; entries: any[] }[]> = {};
 
-    for (const cat of categories) {
-      if (!typeGroups[cat.type]) typeGroups[cat.type] = [];
-      typeGroups[cat.type].push({
-        category: cat,
-        entries: entries.filter((e: any) => e.category_id === cat.id),
-      });
-    }
+    const ontologyText = "\n" + buildOntologyBlock(categories as any, entries as any);
 
-    // Also add entries without category (flat types like product_types, service_types)
-    const uncategorizedEntries = entries.filter((e: any) => !e.category_id);
+    const proposedNewInstructions = `
 
-    // Build ontology text for prompt
-    const typeLabels: Record<string, string> = {
-      capability: "CAPABILITIES",
-      competence: "COMPETENCES",
-      domain: "DOMAINS",
-      product_type: "PRODUCT TYPES",
-      service_type: "SERVICE TYPES",
-    };
+When you fill any role's proposed_new[] array, you MUST also include:
+- proposed_category_id: the UUID of the sub-category (from the ONTOLOGY block above) the proposal best fits under. Required.
+- matched_entry_id (optional): the UUID of an existing entry from the ONTOLOGY block if the proposed name closely matches that entry. Prefer mapping to an existing entry over proposing a new one when the match is strong.`;
 
-    let ontologyText = "";
-    for (const [type, label] of Object.entries(typeLabels)) {
-      ontologyText += `\n${label}:\n`;
-      const groups = typeGroups[type] || [];
-      if (groups.length > 0) {
-        for (const g of groups) {
-          ontologyText += `Category: "${g.category.normalized_name}" (id: ${g.category.id})\n`;
-          for (const e of g.entries) {
-            ontologyText += `  - "${e.raw_name}" (id: ${e.id})\n`;
-          }
-        }
-      }
-      // Add uncategorized entries of this type (check by matching type conventions)
-      const flatEntries = uncategorizedEntries.filter((e: any) => {
-        // Entries without category — check if any category of this type exists
-        // Actually, flat entries belong to categories; if no category, they're orphans
-        return false;
-      });
-    }
-
-    const userMessage = `${combinedInput}\n\n---\n\nONTOLOGY:\n${ontologyText}`;
+    const userMessage = `${combinedInput}\n\n---\n\nONTOLOGY:\n${ontologyText}${proposedNewInstructions}`;
+    console.log(`[interpret-need] ontology prompt block chars: ${ontologyText.length}`);
 
     // Step D — Call AI (try tool calling first, fall back to JSON mode)
     async function callAI(useToolCalling: boolean) {
