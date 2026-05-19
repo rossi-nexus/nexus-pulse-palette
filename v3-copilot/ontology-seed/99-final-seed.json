@@ -4653,13 +4653,6 @@
   "reparenting_map": [
     {
       "old_type": "capability",
-      "old_normalized_name": "Business & Strategy",
-      "new_normalized_name": "Business & Governance",
-      "confidence": "medium",
-      "notes": "name match approximate; may also be \"Strategy & Governance\" or similar"
-    },
-    {
-      "old_type": "capability",
       "old_normalized_name": "C4ISR",
       "new_normalized_name": "C4ISR, Communications & PNT",
       "confidence": "high",
@@ -4709,17 +4702,10 @@
     },
     {
       "old_type": "capability",
-      "old_normalized_name": "Logistics",
+      "old_normalized_name": "Logistics & Supply Chain",
       "new_normalized_name": "Logistics, Supply Chain & Mobility",
       "confidence": "high",
-      "notes": "rename"
-    },
-    {
-      "old_type": "capability",
-      "old_normalized_name": "Manufacturing",
-      "new_normalized_name": "Manufacturing & Engineering",
-      "confidence": "high",
-      "notes": "rename"
+      "notes": "rename — DB has `Logistics & Supply Chain`, new target adds `, & Mobility`"
     },
     {
       "old_type": "capability",
@@ -4758,13 +4744,6 @@
     },
     {
       "old_type": "capability",
-      "old_normalized_name": "Sensors",
-      "new_normalized_name": "Sensors & Detection",
-      "confidence": "high",
-      "notes": "rename"
-    },
-    {
-      "old_type": "capability",
       "old_normalized_name": "Environmental Monitoring",
       "new_normalized_name": "Sensors & Detection",
       "confidence": "high",
@@ -4790,27 +4769,6 @@
       "new_normalized_name": "Space",
       "confidence": "high",
       "notes": "1:1"
-    },
-    {
-      "old_type": "capability",
-      "old_normalized_name": "Training",
-      "new_normalized_name": "Training & Simulation",
-      "confidence": "high",
-      "notes": "rename"
-    },
-    {
-      "old_type": "capability",
-      "old_normalized_name": "Weapons",
-      "new_normalized_name": "Weapons & Munitions",
-      "confidence": "high",
-      "notes": "rename"
-    },
-    {
-      "old_type": "competence",
-      "old_normalized_name": "Business & Strategy",
-      "new_normalized_name": "Business & Governance",
-      "confidence": "medium",
-      "notes": "inferred — may differ"
     },
     {
       "old_type": "competence",
@@ -4856,24 +4814,10 @@
     },
     {
       "old_type": "competence",
-      "old_normalized_name": "Infrastructure",
-      "new_normalized_name": "Energy & Critical Infrastructure",
-      "confidence": "medium",
-      "notes": "may or may not be in competence"
-    },
-    {
-      "old_type": "competence",
-      "old_normalized_name": "Logistics",
+      "old_normalized_name": "Logistics & Supply Chain",
       "new_normalized_name": "Logistics, Supply Chain & Mobility",
       "confidence": "high",
-      "notes": "rename"
-    },
-    {
-      "old_type": "competence",
-      "old_normalized_name": "Manufacturing",
-      "new_normalized_name": "Manufacturing & Engineering",
-      "confidence": "high",
-      "notes": "rename"
+      "notes": "rename — DB has `Logistics & Supply Chain`, new target adds `, & Mobility`"
     },
     {
       "old_type": "competence",
@@ -4884,27 +4828,6 @@
     },
     {
       "old_type": "competence",
-      "old_normalized_name": "Water & Subsea",
-      "new_normalized_name": "Maritime & Subsea",
-      "confidence": "medium",
-      "notes": "may or may not be in competence"
-    },
-    {
-      "old_type": "competence",
-      "old_normalized_name": "Platforms",
-      "new_normalized_name": "Platforms",
-      "confidence": "high",
-      "notes": "rename (no domain suffix on competence)"
-    },
-    {
-      "old_type": "competence",
-      "old_normalized_name": "Preparedness",
-      "new_normalized_name": "Preparedness, Response & Medical",
-      "confidence": "high",
-      "notes": "fold mirror"
-    },
-    {
-      "old_type": "competence",
       "old_normalized_name": "Healthcare & Medical",
       "new_normalized_name": "Preparedness, Response & Medical",
       "confidence": "high",
@@ -4912,17 +4835,10 @@
     },
     {
       "old_type": "competence",
-      "old_normalized_name": "Sensors",
-      "new_normalized_name": "Sensors & Detection",
-      "confidence": "high",
-      "notes": "rename"
-    },
-    {
-      "old_type": "competence",
       "old_normalized_name": "Environmental Monitoring",
       "new_normalized_name": "Sensors & Detection",
-      "confidence": "medium",
-      "notes": "may or may not be in competence"
+      "confidence": "high",
+      "notes": "merge mirror"
     },
     {
       "old_type": "competence",
@@ -4944,13 +4860,6 @@
       "new_normalized_name": "Space",
       "confidence": "high",
       "notes": "1:1"
-    },
-    {
-      "old_type": "competence",
-      "old_normalized_name": "Training",
-      "new_normalized_name": "Training & Simulation",
-      "confidence": "high",
-      "notes": "rename"
     },
     {
       "old_type": "domain",
@@ -5556,7 +5465,7 @@
   "summary": {
     "new_categories_count": 70,
     "new_entries_count": 285,
-    "reparenting_rules_count": 127,
+    "reparenting_rules_count": 114,
     "domain_drops_count": 2,
     "categories_by_type": {
       "capability": 15,
