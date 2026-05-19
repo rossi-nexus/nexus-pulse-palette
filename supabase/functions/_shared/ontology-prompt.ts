@@ -54,7 +54,7 @@ function renderCategory(
   cat: OntoCategory,
   entries: OntoEntry[],
   catNameById: Map<string, string>,
-  opts: Required<BuildOntologyBlockOptions>,
+  opts: { includeMetadata: boolean; includeCoOccurring: boolean; groupByType: boolean },
 ): string {
   const lines: string[] = [];
   lines.push(`- Category: "${cat.normalized_name}" (id: ${cat.id})`);
