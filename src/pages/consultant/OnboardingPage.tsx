@@ -268,6 +268,13 @@ const OnboardingPage = () => {
             products: sections.products.accepted,
             services: sections.services.accepted,
           },
+          decisions: {
+            capabilities: sections.capabilities.decisions,
+            competences: sections.competences.decisions,
+            domains: sections.domains.decisions,
+            products: sections.products.decisions,
+            services: sections.services.decisions,
+          },
           scraped: {
             capabilities: sections.capabilities.scraped,
             competences: sections.competences.scraped,
