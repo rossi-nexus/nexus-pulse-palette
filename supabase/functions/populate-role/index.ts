@@ -129,26 +129,8 @@ serve(async (req) => {
       });
     }
 
-    const typeLabels: Record<string, string> = {
-      capability: "CAPABILITIES",
-      competence: "COMPETENCES",
-      domain: "DOMAINS",
-      product_type: "PRODUCT TYPES",
-      service_type: "SERVICE TYPES",
-    };
-
-    let ontologyText = "";
-    for (const [type, label] of Object.entries(typeLabels)) {
-      ontologyText += `\n${label}:\n`;
-      const cats = categories.filter((c: any) => c.type === type);
-      for (const cat of cats) {
-        ontologyText += `Category: "${cat.normalized_name}" (id: ${cat.id})\n`;
-        const catEntries = entries.filter((e: any) => e.category_id === cat.id);
-        for (const e of catEntries) {
-          ontologyText += `  - "${e.raw_name}" (id: ${e.id})\n`;
-        }
-      }
-    }
+    const ontologyText = "\n" + buildOntologyBlock(categories as any, entries as any);
+    console.log(`[populate-role] ontology prompt block chars: ${ontologyText.length}`);
 
     const existingRolesText = (existing_roles || [])
       .map((r: any, i: number) => `  ${i + 1}. ${r.name}`)
@@ -165,7 +147,9 @@ NEW ROLE TO POPULATE:
 
 ONTOLOGY:${ontologyText}
 
-Generate description, reasoning, and ontology targets for the new role above. Do not duplicate the focus of existing roles.`;
+Generate description, reasoning, and ontology targets for the new role above. Do not duplicate the focus of existing roles.
+
+When you fill proposed_new[], you MUST also include proposed_category_id (UUID of the sub-category from the ONTOLOGY block that the proposal best fits under). Optionally include matched_entry_id (UUID of an existing entry in the ONTOLOGY block) when the proposed name closely matches an existing entry — prefer mapping over proposing in that case.`;
 
     // AI call helper — throws on HTTP failure or missing/malformed tool output.
     // Special-cases 429/402 by surfacing them with explicit codes.
