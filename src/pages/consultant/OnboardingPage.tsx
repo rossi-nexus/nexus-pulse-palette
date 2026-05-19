@@ -991,7 +991,7 @@ const OnboardingPage = () => {
                       proposal={p}
                       categoryType={s.ontoType}
                       onMap={(pick) => handleMapToExisting(s.key, p, pick)}
-                      onAcceptNew={() => handleAcceptAsNew(s.key, p)}
+                      onAcceptNew={(desc) => handleAcceptAsNew(s.key, p, desc)}
                       onMapAndPropose={(pick) => handleMapAndPropose(s.key, p, pick)}
                       onReject={() => handleReject(s.key, p)}
                     />
