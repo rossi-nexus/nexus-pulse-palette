@@ -1499,6 +1499,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_admin_ontology_decision: {
+        Args: {
+          p_action: string
+          p_category_id?: string
+          p_description?: string
+          p_entry_id: string
+          p_raw_name?: string
+          p_reason?: string
+          p_target_entry_id?: string
+        }
+        Returns: Json
+      }
       fn_approve_and_verify: {
         Args: {
           p_confidence: string
@@ -1610,6 +1622,8 @@ export type Database = {
       }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never

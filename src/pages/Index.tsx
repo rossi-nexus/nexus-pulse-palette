@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { AUTH_BYPASS_ACTIVE } from "@/lib/devAuthBypass";
 import AppLayout from "@/components/nexus/AppLayout";
 import ConsultantLayout from "@/pages/ConsultantLayout";
+import AdminLayout from "@/pages/AdminLayout";
 import LoginPage from "@/components/nexus/LoginPage";
 
 const Index = () => {
@@ -21,6 +22,7 @@ const Index = () => {
   return (
     <Routes>
       <Route path="/consultant/*" element={<ConsultantLayout />} />
+      <Route path="/admin/*" element={<AdminLayout />} />
       <Route path="/*" element={<AppLayout />} />
     </Routes>
   );
