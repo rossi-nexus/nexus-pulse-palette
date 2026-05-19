@@ -229,11 +229,11 @@ const OnboardingPage = () => {
       setCity(draft.identity.city ?? "");
       setRegion(draft.identity.region ?? "");
       setSections({
-        capabilities: { ...emptySection(), accepted: draft.accepted?.capabilities ?? [], scraped: !!draft.scraped?.capabilities },
-        competences: { ...emptySection(), accepted: draft.accepted?.competences ?? [], scraped: !!draft.scraped?.competences },
-        domains: { ...emptySection(), accepted: draft.accepted?.domains ?? [], scraped: !!draft.scraped?.domains },
-        products: { ...emptySection(), accepted: draft.accepted?.products ?? [], scraped: !!draft.scraped?.products },
-        services: { ...emptySection(), accepted: draft.accepted?.services ?? [], scraped: !!draft.scraped?.services },
+        capabilities: { ...emptySection(), accepted: draft.accepted?.capabilities ?? [], decisions: draft.decisions?.capabilities ?? [], scraped: !!draft.scraped?.capabilities },
+        competences: { ...emptySection(), accepted: draft.accepted?.competences ?? [], decisions: draft.decisions?.competences ?? [], scraped: !!draft.scraped?.competences },
+        domains: { ...emptySection(), accepted: draft.accepted?.domains ?? [], decisions: draft.decisions?.domains ?? [], scraped: !!draft.scraped?.domains },
+        products: { ...emptySection(), accepted: draft.accepted?.products ?? [], decisions: draft.decisions?.products ?? [], scraped: !!draft.scraped?.products },
+        services: { ...emptySection(), accepted: draft.accepted?.services ?? [], decisions: draft.decisions?.services ?? [], scraped: !!draft.scraped?.services },
       });
       setEvidence(draft.verification?.evidence?.length ? draft.verification.evidence : [{}]);
       setDecay(draft.verification?.decay ?? "90");
