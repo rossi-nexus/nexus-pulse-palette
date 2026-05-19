@@ -143,39 +143,11 @@ async function fetchUrlText(url: string): Promise<string> {
     : text;
 }
 
-interface OntoCategory {
-  id: string;
-  normalized_name: string;
-  description: string | null;
-  keywords: string[] | null;
-  example_entries: string[] | null;
-}
-interface OntoEntry {
-  id: string;
-  raw_name: string;
-  category_id: string;
-}
-
-function buildOntologyBlock(categories: OntoCategory[], entries: OntoEntry[]): string {
-  const entriesByCat = new Map<string, OntoEntry[]>();
-  for (const e of entries) {
-    if (!entriesByCat.has(e.category_id)) entriesByCat.set(e.category_id, []);
-    entriesByCat.get(e.category_id)!.push(e);
-  }
-  const parts: string[] = [];
-  for (const c of categories) {
-    const ents = entriesByCat.get(c.id) ?? [];
-    parts.push(
-      `- Category: "${c.normalized_name}" (id: ${c.id})\n` +
-      (c.description ? `  Description: ${c.description}\n` : "") +
-      (c.keywords && c.keywords.length ? `  Keywords: ${c.keywords.join(", ")}\n` : "") +
-      (c.example_entries && c.example_entries.length ? `  Example entries: ${c.example_entries.join(", ")}\n` : "") +
-      `  Entries:\n` +
-      ents.map((e) => `    - "${e.raw_name}" (id: ${e.id})`).join("\n")
-    );
-  }
-  return parts.join("\n\n");
-}
+import {
+  buildOntologyBlock,
+  type OntoCategory,
+  type OntoEntry,
+} from "../_shared/ontology-prompt.ts";
 
 function buildPrompt(args: {
   sectionKey: SectionKey;
