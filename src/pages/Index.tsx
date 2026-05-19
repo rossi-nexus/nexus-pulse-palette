@@ -22,6 +22,7 @@ const Index = () => {
   return (
     <Routes>
       <Route path="/consultant/*" element={<ConsultantLayout />} />
+      <Route path="/admin/*" element={<AdminLayout />} />
       <Route path="/*" element={<AppLayout />} />
     </Routes>
   );
