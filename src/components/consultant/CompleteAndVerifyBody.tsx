@@ -68,6 +68,8 @@ export interface SeedPill {
   entry_name: string;
   /** present for re-verify path (existing tag); null for approve-path JSONB seeds. */
   ontology_entry_id?: string | null;
+  /** Ontology entry status (re-verify path only): 'active' or 'proposed'. */
+  status?: "active" | "proposed" | string | null;
 }
 
 export type CompletionSeed = Record<SectionKey, SeedPill[]>;
