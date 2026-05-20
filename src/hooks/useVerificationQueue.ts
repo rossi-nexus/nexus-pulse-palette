@@ -1,15 +1,27 @@
 // Phase 6.5.5b: lists pending suggestion-queue rows scoped to the consultant's
 // accessible programmes (or all rows if admin). Returns the data shape needed
 // by the verification workspace UI.
+//
+// B2/B4 follow-up: surfaces registry-import rows (where user_personal_actor_id
+// is NULL) by LEFT-JOINing both user_personal_actors and the new
+// linked_actor_id → actors relation.
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionContext } from "@/contexts/SessionContext";
 
+export type QueueOrigin = "user_suggestion" | "registry_import";
+
 export interface PendingSuggestion {
   queue_id: string;
-  personal_actor_id: string;
+  /** Null for registry-origin rows. */
+  personal_actor_id: string | null;
+  /** Populated for registry-origin rows; null for user suggestions. */
+  linked_actor_id: string | null;
+  origin: QueueOrigin;
+  origin_registry: string | null;
+  origin_external_id: string | null;
   actor_name: string;
   actor_description: string | null;
   actor_website: string | null;
@@ -28,32 +40,52 @@ export interface PendingSuggestion {
   programme_id: string | null;
   programme_name: string | null;
   source_session_id: string | null;
-  /** B4: raw pipeline analysis JSONB used to pre-seed Complete & verify. */
+  /** B4: raw pipeline analysis JSONB used to pre-seed Complete & verify. Null for registry rows. */
   analysis_data: Record<string, unknown> | null;
+}
+
+interface PersonalActorJoin {
+  id: string;
+  actor_name: string;
+  actor_description: string | null;
+  actor_website: string | null;
+  actor_type: string | null;
+  country: string | null;
+  org_number: string | null;
+  trade_names: string[] | null;
+  street_address: string | null;
+  city: string | null;
+  region: string | null;
+  matched_main_db_actor_id: string | null;
+  suggested_at: string | null;
+  source_session_id: string | null;
+  analysis_data: Record<string, unknown> | null;
+}
+
+interface LinkedActorJoin {
+  id: string;
+  legal_name: string;
+  country: string | null;
+  org_number: string | null;
+  trade_names: string[] | null;
+  street_address: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  websites: string[] | null;
 }
 
 interface QueueRow {
   id: string;
-  user_personal_actor_id: string;
+  user_personal_actor_id: string | null;
+  linked_actor_id: string | null;
+  origin: QueueOrigin;
+  origin_registry: string | null;
+  origin_external_id: string | null;
   suggested_by: string;
   created_at: string;
-  user_personal_actors: {
-    id: string;
-    actor_name: string;
-    actor_description: string | null;
-    actor_website: string | null;
-    actor_type: string | null;
-    country: string | null;
-    org_number: string | null;
-    trade_names: string[] | null;
-    street_address: string | null;
-    city: string | null;
-    region: string | null;
-    matched_main_db_actor_id: string | null;
-    suggested_at: string | null;
-    source_session_id: string | null;
-    analysis_data: Record<string, unknown> | null;
-  } | null;
+  user_personal_actors: PersonalActorJoin | null;
+  linked_actor: LinkedActorJoin | null;
 }
 
 export function useVerificationQueue() {
@@ -74,11 +106,16 @@ export function useVerificationQueue() {
       const { data: rows, error: queueErr } = await supabase
         .from("actor_validation_queue")
         .select(
-          `id, user_personal_actor_id, suggested_by, created_at,
+          `id, user_personal_actor_id, linked_actor_id, origin, origin_registry, origin_external_id,
+           suggested_by, created_at,
            user_personal_actors:user_personal_actor_id (
              id, actor_name, actor_description, actor_website, actor_type,
              country, org_number, trade_names, street_address, city, region,
              matched_main_db_actor_id, suggested_at, source_session_id, analysis_data
+           ),
+           linked_actor:linked_actor_id (
+             id, legal_name, country, org_number, trade_names,
+             street_address, city, region, postal_code, websites
            )`,
         )
         .eq("status", "pending")
@@ -91,6 +128,9 @@ export function useVerificationQueue() {
         return;
       }
 
+      // Programme scoping is derived from session→programme for user-suggestion
+      // rows. Registry-import rows have no session/programme, so they're
+      // admin-only (the queue page already gates them as "Unscoped").
       const sessionIds = Array.from(
         new Set(
           queueRows
@@ -150,38 +190,76 @@ export function useVerificationQueue() {
 
       const result: PendingSuggestion[] = [];
       for (const r of queueRows) {
+        const isRegistry = r.origin === "registry_import";
         const pa = r.user_personal_actors;
-        if (!pa) continue;
-        const sessionId = pa.source_session_id;
+        const la = r.linked_actor;
+
+        if (isRegistry) {
+          // Registry rows: must have linked_actor (CHECK constraint enforces).
+          if (!la) continue;
+        } else {
+          // User-suggestion rows: must have personal actor.
+          if (!pa) continue;
+        }
+
+        const sessionId = pa?.source_session_id ?? null;
         const programmeId = sessionId ? sessionToProgramme.get(sessionId) ?? null : null;
 
+        // Non-admins only see rows from programmes they manage. Registry rows
+        // are unscoped → admin-only.
         if (!isAdmin) {
+          if (isRegistry) continue;
           if (!programmeId || !myManagedProgrammeIds.has(programmeId)) continue;
         }
 
         const suggester = suggesterMap.get(r.suggested_by);
+
+        const display = isRegistry
+          ? {
+              actor_name: la!.legal_name,
+              actor_description: null as string | null,
+              actor_website: la!.websites?.[0] ?? null,
+              actor_type: null as string | null,
+              country: la!.country,
+              org_number: la!.org_number,
+              trade_names: la!.trade_names ?? [],
+              street_address: la!.street_address,
+              city: la!.city,
+              region: la!.region,
+              matched_main_db_actor_id: la!.id,
+              suggested_at: r.created_at,
+              analysis_data: null as Record<string, unknown> | null,
+            }
+          : {
+              actor_name: pa!.actor_name,
+              actor_description: pa!.actor_description,
+              actor_website: pa!.actor_website,
+              actor_type: pa!.actor_type,
+              country: pa!.country,
+              org_number: pa!.org_number,
+              trade_names: pa!.trade_names ?? [],
+              street_address: pa!.street_address,
+              city: pa!.city,
+              region: pa!.region,
+              matched_main_db_actor_id: pa!.matched_main_db_actor_id,
+              suggested_at: pa!.suggested_at,
+              analysis_data: pa!.analysis_data ?? null,
+            };
+
         result.push({
           queue_id: r.id,
-          personal_actor_id: pa.id,
-          actor_name: pa.actor_name,
-          actor_description: pa.actor_description,
-          actor_website: pa.actor_website,
-          actor_type: pa.actor_type,
-          country: pa.country,
-          org_number: pa.org_number,
-          trade_names: pa.trade_names ?? [],
-          street_address: pa.street_address,
-          city: pa.city,
-          region: pa.region,
-          matched_main_db_actor_id: pa.matched_main_db_actor_id,
+          personal_actor_id: pa?.id ?? null,
+          linked_actor_id: r.linked_actor_id,
+          origin: r.origin,
+          origin_registry: r.origin_registry,
+          origin_external_id: r.origin_external_id,
+          ...display,
           suggested_by: r.suggested_by,
           suggested_by_name: suggester?.name ?? null,
           suggested_by_email: suggester?.email ?? null,
-          suggested_at: pa.suggested_at,
           programme_id: programmeId,
           programme_name: programmeId ? programmeNames.get(programmeId) ?? null : null,
           source_session_id: sessionId,
-          analysis_data: (pa as { analysis_data?: Record<string, unknown> | null }).analysis_data ?? null,
         });
       }
 
