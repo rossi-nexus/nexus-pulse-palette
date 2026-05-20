@@ -52,6 +52,7 @@ interface QueueRow {
     matched_main_db_actor_id: string | null;
     suggested_at: string | null;
     source_session_id: string | null;
+    analysis_data: Record<string, unknown> | null;
   } | null;
 }
 
