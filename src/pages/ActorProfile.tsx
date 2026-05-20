@@ -69,6 +69,7 @@ interface OntologyTagRow {
   ontology_entries: {
     id: string;
     raw_name: string;
+    status: string | null;
     category_id: string | null;
     ontology_categories: {
       type: string;
