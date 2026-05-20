@@ -43,7 +43,6 @@ import {
   type CompletionSeed,
   type SeedPill,
 } from "@/components/consultant/CompleteAndVerifyBody";
-import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { RecordOutcomeDialog } from "@/components/outcome/RecordOutcomeDialog";
 import { OutcomeHistoryList } from "@/components/outcome/OutcomeHistoryList";
 import { useActorOutcomes } from "@/hooks/useActorOutcomes";
