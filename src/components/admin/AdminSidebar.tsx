@@ -1,9 +1,10 @@
 import { NavLink, Link } from "react-router-dom";
-import { Tags, ArrowLeft } from "lucide-react";
+import { Tags, ArrowLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/admin/ontology", icon: Tags, label: "Ontology" },
+  { to: "/admin/registry-import", icon: Download, label: "Registry import" },
 ];
 
 const AdminSidebar = () => {
