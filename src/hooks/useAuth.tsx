@@ -30,8 +30,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // Only swap the user reference when identity actually changes. Supabase
+    // fires TOKEN_REFRESHED / SIGNED_IN on every tab-focus regain; passing a
+    // fresh user object each time cascades through SessionContext /
+    // useConsultantAccess and unmounts the workspace (closing any open dialog
+    // and discarding in-progress consultant state). Compare by id and skip
+    // no-op updates.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const next = session?.user ?? null;
+      setUser((prev) => (prev?.id === next?.id ? prev : next));
     });
 
     return () => subscription.unsubscribe();
