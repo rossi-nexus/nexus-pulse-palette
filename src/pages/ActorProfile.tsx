@@ -37,6 +37,12 @@ import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import { VerificationReviewDialog, type VerificationSubmitPayload } from "@/components/consultant/VerificationReviewDialog";
+import {
+  emptyCompletionSeed,
+  type CompletionDecision,
+  type CompletionSeed,
+  type SeedPill,
+} from "@/components/consultant/CompleteAndVerifyBody";
 import { RecordOutcomeDialog } from "@/components/outcome/RecordOutcomeDialog";
 import { OutcomeHistoryList } from "@/components/outcome/OutcomeHistoryList";
 import { useActorOutcomes } from "@/hooks/useActorOutcomes";
@@ -69,6 +75,7 @@ interface OntologyTagRow {
   ontology_entries: {
     id: string;
     raw_name: string;
+    status: string | null;
     category_id: string | null;
     ontology_categories: {
       type: string;
@@ -548,7 +555,7 @@ const ActorProfile = () => {
             supabase
               .from("actor_ontology_tags")
               .select(
-                "id, ontology_entry_id, source, ontology_entries(id, raw_name, category_id, ontology_categories(type, normalized_name))",
+                "id, ontology_entry_id, source, ontology_entries(id, raw_name, status, category_id, ontology_categories(type, normalized_name))",
               )
               .eq("actor_id", id),
             supabase.from("actor_certifications").select("*").eq("actor_id", id),
@@ -624,6 +631,32 @@ const ActorProfile = () => {
     }
     return { capabilities: [], competences: [], domains: [], products: [], services: [] };
   }, [source, personal, personalOntologyEntries, ontologyTags]);
+
+  // B4: build CompletionSeed from existing actor_ontology_tags for re-verify path
+  const reverifySeed = useMemo<CompletionSeed>(() => {
+    if (source !== "database") return emptyCompletionSeed();
+    const seed = emptyCompletionSeed();
+    const typeToKey: Record<string, keyof CompletionSeed> = {
+      capability: "capabilities",
+      competence: "competences",
+      domain: "domains",
+      product_type: "products",
+      service_type: "services",
+    };
+    for (const tag of ontologyTags) {
+      const entry = tag.ontology_entries;
+      const type = entry?.ontology_categories?.type;
+      const key = type ? typeToKey[type] : undefined;
+      if (!key || !entry?.raw_name) continue;
+      const pill: SeedPill = {
+        entry_name: entry.raw_name,
+        ontology_entry_id: entry.id,
+        status: entry.status ?? "active",
+      };
+      seed[key].push(pill);
+    }
+    return seed;
+  }, [source, ontologyTags]);
 
   // Derive classification / standards / customers from JSONB for personal
   const personalDerived = useMemo(() => {
@@ -1813,6 +1846,37 @@ const ActorProfile = () => {
             } else if (refreshed) {
               setDbActor(refreshed as DbActor);
             }
+          }}
+          completion={{
+            actionLabel: "Complete & re-verify",
+            submitLabel: "Save completion and re-verify",
+            websiteUrl: dbActor.websites?.[0] ?? null,
+            actorContext: { actor_name: dbActor.legal_name, country: dbActor.country ?? null },
+            seed: reverifySeed,
+            enabled: isAdmin,
+            disabledReason: isAdmin
+              ? undefined
+              : "Admin only — completion writes new ontology tags and proposed entries.",
+            onSubmit: async (p, decisions: CompletionDecision[]) => {
+              setReverifyBusy(true);
+              const { error } = await supabase.rpc("fn_verify_actor", {
+                p_actor_id: dbActor.id,
+                p_evidence: p.evidence as unknown as never,
+                p_decays_at: p.decays_at,
+                p_confidence: p.confidence,
+                p_notes: p.notes || null,
+                p_programme_id: null,
+                p_consultant_decisions: decisions as unknown as never,
+              });
+              setReverifyBusy(false);
+              if (error) { toast.error(error.message); return; }
+              toast.success(
+                `Re-verified · ${decisions.length} ontology decision${decisions.length === 1 ? "" : "s"} recorded`,
+              );
+              setReverifyOpen(false);
+              const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+              if (refreshed) setDbActor(refreshed as DbActor);
+            },
           }}
         />
       )}

@@ -12,7 +12,11 @@ import {
   VerificationReviewDialog,
   type VerificationSubmitPayload,
 } from "@/components/consultant/VerificationReviewDialog";
-import { seedFromAnalysisData, type CompletionDecision } from "@/components/consultant/CompleteAndVerifyBody";
+import {
+  seedFromAnalysisData,
+  emptyCompletionSeed,
+  type CompletionDecision,
+} from "@/components/consultant/CompleteAndVerifyBody";
 
 const VerificationWorkspacePage = () => {
   const { items, loading, refresh } = useVerificationQueue();
@@ -37,6 +41,33 @@ const VerificationWorkspacePage = () => {
       return;
     }
     toast.success(`${active.actor_name} approved and verified`);
+    setActive(null);
+    refresh();
+  };
+
+  const handleCompleteAndVerify = async (
+    p: VerificationSubmitPayload,
+    decisions: CompletionDecision[],
+  ) => {
+    if (!active) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("fn_approve_and_verify", {
+      p_queue_id: active.queue_id,
+      p_evidence: p.evidence as unknown as never,
+      p_decays_at: p.decays_at,
+      p_confidence: p.confidence,
+      p_notes: p.notes || null,
+      p_programme_id: active.programme_id,
+      p_consultant_decisions: decisions as unknown as never,
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(
+      `${active.actor_name} approved · ${decisions.length} ontology decision${decisions.length === 1 ? "" : "s"} recorded`,
+    );
     setActive(null);
     refresh();
   };
@@ -160,6 +191,20 @@ const VerificationWorkspacePage = () => {
           onApprove={handleApprove}
           onReject={handleReject}
           busy={busy}
+          completion={{
+            actionLabel: "Complete & verify",
+            submitLabel: "Save completion and verify",
+            websiteUrl: active.actor_website ?? null,
+            actorContext: { actor_name: active.actor_name, country: active.country },
+            seed: active.analysis_data
+              ? seedFromAnalysisData(active.analysis_data)
+              : emptyCompletionSeed(),
+            enabled: isAdmin,
+            disabledReason: isAdmin
+              ? undefined
+              : "Admin only — non-admin consultants can't read full pipeline analysis for queued actors.",
+            onSubmit: handleCompleteAndVerify,
+          }}
           summary={
             <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 gap-x-4">
               <dt className="text-foreground-muted">Name</dt>
