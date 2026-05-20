@@ -178,6 +178,19 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
     return map;
   }, [seed]);
 
+  // Build seed status lookup: section -> name -> status (for visual differentiation)
+  const seedStatus = useMemo(() => {
+    const map: Record<SectionKey, Map<string, string | null>> = {
+      capabilities: new Map(), competences: new Map(), domains: new Map(), products: new Map(), services: new Map(),
+    };
+    for (const def of SECTIONS) {
+      for (const p of seed[def.key]) {
+        if (p.status) map[def.key].set(p.entry_name, p.status);
+      }
+    }
+    return map;
+  }, [seed]);
+
   // Bubble decisions + removed tag ids to parent
   useEffect(() => {
     const decisions: CompletionDecision[] = [];
