@@ -28,6 +28,8 @@ export interface PendingSuggestion {
   programme_id: string | null;
   programme_name: string | null;
   source_session_id: string | null;
+  /** B4: raw pipeline analysis JSONB used to pre-seed Complete & verify. */
+  analysis_data: Record<string, unknown> | null;
 }
 
 interface QueueRow {
