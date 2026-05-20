@@ -408,6 +408,26 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
         On submit, all decisions are recorded with the verification.
       </div>
 
+      <div className="bg-surface border border-border rounded-md p-3 space-y-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
+          Enrichment source URL
+        </label>
+        <Input
+          type="url"
+          value={urlDraft}
+          onChange={(e) => setUrlDraft(e.target.value)}
+          placeholder="https://example.com"
+          className="h-8 text-xs"
+        />
+        <p className="text-[11px] text-foreground-muted">
+          {websiteUrl
+            ? "Pre-filled from the actor record. Edit if you have a better source."
+            : "No website on file — paste a URL the AI should scrape for ontology proposals."}
+        </p>
+      </div>
+
+
+
       {SECTIONS.map((def) => {
         const sec = sections[def.key];
         const draftName = manualDrafts[def.key];
