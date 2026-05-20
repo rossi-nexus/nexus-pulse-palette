@@ -1,6 +1,12 @@
 // Phase 6.5.5b: shared review dialog used by both the verification workspace
 // (suggestion approval flow → fn_approve_and_verify) and the actor profile
 // re-verify button (re-verification flow → fn_verify_actor).
+//
+// B4: gains an optional "Complete & verify" mode (or "Complete & re-verify"
+// on the re-verify path). When the parent passes `completion`, the dialog
+// surfaces a second primary action that expands the body into the four-action
+// ontology UX (CompleteAndVerifyBody) and submits decisions via
+// completion.onSubmit.
 import { useState } from "react";
 import {
   Dialog,
@@ -15,11 +21,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Trash2, Sparkles } from "lucide-react";
 import type {
   VerificationEvidenceItem,
   VerifierConfidence,
 } from "@/types/verification";
+import {
+  CompleteAndVerifyBody,
+  type CompletionDecision,
+  type CompletionSeed,
+} from "./CompleteAndVerifyBody";
 
 const DECAY_OPTIONS: { value: string; label: string; days: number | null }[] = [
   { value: "30", label: "30 days", days: 30 },
@@ -35,6 +52,28 @@ export interface VerificationSubmitPayload {
   notes: string;
 }
 
+export interface CompletionConfig {
+  /** Label for the second primary action (e.g. "Complete & verify"). */
+  actionLabel: string;
+  /** Label after expansion (e.g. "Save completion and verify"). */
+  submitLabel: string;
+  /** Website to pass to enrich-from-url. */
+  websiteUrl: string | null;
+  /** Context for enrich-from-url. */
+  actorContext: { actor_name: string; country: string | null };
+  /** Pre-seeded pills per section. */
+  seed: CompletionSeed;
+  /** Whether the current viewer is allowed to use completion (admin gate). */
+  enabled: boolean;
+  /** Disabled-state tooltip (shown when enabled=false). */
+  disabledReason?: string;
+  /** Submission handler invoked when the consultant submits the completion flow. */
+  onSubmit: (
+    verification: VerificationSubmitPayload,
+    decisions: CompletionDecision[],
+  ) => Promise<void>;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,10 +85,14 @@ interface Props {
   onApprove: (payload: VerificationSubmitPayload) => Promise<void>;
   /** Optional secondary action (Reject) for the suggestion-approval flow. */
   onReject?: (reason: string) => Promise<void>;
-  /** Phase 6.5.6: optional past-outcomes summary panel rendered above the read-only actor summary. */
+  /** Phase 6.5.6: optional past-outcomes summary panel. */
   outcomesPanel?: React.ReactNode;
+  /** B4: optional completion-mode config. When set, surfaces a second primary action. */
+  completion?: CompletionConfig;
   busy?: boolean;
 }
+
+type Mode = "approve" | "reject" | "complete";
 
 export const VerificationReviewDialog = ({
   open,
@@ -61,22 +104,25 @@ export const VerificationReviewDialog = ({
   onApprove,
   onReject,
   outcomesPanel,
+  completion,
   busy = false,
 }: Props) => {
   const [evidence, setEvidence] = useState<VerificationEvidenceItem[]>([{}]);
   const [decay, setDecay] = useState<string>("90");
   const [confidence, setConfidence] = useState<VerifierConfidence | "">("");
   const [notes, setNotes] = useState("");
-  const [showReject, setShowReject] = useState(false);
+  const [mode, setMode] = useState<Mode>("approve");
   const [rejectReason, setRejectReason] = useState("");
+  const [decisions, setDecisions] = useState<CompletionDecision[]>([]);
 
   const reset = () => {
     setEvidence([{}]);
     setDecay("90");
     setConfidence("");
     setNotes("");
-    setShowReject(false);
+    setMode("approve");
     setRejectReason("");
+    setDecisions([]);
   };
 
   const handleClose = (next: boolean) => {
@@ -94,15 +140,29 @@ export const VerificationReviewDialog = ({
       prev.map((e, idx) => (idx === i ? { ...e, [field]: value || undefined } : e)),
     );
 
-  const handleApprove = async () => {
-    if (!confidence) return;
+  const buildPayload = (): VerificationSubmitPayload | null => {
+    if (!confidence) return null;
     const decayOpt = DECAY_OPTIONS.find((d) => d.value === decay);
     const decays_at =
       decayOpt && decayOpt.days
         ? new Date(Date.now() + decayOpt.days * 24 * 60 * 60 * 1000).toISOString()
         : null;
     const cleanEvidence = evidence.filter((e) => e.source_url || e.note);
-    await onApprove({ evidence: cleanEvidence, decays_at, confidence, notes });
+    return { evidence: cleanEvidence, decays_at, confidence, notes };
+  };
+
+  const handleApprove = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
+    await onApprove(payload);
+    reset();
+  };
+
+  const handleComplete = async () => {
+    if (!completion) return;
+    const payload = buildPayload();
+    if (!payload) return;
+    await completion.onSubmit(payload, decisions);
     reset();
   };
 
@@ -114,7 +174,7 @@ export const VerificationReviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -127,7 +187,7 @@ export const VerificationReviewDialog = ({
           {summary}
         </div>
 
-        {showReject && onReject ? (
+        {mode === "reject" && onReject ? (
           <div className="space-y-3">
             <Label>Reason (optional)</Label>
             <Textarea
@@ -137,20 +197,26 @@ export const VerificationReviewDialog = ({
               rows={3}
             />
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowReject(false)} disabled={busy}>
+              <Button variant="outline" onClick={() => setMode("approve")} disabled={busy}>
                 Back
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleReject}
-                disabled={busy}
-              >
+              <Button variant="destructive" onClick={handleReject} disabled={busy}>
                 Confirm rejection
               </Button>
             </div>
           </div>
         ) : (
           <>
+            {/* B4: completion-mode body */}
+            {mode === "complete" && completion && (
+              <CompleteAndVerifyBody
+                websiteUrl={completion.websiteUrl}
+                actorContext={completion.actorContext}
+                seed={completion.seed}
+                onChange={({ decisions: d }) => setDecisions(d)}
+              />
+            )}
+
             {/* Evidence */}
             <div className="space-y-2">
               <Label>Evidence sources (optional, up to 5)</Label>
@@ -187,7 +253,6 @@ export const VerificationReviewDialog = ({
               )}
             </div>
 
-            {/* Decay window */}
             <div className="space-y-2">
               <Label>Decay window</Label>
               <RadioGroup value={decay} onValueChange={setDecay} className="flex gap-4 flex-wrap">
@@ -202,7 +267,6 @@ export const VerificationReviewDialog = ({
               </RadioGroup>
             </div>
 
-            {/* Confidence */}
             <div className="space-y-2">
               <Label>
                 Confidence <span className="text-destructive">*</span>
@@ -223,7 +287,6 @@ export const VerificationReviewDialog = ({
               </RadioGroup>
             </div>
 
-            {/* Notes */}
             <div className="space-y-2">
               <Label>Verifier notes (optional)</Label>
               <Textarea
@@ -234,23 +297,58 @@ export const VerificationReviewDialog = ({
               />
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 flex-wrap">
               <Button variant="outline" onClick={() => handleClose(false)} disabled={busy}>
                 Cancel
               </Button>
-              {onReject && (
+              {onReject && mode !== "complete" && (
                 <Button
                   variant="ghost"
-                  onClick={() => setShowReject(true)}
+                  onClick={() => setMode("reject")}
                   disabled={busy}
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   Reject
                 </Button>
               )}
-              <Button onClick={handleApprove} disabled={busy || !confidence}>
-                {primaryLabel}
-              </Button>
+              {mode === "complete" ? (
+                <>
+                  <Button variant="ghost" onClick={() => setMode("approve")} disabled={busy}>
+                    Back to approve
+                  </Button>
+                  <Button onClick={handleComplete} disabled={busy || !confidence}>
+                    {completion?.submitLabel ?? "Save completion and verify"}
+                    {decisions.length > 0 ? ` (${decisions.length})` : ""}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={handleApprove} disabled={busy || !confidence}>
+                    {primaryLabel}
+                  </Button>
+                  {completion && (
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              variant="default"
+                              onClick={() => setMode("complete")}
+                              disabled={busy || !completion.enabled}
+                            >
+                              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                              {completion.actionLabel}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {!completion.enabled && completion.disabledReason && (
+                          <TooltipContent>{completion.disabledReason}</TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </>
+              )}
             </DialogFooter>
           </>
         )}
