@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import TopBar from "@/components/nexus/TopBar";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import OntologyQueuePage from "@/pages/admin/OntologyQueuePage";
+import RegistryImportPage from "@/pages/admin/RegistryImportPage";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
@@ -30,6 +31,7 @@ const AdminLayout = () => {
             <Routes>
               <Route index element={<Navigate to="ontology" replace />} />
               <Route path="ontology" element={<OntologyQueuePage />} />
+              <Route path="registry-import" element={<RegistryImportPage />} />
             </Routes>
           </div>
         </div>

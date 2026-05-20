@@ -1,5 +1,23 @@
 // Shared types for registry adapters
 
+export interface EnrichmentProposal {
+  actor_name: string | null;
+  org_number: string | null;
+  org_number_display?: string | null;
+  street_address: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  actor_website: string | null;
+  // B2 — extended fields kept from upstream registries when available.
+  postal_code?: string | null;
+  industry_codes?: string[];
+  industry_label?: string | null;
+  trade_names?: string[];
+  founding_date?: string | null; // ISO date
+  employee_count?: number | null;
+}
+
 export interface RegistryAdapter {
   id: "brreg" | "cvr" | "prh";
   name: string;

@@ -74,7 +74,18 @@ function buildProposalFromResult(result: PrhResult) {
   const addr = pickActiveAddress(result.addresses);
   const street = addr?.street?.trim() || null;
   const city = addr?.city ? titleCase(addr.city.trim()) : null;
+  const postal_code = addr?.postCode ? addr.postCode.trim() : null;
   const businessId = (result.businessId ?? "").trim();
+  const auxNames = Array.isArray(result.auxiliaryNames)
+    ? result.auxiliaryNames
+        .filter(isActive)
+        .map((n) => (n.name ?? "").trim())
+        .filter((n) => n.length > 0)
+    : [];
+  const activeLines = Array.isArray(result.businessLines)
+    ? result.businessLines.filter(isActive)
+    : [];
+  const industry_label = activeLines[0]?.description ?? null;
   return {
     actor_name: pickActiveName(result) || null,
     org_number: businessId || null,
@@ -84,6 +95,10 @@ function buildProposalFromResult(result: PrhResult) {
     region: null as string | null,
     country: "Finland",
     actor_website: null as string | null,
+    postal_code,
+    trade_names: auxNames.length > 0 ? auxNames : undefined,
+    industry_label,
+    founding_date: result.registrationDate ?? null,
   };
 }
 

@@ -21,6 +21,11 @@ interface BrregEntity {
   forretningsadresse?: BrregAddress;
   postadresse?: BrregAddress;
   slettedato?: string;
+  stiftelsesdato?: string;
+  antallAnsatte?: number;
+  naeringskode1?: { kode?: string; beskrivelse?: string };
+  naeringskode2?: { kode?: string; beskrivelse?: string };
+  naeringskode3?: { kode?: string; beskrivelse?: string };
 }
 
 function pickAddress(entity: BrregEntity): BrregAddress | null {
@@ -50,7 +55,16 @@ function buildProposalFromEntity(entity: BrregEntity) {
   const city = addr?.poststed ? titleCase(addr.poststed.trim()) : null;
   const region = addr?.kommune ? titleCase(addr.kommune.trim()) : null;
   const country = mapCountry(addr?.land);
+  const postal_code = addr?.postnummer ? addr.postnummer.trim() : null;
   const orgRaw = (entity.organisasjonsnummer ?? "").replace(/\D/g, "");
+  const codes: string[] = [];
+  let label: string | null = null;
+  for (const c of [entity.naeringskode1, entity.naeringskode2, entity.naeringskode3]) {
+    if (c?.kode) {
+      codes.push(c.kode);
+      if (!label && c.beskrivelse) label = c.beskrivelse;
+    }
+  }
   return {
     actor_name: (entity.navn ?? "").trim() || null,
     org_number: orgRaw || null,
@@ -60,6 +74,12 @@ function buildProposalFromEntity(entity: BrregEntity) {
     region,
     country,
     actor_website: sanitizeWebsite(entity.hjemmeside),
+    postal_code,
+    industry_codes: codes.length > 0 ? codes : undefined,
+    industry_label: label,
+    founding_date: entity.stiftelsesdato ?? null,
+    employee_count:
+      typeof entity.antallAnsatte === "number" ? entity.antallAnsatte : null,
   };
 }
 
