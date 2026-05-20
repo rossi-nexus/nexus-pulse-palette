@@ -181,6 +181,7 @@ export function useVerificationQueue() {
           programme_id: programmeId,
           programme_name: programmeId ? programmeNames.get(programmeId) ?? null : null,
           source_session_id: sessionId,
+          analysis_data: (pa as { analysis_data?: Record<string, unknown> | null }).analysis_data ?? null,
         });
       }
 
