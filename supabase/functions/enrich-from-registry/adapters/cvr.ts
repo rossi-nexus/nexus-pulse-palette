@@ -42,15 +42,28 @@ function buildProposalFromCvr(entity: CvrEntity) {
   const street = entity.address ? entity.address.trim() : null;
   const city = entity.city ? titleCase(entity.city.trim()) : null;
   const website = sanitizeWebsite(entity.website ?? entity.homepage ?? null);
+  const postal_code = entity.zipcode != null ? String(entity.zipcode).trim() : null;
+  const industryCode = entity.industrycode != null ? String(entity.industrycode) : null;
+  const employees =
+    typeof entity.employees === "number"
+      ? entity.employees
+      : entity.employees && !isNaN(Number(entity.employees))
+        ? Number(entity.employees)
+        : null;
   return {
     actor_name: (entity.name ?? "").trim() || null,
     org_number: orgRaw || null,
     org_number_display: orgRaw ? formatCvrDisplay(orgRaw) : null,
     street_address: street && street.length > 0 ? street : null,
     city,
-    region: null as string | null, // CVR does not expose a kommune-equivalent cleanly
+    region: null as string | null,
     country: "Denmark",
     actor_website: website,
+    postal_code,
+    industry_codes: industryCode ? [industryCode] : undefined,
+    industry_label: entity.industrydesc ?? null,
+    founding_date: entity.startdate ?? null,
+    employee_count: employees,
   };
 }
 
