@@ -151,6 +151,7 @@ export const emptyCompletionSeed = (): CompletionSeed => ({
 });
 
 export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange }: Props) => {
+  const [urlDraft, setUrlDraft] = useState<string>(websiteUrl ?? "");
   const [sections, setSections] = useState<Record<SectionKey, SectionState>>(() => {
     const s = {} as Record<SectionKey, SectionState>;
     for (const def of SECTIONS) {
