@@ -632,6 +632,32 @@ const ActorProfile = () => {
     return { capabilities: [], competences: [], domains: [], products: [], services: [] };
   }, [source, personal, personalOntologyEntries, ontologyTags]);
 
+  // B4: build CompletionSeed from existing actor_ontology_tags for re-verify path
+  const reverifySeed = useMemo<CompletionSeed>(() => {
+    if (source !== "database") return emptyCompletionSeed();
+    const seed = emptyCompletionSeed();
+    const typeToKey: Record<string, keyof CompletionSeed> = {
+      capability: "capabilities",
+      competence: "competences",
+      domain: "domains",
+      product_type: "products",
+      service_type: "services",
+    };
+    for (const tag of ontologyTags) {
+      const entry = tag.ontology_entries;
+      const type = entry?.ontology_categories?.type;
+      const key = type ? typeToKey[type] : undefined;
+      if (!key || !entry?.raw_name) continue;
+      const pill: SeedPill = {
+        entry_name: entry.raw_name,
+        ontology_entry_id: entry.id,
+        status: entry.status ?? "active",
+      };
+      seed[key].push(pill);
+    }
+    return seed;
+  }, [source, ontologyTags]);
+
   // Derive classification / standards / customers from JSONB for personal
   const personalDerived = useMemo(() => {
     if (!personal) return { classification: [], standards: [], customers: [] };
