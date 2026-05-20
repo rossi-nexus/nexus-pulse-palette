@@ -28,6 +28,8 @@ export interface PendingSuggestion {
   programme_id: string | null;
   programme_name: string | null;
   source_session_id: string | null;
+  /** B4: raw pipeline analysis JSONB used to pre-seed Complete & verify. */
+  analysis_data: Record<string, unknown> | null;
 }
 
 interface QueueRow {
@@ -50,6 +52,7 @@ interface QueueRow {
     matched_main_db_actor_id: string | null;
     suggested_at: string | null;
     source_session_id: string | null;
+    analysis_data: Record<string, unknown> | null;
   } | null;
 }
 
@@ -75,7 +78,7 @@ export function useVerificationQueue() {
            user_personal_actors:user_personal_actor_id (
              id, actor_name, actor_description, actor_website, actor_type,
              country, org_number, trade_names, street_address, city, region,
-             matched_main_db_actor_id, suggested_at, source_session_id
+             matched_main_db_actor_id, suggested_at, source_session_id, analysis_data
            )`,
         )
         .eq("status", "pending")
@@ -178,6 +181,7 @@ export function useVerificationQueue() {
           programme_id: programmeId,
           programme_name: programmeId ? programmeNames.get(programmeId) ?? null : null,
           source_session_id: sessionId,
+          analysis_data: (pa as { analysis_data?: Record<string, unknown> | null }).analysis_data ?? null,
         });
       }
 

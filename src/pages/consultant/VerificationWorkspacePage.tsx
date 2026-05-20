@@ -1,17 +1,22 @@
 // Phase 6.5.5b: verification workspace — replaces the placeholder.
+// B4: adds "Complete & verify" mode wired to fn_approve_and_verify's
+// p_consultant_decisions parameter. Gated to admins (RLS on analysis_data).
 import { useState } from "react";
 import { ShieldCheck, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useVerificationQueue, type PendingSuggestion } from "@/hooks/useVerificationQueue";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import {
   VerificationReviewDialog,
   type VerificationSubmitPayload,
 } from "@/components/consultant/VerificationReviewDialog";
+import { seedFromAnalysisData, type CompletionDecision } from "@/components/consultant/CompleteAndVerifyBody";
 
 const VerificationWorkspacePage = () => {
   const { items, loading, refresh } = useVerificationQueue();
+  const { hasAccess: isAdmin } = useAdminAccess();
   const [active, setActive] = useState<PendingSuggestion | null>(null);
   const [busy, setBusy] = useState(false);
 

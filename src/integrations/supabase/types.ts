@@ -1511,17 +1511,30 @@ export type Database = {
         }
         Returns: Json
       }
-      fn_approve_and_verify: {
-        Args: {
-          p_confidence: string
-          p_decays_at: string
-          p_evidence: Json
-          p_notes: string
-          p_programme_id?: string
-          p_queue_id: string
-        }
-        Returns: Json
-      }
+      fn_approve_and_verify:
+        | {
+            Args: {
+              p_confidence: string
+              p_decays_at: string
+              p_evidence: Json
+              p_notes: string
+              p_programme_id?: string
+              p_queue_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_confidence: string
+              p_consultant_decisions?: Json
+              p_decays_at: string
+              p_evidence: Json
+              p_notes: string
+              p_programme_id?: string
+              p_queue_id: string
+            }
+            Returns: Json
+          }
       fn_audit_log_event: {
         Args: {
           p_actor_id?: string
@@ -1609,17 +1622,30 @@ export type Database = {
         Args: { _programme_id: string; _uid: string }
         Returns: boolean
       }
-      fn_verify_actor: {
-        Args: {
-          p_actor_id: string
-          p_confidence: string
-          p_decays_at: string
-          p_evidence: Json
-          p_notes: string
-          p_programme_id?: string
-        }
-        Returns: string
-      }
+      fn_verify_actor:
+        | {
+            Args: {
+              p_actor_id: string
+              p_confidence: string
+              p_decays_at: string
+              p_evidence: Json
+              p_notes: string
+              p_programme_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_actor_id: string
+              p_confidence: string
+              p_consultant_decisions?: Json
+              p_decays_at: string
+              p_evidence: Json
+              p_notes: string
+              p_programme_id?: string
+            }
+            Returns: string
+          }
       get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
