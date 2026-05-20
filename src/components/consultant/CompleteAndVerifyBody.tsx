@@ -433,13 +433,14 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
                 <Button
                   size="sm" variant="ghost"
                   onClick={() => scrapeSection(def)}
-                  disabled={sec.loading || !websiteUrl}
-                  title={!websiteUrl ? "No website set" : undefined}
+                  disabled={sec.loading || !urlDraft.trim()}
+                  title={!urlDraft.trim() ? "Enter a URL above" : undefined}
                 >
                   {sec.loading
                     ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Scraping…</>
                     : sec.scraped ? "Re-scrape" : "Enrich from URL"}
                 </Button>
+
                 <Button
                   size="sm" variant="ghost"
                   onClick={() => setManualDrafts((p) => ({ ...p, [def.key]: "" }))}
