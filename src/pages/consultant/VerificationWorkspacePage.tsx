@@ -191,6 +191,20 @@ const VerificationWorkspacePage = () => {
           onApprove={handleApprove}
           onReject={handleReject}
           busy={busy}
+          completion={{
+            actionLabel: "Complete & verify",
+            submitLabel: "Save completion and verify",
+            websiteUrl: active.actor_website ?? null,
+            actorContext: { actor_name: active.actor_name, country: active.country },
+            seed: active.analysis_data
+              ? seedFromAnalysisData(active.analysis_data)
+              : emptyCompletionSeed(),
+            enabled: isAdmin,
+            disabledReason: isAdmin
+              ? undefined
+              : "Admin only — non-admin consultants can't read full pipeline analysis for queued actors.",
+            onSubmit: handleCompleteAndVerify,
+          }}
           summary={
             <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 gap-x-4">
               <dt className="text-foreground-muted">Name</dt>
