@@ -451,23 +451,35 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
 
             {sec.acceptedNames.length > 0 && (
               <ul className="flex flex-wrap gap-1">
-                {sec.acceptedNames.map((name) => (
-                  <li
-                    key={name}
-                    className="inline-flex items-center gap-1 text-xs bg-elevated/60 border border-border rounded px-1.5 py-0.5"
-                  >
-                    <Check className="w-3 h-3 text-success shrink-0" />
-                    <span className="font-mono">{name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAccepted(def.key, name)}
-                      className="ml-0.5 text-foreground-muted hover:text-destructive"
-                      aria-label={`Remove ${name}`}
+                {sec.acceptedNames.map((name) => {
+                  const status = seedStatus[def.key].get(name);
+                  const isProposed = status === "proposed";
+                  return (
+                    <li
+                      key={name}
+                      className={`inline-flex items-center gap-1 text-xs border rounded px-1.5 py-0.5 ${
+                        isProposed
+                          ? "bg-warning/10 border-warning/40 border-dashed"
+                          : "bg-elevated/60 border-border"
+                      }`}
+                      title={isProposed ? "Proposed ontology entry (pending admin approval)" : undefined}
                     >
-                      <XIcon className="w-3 h-3" />
-                    </button>
-                  </li>
-                ))}
+                      <Check className={`w-3 h-3 shrink-0 ${isProposed ? "text-warning" : "text-success"}`} />
+                      <span className="font-mono">{name}</span>
+                      {isProposed && (
+                        <span className="text-[10px] uppercase tracking-wide text-warning">proposed</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeAccepted(def.key, name)}
+                        className="ml-0.5 text-foreground-muted hover:text-destructive"
+                        aria-label={`Remove ${name}`}
+                      >
+                        <XIcon className="w-3 h-3" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
