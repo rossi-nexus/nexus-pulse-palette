@@ -127,11 +127,23 @@ const VerificationWorkspacePage = () => {
                 className="w-full text-left bg-surface border border-border rounded-lg p-4 hover:border-border-accent hover:shadow-md transition-all"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
                     <h3 className="font-semibold text-foreground text-base leading-tight truncate">
                       {it.actor_name || "Unnamed actor"}
                     </h3>
-                    {it.matched_main_db_actor_id && (
+                    {it.origin === "registry_import" ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] bg-accent/10 text-accent border-accent/30 uppercase"
+                      >
+                        {it.origin_registry ?? "Registry"} import
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px]">
+                        User suggestion
+                      </Badge>
+                    )}
+                    {it.matched_main_db_actor_id && it.origin !== "registry_import" && (
                       <Badge
                         variant="outline"
                         className="text-[10px] bg-info/10 text-info border-info/30"
@@ -148,7 +160,7 @@ const VerificationWorkspacePage = () => {
                 </div>
                 <div className="text-xs text-foreground-secondary flex items-center gap-2 flex-wrap">
                   <span>
-                    Suggested by{" "}
+                    {it.origin === "registry_import" ? "Imported by " : "Suggested by "}
                     <span className="text-foreground">
                       {it.suggested_by_name || it.suggested_by_email || "unknown"}
                     </span>
