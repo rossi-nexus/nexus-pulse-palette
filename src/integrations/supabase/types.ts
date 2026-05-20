@@ -486,33 +486,42 @@ export type Database = {
           created_at: string
           duplicate_check_result: Json | null
           id: string
+          origin: string
+          origin_external_id: string | null
+          origin_registry: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
           suggested_by: string
-          user_personal_actor_id: string
+          user_personal_actor_id: string | null
         }
         Insert: {
           admin_notes?: string | null
           created_at?: string
           duplicate_check_result?: Json | null
           id?: string
+          origin?: string
+          origin_external_id?: string | null
+          origin_registry?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
           suggested_by: string
-          user_personal_actor_id: string
+          user_personal_actor_id?: string | null
         }
         Update: {
           admin_notes?: string | null
           created_at?: string
           duplicate_check_result?: Json | null
           id?: string
+          origin?: string
+          origin_external_id?: string | null
+          origin_registry?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
           suggested_by?: string
-          user_personal_actor_id?: string
+          user_personal_actor_id?: string | null
         }
         Relationships: [
           {
@@ -549,6 +558,7 @@ export type Database = {
           id: string
           legal_name: string
           org_number: string | null
+          postal_code: string | null
           region: string | null
           source: string
           street_address: string | null
@@ -570,6 +580,7 @@ export type Database = {
           id?: string
           legal_name: string
           org_number?: string | null
+          postal_code?: string | null
           region?: string | null
           source: string
           street_address?: string | null
@@ -591,6 +602,7 @@ export type Database = {
           id?: string
           legal_name?: string
           org_number?: string | null
+          postal_code?: string | null
           region?: string | null
           source?: string
           street_address?: string | null
@@ -1560,6 +1572,15 @@ export type Database = {
       fn_create_programme: {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string
+      }
+      fn_import_actor_from_registry: {
+        Args: {
+          p_data: Json
+          p_evidence_url?: string
+          p_external_id: string
+          p_registry: string
+        }
+        Returns: Json
       }
       fn_onboard_verified_actor:
         | {
