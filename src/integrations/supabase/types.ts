@@ -486,6 +486,7 @@ export type Database = {
           created_at: string
           duplicate_check_result: Json | null
           id: string
+          linked_actor_id: string | null
           origin: string
           origin_external_id: string | null
           origin_registry: string | null
@@ -500,6 +501,7 @@ export type Database = {
           created_at?: string
           duplicate_check_result?: Json | null
           id?: string
+          linked_actor_id?: string | null
           origin?: string
           origin_external_id?: string | null
           origin_registry?: string | null
@@ -514,6 +516,7 @@ export type Database = {
           created_at?: string
           duplicate_check_result?: Json | null
           id?: string
+          linked_actor_id?: string | null
           origin?: string
           origin_external_id?: string | null
           origin_registry?: string | null
@@ -524,6 +527,13 @@ export type Database = {
           user_personal_actor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "actor_validation_queue_linked_actor_id_fkey"
+            columns: ["linked_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "actor_validation_queue_reviewed_by_fkey"
             columns: ["reviewed_by"]
