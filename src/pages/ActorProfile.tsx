@@ -37,6 +37,13 @@ import { TagInput } from "@/components/nexus/TagInput";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import { VerificationReviewDialog, type VerificationSubmitPayload } from "@/components/consultant/VerificationReviewDialog";
+import {
+  emptyCompletionSeed,
+  type CompletionDecision,
+  type CompletionSeed,
+  type SeedPill,
+} from "@/components/consultant/CompleteAndVerifyBody";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { RecordOutcomeDialog } from "@/components/outcome/RecordOutcomeDialog";
 import { OutcomeHistoryList } from "@/components/outcome/OutcomeHistoryList";
 import { useActorOutcomes } from "@/hooks/useActorOutcomes";
