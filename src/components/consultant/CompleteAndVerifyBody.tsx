@@ -151,6 +151,7 @@ export const emptyCompletionSeed = (): CompletionSeed => ({
 });
 
 export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange }: Props) => {
+  const [urlDraft, setUrlDraft] = useState<string>(websiteUrl ?? "");
   const [sections, setSections] = useState<Record<SectionKey, SectionState>>(() => {
     const s = {} as Record<SectionKey, SectionState>;
     for (const def of SECTIONS) {
@@ -206,17 +207,18 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
   }, [sections, removedSeedNames, seedTagIds, onChange]);
 
   const scrapeSection = async (def: SectionDef) => {
-    if (!websiteUrl) {
-      toast.error("This actor has no website to scrape.");
+    const effectiveUrl = urlDraft.trim();
+    if (!effectiveUrl) {
+      toast.error("Enter a URL to scrape.");
       return;
     }
     setSections((prev) => ({ ...prev, [def.key]: { ...prev[def.key], loading: true, error: null } }));
     try {
       const { data, error } = await supabase.functions.invoke("enrich-from-url", {
         body: {
-          url: websiteUrl,
+          url: effectiveUrl,
           section_key: def.key,
-          actor_context: { ...actorContext, actor_website: websiteUrl },
+          actor_context: { ...actorContext, actor_website: effectiveUrl },
           existing_items: sections[def.key].acceptedNames,
         },
       });
@@ -233,6 +235,7 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
       toast.error(msg);
     }
   };
+
 
   const removeAccepted = (key: SectionKey, name: string) => {
     setSections((prev) => ({
@@ -405,6 +408,26 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
         On submit, all decisions are recorded with the verification.
       </div>
 
+      <div className="bg-surface border border-border rounded-md p-3 space-y-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
+          Enrichment source URL
+        </label>
+        <Input
+          type="url"
+          value={urlDraft}
+          onChange={(e) => setUrlDraft(e.target.value)}
+          placeholder="https://example.com"
+          className="h-8 text-xs"
+        />
+        <p className="text-[11px] text-foreground-muted">
+          {websiteUrl
+            ? "Pre-filled from the actor record. Edit if you have a better source."
+            : "No website on file — paste a URL the AI should scrape for ontology proposals."}
+        </p>
+      </div>
+
+
+
       {SECTIONS.map((def) => {
         const sec = sections[def.key];
         const draftName = manualDrafts[def.key];
@@ -430,13 +453,14 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
                 <Button
                   size="sm" variant="ghost"
                   onClick={() => scrapeSection(def)}
-                  disabled={sec.loading || !websiteUrl}
-                  title={!websiteUrl ? "No website set" : undefined}
+                  disabled={sec.loading || !urlDraft.trim()}
+                  title={!urlDraft.trim() ? "Enter a URL above" : undefined}
                 >
                   {sec.loading
                     ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Scraping…</>
                     : sec.scraped ? "Re-scrape" : "Enrich from URL"}
                 </Button>
+
                 <Button
                   size="sm" variant="ghost"
                   onClick={() => setManualDrafts((p) => ({ ...p, [def.key]: "" }))}
