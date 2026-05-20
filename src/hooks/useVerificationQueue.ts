@@ -78,7 +78,7 @@ export function useVerificationQueue() {
            user_personal_actors:user_personal_actor_id (
              id, actor_name, actor_description, actor_website, actor_type,
              country, org_number, trade_names, street_address, city, region,
-             matched_main_db_actor_id, suggested_at, source_session_id
+             matched_main_db_actor_id, suggested_at, source_session_id, analysis_data
            )`,
         )
         .eq("status", "pending")
