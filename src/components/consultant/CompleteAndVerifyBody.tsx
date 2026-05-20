@@ -207,17 +207,18 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
   }, [sections, removedSeedNames, seedTagIds, onChange]);
 
   const scrapeSection = async (def: SectionDef) => {
-    if (!websiteUrl) {
-      toast.error("This actor has no website to scrape.");
+    const effectiveUrl = urlDraft.trim();
+    if (!effectiveUrl) {
+      toast.error("Enter a URL to scrape.");
       return;
     }
     setSections((prev) => ({ ...prev, [def.key]: { ...prev[def.key], loading: true, error: null } }));
     try {
       const { data, error } = await supabase.functions.invoke("enrich-from-url", {
         body: {
-          url: websiteUrl,
+          url: effectiveUrl,
           section_key: def.key,
-          actor_context: { ...actorContext, actor_website: websiteUrl },
+          actor_context: { ...actorContext, actor_website: effectiveUrl },
           existing_items: sections[def.key].acceptedNames,
         },
       });
@@ -234,6 +235,7 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
       toast.error(msg);
     }
   };
+
 
   const removeAccepted = (key: SectionKey, name: string) => {
     setSections((prev) => ({
