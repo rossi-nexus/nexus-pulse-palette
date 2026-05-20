@@ -1847,6 +1847,37 @@ const ActorProfile = () => {
               setDbActor(refreshed as DbActor);
             }
           }}
+          completion={{
+            actionLabel: "Complete & re-verify",
+            submitLabel: "Save completion and re-verify",
+            websiteUrl: dbActor.websites?.[0] ?? null,
+            actorContext: { actor_name: dbActor.legal_name, country: dbActor.country ?? null },
+            seed: reverifySeed,
+            enabled: isAdmin,
+            disabledReason: isAdmin
+              ? undefined
+              : "Admin only — completion writes new ontology tags and proposed entries.",
+            onSubmit: async (p, decisions: CompletionDecision[]) => {
+              setReverifyBusy(true);
+              const { error } = await supabase.rpc("fn_verify_actor", {
+                p_actor_id: dbActor.id,
+                p_evidence: p.evidence as unknown as never,
+                p_decays_at: p.decays_at,
+                p_confidence: p.confidence,
+                p_notes: p.notes || null,
+                p_programme_id: null,
+                p_consultant_decisions: decisions as unknown as never,
+              });
+              setReverifyBusy(false);
+              if (error) { toast.error(error.message); return; }
+              toast.success(
+                `Re-verified · ${decisions.length} ontology decision${decisions.length === 1 ? "" : "s"} recorded`,
+              );
+              setReverifyOpen(false);
+              const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+              if (refreshed) setDbActor(refreshed as DbActor);
+            },
+          }}
         />
       )}
       {dbActor && (
