@@ -241,6 +241,7 @@ export const CompleteAndVerifyBody = ({
       toast.error("Enter a URL to scrape.");
       return;
     }
+    commitEnrichmentUrl();
     setSections((prev) => ({ ...prev, [def.key]: { ...prev[def.key], loading: true, error: null } }));
     try {
       const { data, error } = await supabase.functions.invoke("enrich-from-url", {
