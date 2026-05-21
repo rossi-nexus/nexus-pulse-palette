@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useProgramme } from "@/hooks/useProgramme";
+import { useProgrammeAccess } from "@/hooks/useProgrammeAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ import {
 const ProgrammeView = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  // A4 Area 7 — explicit membership gate (RLS still authoritative).
+  const { hasAccess, loading: accessLoading } = useProgrammeAccess(id);
   const { programme, members, sessions, currentUserRole, isOwner, loading, notFound, refresh } =
     useProgramme(id);
   const { outcomes: programmeOutcomes } = useProgrammeOutcomes(programme?.id);
@@ -34,7 +37,7 @@ const ProgrammeView = () => {
   const [confirmRemove, setConfirmRemove] = useState<{ userId: string; isSelf: boolean } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
 
-  if (loading) {
+  if (loading || accessLoading) {
     return (
       <div className="h-full flex items-center justify-center text-foreground-muted">
         Loading programme…
@@ -42,15 +45,35 @@ const ProgrammeView = () => {
     );
   }
 
+  // A4 Area 7 — explicit non-member empty state instead of blank data view.
+  if (!hasAccess) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 px-8">
+        <div className="max-w-md w-full bg-elevated border border-border rounded-lg p-6 text-center space-y-3">
+          <h1 className="text-h2 text-foreground">You aren't a member of this programme</h1>
+          <p className="text-body-sm text-foreground-secondary">
+            Ask a programme owner to invite you, or return to your programme list.
+          </p>
+          <Link
+            to="/consultant/programmes"
+            className="inline-block text-accent-teal hover:underline text-body-sm"
+          >
+            Back to your programmes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (notFound || !programme || currentUserRole === null) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 px-8">
-        <h1 className="text-h1 text-foreground">No access</h1>
+        <h1 className="text-h1 text-foreground">Programme not found</h1>
         <p className="text-body text-foreground-secondary">
-          You don't have access to this programme, or it doesn't exist.
+          This programme doesn't exist or has been removed.
         </p>
-        <Link to="/pipeline" className="text-accent-teal hover:underline">
-          Back to home
+        <Link to="/consultant/programmes" className="text-accent-teal hover:underline">
+          Back to your programmes
         </Link>
       </div>
     );
