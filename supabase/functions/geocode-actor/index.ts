@@ -44,7 +44,8 @@ function derivePrecision(address: Record<string, unknown> | undefined | null): P
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // JWT gate
+  // JWT gate — verify_jwt=true (see supabase/config.toml) validates the signature
+  // at the runtime layer; here we just require the header is present.
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.toLowerCase().startsWith("bearer ")) {
     return jsonResponse({ error: "unauthorized" }, 401);
@@ -52,16 +53,6 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-  // Verify the JWT by asking auth.getUser with a user-bound client.
-  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: userData, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !userData?.user) {
-    return jsonResponse({ error: "unauthorized" }, 401);
-  }
 
   let body: Body;
   try {
