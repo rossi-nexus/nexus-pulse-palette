@@ -154,8 +154,33 @@ export const emptyCompletionSeed = (): CompletionSeed => ({
   capabilities: [], competences: [], domains: [], products: [], services: [],
 });
 
-export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange }: Props) => {
-  const [urlDraft, setUrlDraft] = useState<string>(websiteUrl ?? "");
+type UrlPrefillSource = "record" | "evidence" | "typed" | "empty";
+
+export const CompleteAndVerifyBody = ({
+  websiteUrl,
+  actorContext,
+  seed,
+  initialEvidenceUrl,
+  onEnrichmentUrlCommit,
+  onChange,
+}: Props) => {
+  // Pre-fill precedence: actor record website > first evidence URL > empty.
+  const initialUrl = (websiteUrl && websiteUrl.trim())
+    || (initialEvidenceUrl && initialEvidenceUrl.trim())
+    || "";
+  const initialSource: UrlPrefillSource = websiteUrl && websiteUrl.trim()
+    ? "record"
+    : initialEvidenceUrl && initialEvidenceUrl.trim()
+      ? "evidence"
+      : "empty";
+  const [urlDraft, setUrlDraft] = useState<string>(initialUrl);
+  const [urlSource, setUrlSource] = useState<UrlPrefillSource>(initialSource);
+
+  const commitEnrichmentUrl = () => {
+    const u = urlDraft.trim();
+    if (!u || !/^https?:\/\//i.test(u)) return;
+    onEnrichmentUrlCommit?.(u);
+  };
   const [sections, setSections] = useState<Record<SectionKey, SectionState>>(() => {
     const s = {} as Record<SectionKey, SectionState>;
     for (const def of SECTIONS) {
