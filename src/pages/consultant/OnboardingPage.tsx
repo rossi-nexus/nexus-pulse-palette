@@ -1052,7 +1052,7 @@ const OnboardingPage = () => {
             })}
 
             <div className="flex justify-between pt-2">
-              <Button variant="ghost" onClick={() => setStep(1)}>
+              <Button variant="outline" onClick={() => setStep(1)}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <Button onClick={() => setStep(3)}>
@@ -1179,7 +1179,7 @@ const OnboardingPage = () => {
             </div>
 
             <div className="flex justify-between pt-2">
-              <Button variant="ghost" onClick={() => setStep(2)} disabled={submitting}>
+              <Button variant="outline" onClick={() => setStep(2)} disabled={submitting}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <Button onClick={handleSubmit} disabled={!canSubmit}>
