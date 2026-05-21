@@ -32,7 +32,7 @@ const ProgrammeContextBanner = ({ sessionId, programmeId }: Props) => {
 
   return (
     <Link
-      to={`/programmes/${programmeId}`}
+      to={`/consultant/programmes/${programmeId}`}
       className="inline-flex items-center gap-2 px-3 py-1.5 bg-elevated border border-border rounded-md text-body-sm text-foreground-secondary hover:text-foreground hover:border-border-accent/60 transition-colors w-fit"
     >
       <FolderOpen className="w-3.5 h-3.5 text-accent-teal" />

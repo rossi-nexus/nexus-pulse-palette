@@ -52,7 +52,7 @@ const ConsultantProgrammesPage = () => {
             {programmes.map((p) => (
               <button
                 key={p.id}
-                onClick={() => navigate(`/programmes/${p.id}`)}
+                onClick={() => navigate(`/consultant/programmes/${p.id}`)}
                 className="text-left border border-border rounded-lg bg-elevated hover:bg-surface/60 transition-colors p-5"
               >
                 <div className="flex items-start justify-between gap-4 mb-2">

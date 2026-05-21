@@ -49,7 +49,7 @@ const NewProgrammeDialog = ({ open, onOpenChange, onCreated }: Props) => {
     setClientOrg("");
     onOpenChange(false);
     onCreated?.();
-    navigate(`/programmes/${data as string}`);
+    navigate(`/consultant/programmes/${data as string}`);
   };
 
   return (
