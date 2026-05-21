@@ -11,35 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShieldCheck, AlertTriangle, ExternalLink } from "lucide-react";
-
-const StatCard = ({
-  label,
-  value,
-  hint,
-  tone = "default",
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-  tone?: "default" | "warning" | "success";
-}) => {
-  const toneClass =
-    tone === "warning"
-      ? "text-warning"
-      : tone === "success"
-      ? "text-success"
-      : "text-foreground";
-  return (
-    <div className="bg-surface border border-border rounded-md p-4 space-y-1">
-      <div className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-muted">
-        {label}
-      </div>
-      <div className={`text-2xl font-light ${toneClass}`}>{value}</div>
-      {hint && <div className="text-xs text-foreground-muted">{hint}</div>}
-    </div>
-  );
-};
+import { ShieldCheck, AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/analytics/StatCard";
 
 const ConfidencePill = ({ c }: { c: "high" | "medium" | "low" | null }) => {
   if (!c) return null;
@@ -69,7 +43,7 @@ const ProgrammeAnalyticsPage = () => {
     if (!selected && programmes.length > 0) setSelected(programmes[0].id);
   }, [programmes, selected]);
 
-  const { summary, activity, decay, members, loading } = useProgrammeAnalytics(selected);
+  const { summary, activity, decay, members, loading, refresh } = useProgrammeAnalytics(selected);
 
   const selectedProg = useMemo(
     () => programmes.find((p) => p.id === selected),
@@ -96,9 +70,20 @@ const ProgrammeAnalyticsPage = () => {
     <div className="h-full overflow-y-auto bg-background">
       <div className="max-w-5xl mx-auto px-8 py-8 space-y-8">
         <header className="space-y-3">
-          <h1 className="text-[2.125rem] font-light tracking-[0.03em] leading-[1.2] text-foreground">
-            Programme analytics
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-[2.125rem] font-light tracking-[0.03em] leading-[1.2] text-foreground">
+              Programme analytics
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refresh}
+              disabled={loading}
+              title="Refresh"
+            >
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            </Button>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-muted">
               Programme
