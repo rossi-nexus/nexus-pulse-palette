@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw } from "lucide-react";
+import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw, Sparkles, CircleDashed } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
