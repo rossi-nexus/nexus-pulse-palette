@@ -486,7 +486,7 @@ const RegistryImportPage = () => {
                       {importing === key ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        "Import to queue"
+                        <><Download className="w-3 h-3 mr-1" /> Import to queue</>
                       )}
                     </Button>
                   </div>
