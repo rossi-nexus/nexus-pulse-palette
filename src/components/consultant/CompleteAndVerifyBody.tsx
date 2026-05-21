@@ -445,14 +445,22 @@ export const CompleteAndVerifyBody = ({
         <Input
           type="url"
           value={urlDraft}
-          onChange={(e) => setUrlDraft(e.target.value)}
+          onChange={(e) => {
+            setUrlDraft(e.target.value);
+            setUrlSource("typed");
+          }}
+          onBlur={commitEnrichmentUrl}
           placeholder="https://example.com"
           className="h-8 text-xs"
         />
         <p className="text-[11px] text-foreground-muted">
-          {websiteUrl
-            ? "Pre-filled from the actor record. Edit if you have a better source."
-            : "No website on file — paste a URL the AI should scrape for ontology proposals."}
+          {urlDraft.trim() === ""
+            ? "No website on file — paste a URL the AI should scrape for ontology proposals."
+            : urlSource === "record"
+              ? "Pre-filled from the actor record. Edit if you have a better source."
+              : urlSource === "evidence"
+                ? "Pre-filled from the evidence source above. Edit if you have a better source."
+                : "Source for AI ontology proposals."}
         </p>
       </div>
 
