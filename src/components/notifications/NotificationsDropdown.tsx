@@ -97,7 +97,7 @@ function renderEntry(entry: NotificationEntry, unread: boolean) {
 interface Props {
   entries: NotificationEntry[];
   unreadCount: number;
-  lastSeenAt?: string;
+  lastSeenAt: string;
   loading: boolean;
   onMarkAllRead: () => void;
   onItemClick?: () => void;
@@ -106,6 +106,7 @@ interface Props {
 export function NotificationsDropdown({
   entries,
   unreadCount,
+  lastSeenAt,
   loading,
   onMarkAllRead,
   onItemClick,
@@ -137,8 +138,7 @@ export function NotificationsDropdown({
           <ul className="divide-y divide-border/60">
             {visible.map((entry) => {
               const ts = entry.kind === "audit" ? entry.created_at : entry.decays_at;
-              // unread computed inline: see useNotifications. Approximate locally using prop-derived count not enough — recompute via prop.
-              const unread = false; // replaced below via wrapper
+              const unread = ts > lastSeenAt;
               const rendered = renderEntry(entry, unread);
               if (!rendered) return null;
               const Icon = rendered.icon;

@@ -39,6 +39,7 @@ export type NotificationEntry =
 export interface UseNotificationsResult {
   entries: NotificationEntry[];
   unreadCount: number;
+  lastSeenAt: string;
   loading: boolean;
   error: Error | null;
   markAllRead: () => Promise<void>;
@@ -147,7 +148,7 @@ export function useNotifications(): UseNotificationsResult {
       .from("user_notification_state")
       .upsert({ user_id: userId, last_seen_at: now, updated_at: now }, { onConflict: "user_id" });
     if (upErr) {
-      setError(upErr instanceof Error ? upErr : new Error(upErr.message));
+      setError(new Error(upErr.message ?? String(upErr)));
       return;
     }
     setLastSeenAt(now);
@@ -158,5 +159,5 @@ export function useNotifications(): UseNotificationsResult {
     return ts > lastSeenAt ? n + 1 : n;
   }, 0);
 
-  return { entries, unreadCount, loading, error, markAllRead, refresh: load };
+  return { entries, unreadCount, lastSeenAt, loading, error, markAllRead, refresh: load };
 }
