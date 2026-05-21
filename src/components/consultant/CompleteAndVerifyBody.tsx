@@ -431,6 +431,47 @@ export const CompleteAndVerifyBody = ({
     setManualDrafts((p) => ({ ...p, [key]: null }));
   };
 
+  const sectionStatus = (sec: SectionState) => {
+    if (sec.loading) return "loading" as const;
+    const total = sec.acceptedNames.length + sec.decisions.length;
+    const pending = sec.proposals.length;
+    if (sec.scraped && pending === 0 && total > 0) return "completed" as const;
+    if (total > 0 || pending > 0 || sec.scraped) return "in_progress" as const;
+    return "not_started" as const;
+  };
+
+  const renderStatusPill = (sec: SectionState) => {
+    const s = sectionStatus(sec);
+    const totalDone = sec.acceptedNames.length + sec.decisions.length;
+    const pending = sec.proposals.length;
+    if (s === "loading") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+          <Loader2 className="w-2.5 h-2.5 animate-spin" /> Scraping
+        </span>
+      );
+    }
+    if (s === "completed") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-success">
+          <Check className="w-2.5 h-2.5" /> All reviewed
+        </span>
+      );
+    }
+    if (s === "in_progress") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-accent-teal/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+          {pending > 0 ? `${totalDone} reviewed · ${pending} to review` : `${totalDone} reviewed`}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+        <CircleDashed className="w-2.5 h-2.5" /> Not started
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-xs text-foreground-muted">
@@ -438,8 +479,15 @@ export const CompleteAndVerifyBody = ({
         On submit, all decisions are recorded with the verification.
       </div>
 
-      <div className="bg-surface border border-border rounded-md p-3 space-y-1.5">
-        <label className="text-xs font-semibold uppercase tracking-wider text-foreground">
+      <div
+        className={`rounded-md border p-3 space-y-1.5 transition-colors ${
+          urlDraft.trim()
+            ? "border-border-accent/60 bg-accent-teal/5"
+            : "border-border bg-surface"
+        }`}
+      >
+        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground">
+          <Sparkles className="w-3.5 h-3.5 text-accent-teal" />
           Enrichment source URL
         </label>
         <Input
@@ -451,7 +499,7 @@ export const CompleteAndVerifyBody = ({
           }}
           onBlur={commitEnrichmentUrl}
           placeholder="https://example.com"
-          className="h-8 text-xs"
+          className="h-9 text-sm"
         />
         <p className="text-[11px] text-foreground-muted">
           {urlDraft.trim() === ""
@@ -460,7 +508,7 @@ export const CompleteAndVerifyBody = ({
               ? "Pre-filled from the actor record. Edit if you have a better source."
               : urlSource === "evidence"
                 ? "Pre-filled from the evidence source above. Edit if you have a better source."
-                : "Source for AI ontology proposals."}
+                : "Source for AI ontology proposals. Also mirrored into evidence."}
         </p>
       </div>
 
@@ -471,36 +519,30 @@ export const CompleteAndVerifyBody = ({
         const draftName = manualDrafts[def.key];
         const matchedProposals = sec.proposals.filter((p) => !p.is_proposed_new);
         const newProposals = sec.proposals.filter((p) => p.is_proposed_new);
+        const status = sectionStatus(sec);
         return (
           <div key={def.key} className="bg-surface border border-border rounded-md p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                {def.label}
-                {sec.acceptedNames.length > 0 && (
-                  <span className="ml-2 text-foreground-muted normal-case font-normal">
-                    {sec.acceptedNames.length} accepted
-                  </span>
-                )}
-                {sec.decisions.length > 0 && (
-                  <span className="ml-2 text-foreground-muted normal-case font-normal">
-                    · {sec.decisions.length} decided
-                  </span>
-                )}
-              </h4>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  {def.label}
+                </h4>
+                {renderStatusPill(sec)}
+              </div>
               <div className="flex gap-1">
                 <Button
-                  size="sm" variant="ghost"
+                  size="sm" variant="outline"
                   onClick={() => scrapeSection(def)}
                   disabled={sec.loading || !urlDraft.trim()}
                   title={!urlDraft.trim() ? "Enter a URL above" : undefined}
                 >
                   {sec.loading
                     ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Scraping…</>
-                    : sec.scraped ? "Re-scrape" : "Enrich from URL"}
+                    : <><Sparkles className="w-3 h-3 mr-1" /> {sec.scraped ? "Re-scrape" : "Enrich from URL"}</>}
                 </Button>
 
                 <Button
-                  size="sm" variant="ghost"
+                  size="sm" variant="outline"
                   onClick={() => setManualDrafts((p) => ({ ...p, [def.key]: "" }))}
                   disabled={draftName !== null}
                 >
@@ -603,8 +645,20 @@ export const CompleteAndVerifyBody = ({
               />
             ))}
 
-            {!sec.loading && sec.scraped && sec.proposals.length === 0 && sec.acceptedNames.length === 0 && (
-              <p className="text-xs text-foreground-muted italic">No proposals.</p>
+            {status === "not_started" && draftName === null && (
+              <p className="text-xs text-foreground-muted italic">
+                {urlDraft.trim()
+                  ? `No ${def.label.toLowerCase()} yet. Click Enrich from URL to fetch AI proposals, or add one manually.`
+                  : `No ${def.label.toLowerCase()} yet. Paste a URL above to fetch AI proposals, or add one manually.`}
+              </p>
+            )}
+            {status === "completed" && (
+              <p className="text-[11px] text-foreground-muted">
+                {sec.acceptedNames.length} accepted{sec.decisions.length > 0 ? ` · ${sec.decisions.length} decided` : ""}
+              </p>
+            )}
+            {status === "in_progress" && !sec.loading && sec.proposals.length === 0 && sec.acceptedNames.length === 0 && sec.decisions.length === 0 && sec.scraped && (
+              <p className="text-xs text-foreground-muted italic">No proposals returned. Try a different URL or add manually.</p>
             )}
           </div>
         );
