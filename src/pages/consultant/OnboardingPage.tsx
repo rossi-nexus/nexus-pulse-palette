@@ -875,28 +875,64 @@ const OnboardingPage = () => {
             {SECTIONS.map((s) => {
               const sec = sections[s.key];
               const draft = manualDrafts[s.key];
+              const pending = sec.proposals.length;
+              const totalDone = sec.accepted.length + sec.decisions.length;
+              const status: "not_started" | "loading" | "in_progress" | "completed" =
+                sec.loading ? "loading"
+                : (sec.scraped && pending === 0 && totalDone > 0) ? "completed"
+                : (totalDone > 0 || pending > 0 || sec.scraped) ? "in_progress"
+                : "not_started";
+              const pill =
+                status === "loading" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Scraping
+                  </span>
+                ) : status === "completed" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-success">
+                    <Check className="w-2.5 h-2.5" /> All reviewed
+                  </span>
+                ) : status === "in_progress" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-accent-teal/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+                    {pending > 0 ? `${totalDone} reviewed · ${pending} to review` : `${totalDone} reviewed`}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                    <CircleDashed className="w-2.5 h-2.5" /> Not started
+                  </span>
+                );
               return (
                 <div key={s.key} className="bg-surface border border-border rounded-md p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-foreground">{s.label}</h4>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-foreground">{s.label}</h4>
+                      {pill}
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => scrapeSection(s.key, s.label)}
                         disabled={sec.loading || !cleanWebsites()[0]}
                       >
                         {sec.loading ? (
                           <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Scraping…</>
                         ) : (
-                          sec.scraped ? "Re-scrape" : "Scrape"
+                          <><Sparkles className="w-3.5 h-3.5 mr-1" /> {sec.scraped ? "Re-scrape" : "Enrich from URL"}</>
                         )}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => startManual(s.key)} disabled={!!draft}>
+                      <Button size="sm" variant="outline" onClick={() => startManual(s.key)} disabled={!!draft}>
                         <Plus className="w-3.5 h-3.5 mr-1" /> Add manual
                       </Button>
                     </div>
                   </div>
+
+                  {status === "not_started" && !draft && (
+                    <p className="text-xs text-foreground-muted italic">
+                      {cleanWebsites()[0]
+                        ? `No ${s.label.toLowerCase()} yet. Click Enrich from URL to fetch AI proposals, or add one manually.`
+                        : `No ${s.label.toLowerCase()} yet. Add a website on Step 1 to enable AI enrichment, or add one manually.`}
+                    </p>
+                  )}
 
                   {sec.error && (
                     <p className="text-xs text-destructive">{sec.error}</p>
