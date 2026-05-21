@@ -96,6 +96,10 @@ interface Props {
   actorContext: { actor_name: string; country: string | null };
   /** Initial pre-seeded items per section. */
   seed: CompletionSeed;
+  /** First evidence URL captured before expansion — used to pre-fill enrichment URL when no website on file. */
+  initialEvidenceUrl?: string | null;
+  /** Called when the consultant commits an enrichment URL (blur or Enrich click) so it can be mirrored into evidence. */
+  onEnrichmentUrlCommit?: (url: string) => void;
   /** Fires whenever decisions or seed-removal change. */
   onChange: (payload: {
     decisions: CompletionDecision[];
@@ -150,8 +154,33 @@ export const emptyCompletionSeed = (): CompletionSeed => ({
   capabilities: [], competences: [], domains: [], products: [], services: [],
 });
 
-export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange }: Props) => {
-  const [urlDraft, setUrlDraft] = useState<string>(websiteUrl ?? "");
+type UrlPrefillSource = "record" | "evidence" | "typed" | "empty";
+
+export const CompleteAndVerifyBody = ({
+  websiteUrl,
+  actorContext,
+  seed,
+  initialEvidenceUrl,
+  onEnrichmentUrlCommit,
+  onChange,
+}: Props) => {
+  // Pre-fill precedence: actor record website > first evidence URL > empty.
+  const initialUrl = (websiteUrl && websiteUrl.trim())
+    || (initialEvidenceUrl && initialEvidenceUrl.trim())
+    || "";
+  const initialSource: UrlPrefillSource = websiteUrl && websiteUrl.trim()
+    ? "record"
+    : initialEvidenceUrl && initialEvidenceUrl.trim()
+      ? "evidence"
+      : "empty";
+  const [urlDraft, setUrlDraft] = useState<string>(initialUrl);
+  const [urlSource, setUrlSource] = useState<UrlPrefillSource>(initialSource);
+
+  const commitEnrichmentUrl = () => {
+    const u = urlDraft.trim();
+    if (!u || !/^https?:\/\//i.test(u)) return;
+    onEnrichmentUrlCommit?.(u);
+  };
   const [sections, setSections] = useState<Record<SectionKey, SectionState>>(() => {
     const s = {} as Record<SectionKey, SectionState>;
     for (const def of SECTIONS) {
@@ -212,6 +241,7 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
       toast.error("Enter a URL to scrape.");
       return;
     }
+    commitEnrichmentUrl();
     setSections((prev) => ({ ...prev, [def.key]: { ...prev[def.key], loading: true, error: null } }));
     try {
       const { data, error } = await supabase.functions.invoke("enrich-from-url", {
@@ -415,14 +445,22 @@ export const CompleteAndVerifyBody = ({ websiteUrl, actorContext, seed, onChange
         <Input
           type="url"
           value={urlDraft}
-          onChange={(e) => setUrlDraft(e.target.value)}
+          onChange={(e) => {
+            setUrlDraft(e.target.value);
+            setUrlSource("typed");
+          }}
+          onBlur={commitEnrichmentUrl}
           placeholder="https://example.com"
           className="h-8 text-xs"
         />
         <p className="text-[11px] text-foreground-muted">
-          {websiteUrl
-            ? "Pre-filled from the actor record. Edit if you have a better source."
-            : "No website on file — paste a URL the AI should scrape for ontology proposals."}
+          {urlDraft.trim() === ""
+            ? "No website on file — paste a URL the AI should scrape for ontology proposals."
+            : urlSource === "record"
+              ? "Pre-filled from the actor record. Edit if you have a better source."
+              : urlSource === "evidence"
+                ? "Pre-filled from the evidence source above. Edit if you have a better source."
+                : "Source for AI ontology proposals."}
         </p>
       </div>
 

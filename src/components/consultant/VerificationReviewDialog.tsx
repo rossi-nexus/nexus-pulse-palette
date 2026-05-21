@@ -217,6 +217,17 @@ export const VerificationReviewDialog = ({
                 websiteUrl={completion.websiteUrl}
                 actorContext={completion.actorContext}
                 seed={completion.seed}
+                initialEvidenceUrl={evidence[0]?.source_url ?? null}
+                onEnrichmentUrlCommit={(url) => {
+                  setEvidence((prev) => {
+                    if (prev.some((e) => e.source_url === url)) return prev;
+                    const first = prev[0];
+                    if (first && !first.source_url && !first.note) {
+                      return [{ source_url: url }, ...prev.slice(1)];
+                    }
+                    return [{ source_url: url }, ...prev];
+                  });
+                }}
                 onChange={({ decisions: d }) => setDecisions(d)}
               />
             )}
