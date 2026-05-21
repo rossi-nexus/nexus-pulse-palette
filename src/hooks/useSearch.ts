@@ -548,6 +548,8 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     totalSavedForLater,
     crossRoleCount,
     canLock,
+    roleSearchModes,
+    setRoleSearchMode,
     setExpandedRoleId,
     startSearch,
     includeActor,
