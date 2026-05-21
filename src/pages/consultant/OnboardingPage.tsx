@@ -711,6 +711,14 @@ const OnboardingPage = () => {
         })()}
 
         {/* Step indicator */}
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-wider text-foreground-muted">
+            Step {step} of 3 · {step === 1 ? "Identity" : step === 2 ? "Ontology" : "Verify"}
+          </div>
+          <div className="text-[11px] text-foreground-muted">
+            {step === 1 ? "~2 minutes" : step === 2 ? "~5 minutes" : "~2 minutes"}
+          </div>
+        </div>
         <div className="flex items-center gap-2 mb-8">
           {[1, 2, 3].map((n) => (
             <div key={n} className="flex items-center gap-2 flex-1">
