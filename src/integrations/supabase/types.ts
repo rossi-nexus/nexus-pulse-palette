@@ -560,13 +560,16 @@ export type Database = {
       actors: {
         Row: {
           city: string | null
-          coordinates: unknown
           country: string | null
           created_at: string
           data_completeness: string[] | null
           decays_at: string | null
+          geocoded_at: string | null
+          geocoded_precision: string | null
           id: string
+          latitude: number | null
           legal_name: string
+          longitude: number | null
           org_number: string | null
           postal_code: string | null
           region: string | null
@@ -582,13 +585,16 @@ export type Database = {
         }
         Insert: {
           city?: string | null
-          coordinates?: unknown
           country?: string | null
           created_at?: string
           data_completeness?: string[] | null
           decays_at?: string | null
+          geocoded_at?: string | null
+          geocoded_precision?: string | null
           id?: string
+          latitude?: number | null
           legal_name: string
+          longitude?: number | null
           org_number?: string | null
           postal_code?: string | null
           region?: string | null
@@ -604,13 +610,16 @@ export type Database = {
         }
         Update: {
           city?: string | null
-          coordinates?: unknown
           country?: string | null
           created_at?: string
           data_completeness?: string[] | null
           decays_at?: string | null
+          geocoded_at?: string | null
+          geocoded_precision?: string | null
           id?: string
+          latitude?: number | null
           legal_name?: string
+          longitude?: number | null
           org_number?: string | null
           postal_code?: string | null
           region?: string | null
@@ -1631,6 +1640,15 @@ export type Database = {
       fn_create_programme: {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string
+      }
+      fn_geocode_missing_actors: {
+        Args: never
+        Returns: {
+          failed: number
+          skipped_no_address: number
+          successful: number
+          total_attempted: number
+        }[]
       }
       fn_import_actor_from_registry: {
         Args: {
