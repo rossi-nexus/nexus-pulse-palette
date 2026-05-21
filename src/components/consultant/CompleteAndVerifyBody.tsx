@@ -11,7 +11,7 @@
 // On every change, calls onChange with the current { decisions, removedSeedNames }
 // so the parent dialog can pass them to the verification RPC on submit.
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Check, X as XIcon } from "lucide-react";
+import { Loader2, Plus, Check, X as XIcon, Sparkles, CircleDashed } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
