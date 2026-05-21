@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw } from "lucide-react";
+import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw, Sparkles, CircleDashed } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -711,6 +711,14 @@ const OnboardingPage = () => {
         })()}
 
         {/* Step indicator */}
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-wider text-foreground-muted">
+            Step {step} of 3 · {step === 1 ? "Identity" : step === 2 ? "Ontology" : "Verify"}
+          </div>
+          <div className="text-[11px] text-foreground-muted">
+            {step === 1 ? "~2 minutes" : step === 2 ? "~5 minutes" : "~2 minutes"}
+          </div>
+        </div>
         <div className="flex items-center gap-2 mb-8">
           {[1, 2, 3].map((n) => (
             <div key={n} className="flex items-center gap-2 flex-1">
@@ -867,28 +875,64 @@ const OnboardingPage = () => {
             {SECTIONS.map((s) => {
               const sec = sections[s.key];
               const draft = manualDrafts[s.key];
+              const pending = sec.proposals.length;
+              const totalDone = sec.accepted.length + sec.decisions.length;
+              const status: "not_started" | "loading" | "in_progress" | "completed" =
+                sec.loading ? "loading"
+                : (sec.scraped && pending === 0 && totalDone > 0) ? "completed"
+                : (totalDone > 0 || pending > 0 || sec.scraped) ? "in_progress"
+                : "not_started";
+              const pill =
+                status === "loading" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Scraping
+                  </span>
+                ) : status === "completed" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-success">
+                    <Check className="w-2.5 h-2.5" /> All reviewed
+                  </span>
+                ) : status === "in_progress" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-accent-teal/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+                    {pending > 0 ? `${totalDone} reviewed · ${pending} to review` : `${totalDone} reviewed`}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                    <CircleDashed className="w-2.5 h-2.5" /> Not started
+                  </span>
+                );
               return (
                 <div key={s.key} className="bg-surface border border-border rounded-md p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-foreground">{s.label}</h4>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-foreground">{s.label}</h4>
+                      {pill}
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => scrapeSection(s.key, s.label)}
                         disabled={sec.loading || !cleanWebsites()[0]}
                       >
                         {sec.loading ? (
                           <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Scraping…</>
                         ) : (
-                          sec.scraped ? "Re-scrape" : "Scrape"
+                          <><Sparkles className="w-3.5 h-3.5 mr-1" /> {sec.scraped ? "Re-scrape" : "Enrich from URL"}</>
                         )}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => startManual(s.key)} disabled={!!draft}>
+                      <Button size="sm" variant="outline" onClick={() => startManual(s.key)} disabled={!!draft}>
                         <Plus className="w-3.5 h-3.5 mr-1" /> Add manual
                       </Button>
                     </div>
                   </div>
+
+                  {status === "not_started" && !draft && (
+                    <p className="text-xs text-foreground-muted italic">
+                      {cleanWebsites()[0]
+                        ? `No ${s.label.toLowerCase()} yet. Click Enrich from URL to fetch AI proposals, or add one manually.`
+                        : `No ${s.label.toLowerCase()} yet. Add a website on Step 1 to enable AI enrichment, or add one manually.`}
+                    </p>
+                  )}
 
                   {sec.error && (
                     <p className="text-xs text-destructive">{sec.error}</p>
@@ -1008,7 +1052,7 @@ const OnboardingPage = () => {
             })}
 
             <div className="flex justify-between pt-2">
-              <Button variant="ghost" onClick={() => setStep(1)}>
+              <Button variant="outline" onClick={() => setStep(1)}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <Button onClick={() => setStep(3)}>
@@ -1135,7 +1179,7 @@ const OnboardingPage = () => {
             </div>
 
             <div className="flex justify-between pt-2">
-              <Button variant="ghost" onClick={() => setStep(2)} disabled={submitting}>
+              <Button variant="outline" onClick={() => setStep(2)} disabled={submitting}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <Button onClick={handleSubmit} disabled={!canSubmit}>

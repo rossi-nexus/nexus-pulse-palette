@@ -313,32 +313,37 @@ export const VerificationReviewDialog = ({
             </div>
 
             <DialogFooter className="gap-2 flex-wrap">
-              <Button variant="outline" onClick={() => handleClose(false)} disabled={busy}>
+              <Button variant="ghost" onClick={() => handleClose(false)} disabled={busy}>
                 Cancel
               </Button>
               {onReject && mode !== "complete" && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => setMode("reject")}
                   disabled={busy}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="border-destructive/60 text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   Reject
                 </Button>
               )}
               {mode === "complete" ? (
                 <>
-                  <Button variant="ghost" onClick={() => setMode("approve")} disabled={busy}>
+                  <Button variant="outline" onClick={() => setMode("approve")} disabled={busy}>
                     Back to approve
                   </Button>
                   <Button onClick={handleComplete} disabled={busy || !confidence}>
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                     {completion?.submitLabel ?? "Save completion and verify"}
                     {decisions.length > 0 ? ` (${decisions.length})` : ""}
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button onClick={handleApprove} disabled={busy || !confidence}>
+                  <Button
+                    variant={completion ? "outline" : "default"}
+                    onClick={handleApprove}
+                    disabled={busy || !confidence}
+                  >
                     {primaryLabel}
                   </Button>
                   {completion && (

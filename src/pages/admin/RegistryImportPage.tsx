@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Search, Hash, Info, X as XIcon, ExternalLink } from "lucide-react";
+import { Loader2, Search, Hash, Info, X as XIcon, ExternalLink, ShieldCheck, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -220,7 +220,10 @@ const RegistryImportPage = () => {
     <div className="h-full overflow-y-auto bg-background">
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <header className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-accent-teal/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+              <ShieldCheck className="w-3 h-3" /> Admin
+            </span>
             <h1 className="text-2xl font-semibold text-foreground">
               Registry import
             </h1>
@@ -266,59 +269,66 @@ const RegistryImportPage = () => {
         </header>
 
         <section className="bg-elevated border border-border rounded-md p-4 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-foreground-secondary">
+          <div className="space-y-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
               Registry
             </span>
-            {REGISTRIES.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => {
-                  setRegistryId(r.id);
-                  setCandidates([]);
-                  setResults({});
-                  setBanner(null);
-                }}
-                className={`px-3 py-1 rounded text-xs border transition-colors ${
-                  registryId === r.id
-                    ? "border-accent-teal text-foreground bg-surface"
-                    : "border-border text-foreground-secondary hover:text-foreground"
-                }`}
-              >
-                {r.name}
-              </button>
-            ))}
+            <div className="inline-flex rounded-md border border-border bg-surface p-0.5">
+              {REGISTRIES.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => {
+                    setRegistryId(r.id);
+                    setCandidates([]);
+                    setResults({});
+                    setBanner(null);
+                  }}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                    registryId === r.id
+                      ? "bg-elevated text-foreground shadow-sm border border-border-accent/60"
+                      : "text-foreground-muted hover:text-foreground"
+                  }`}
+                  aria-pressed={registryId === r.id}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-foreground-secondary">
-              Mode
+          <div className="space-y-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+              Search mode
             </span>
-            <button
-              type="button"
-              onClick={() => setMode("name")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs border transition-colors ${
-                mode === "name"
-                  ? "border-accent-teal text-foreground bg-surface"
-                  : "border-border text-foreground-secondary hover:text-foreground"
-              }`}
-            >
-              <Search className="w-3 h-3" />
-              Search by name
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("org_number")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs border transition-colors ${
-                mode === "org_number"
-                  ? "border-accent-teal text-foreground bg-surface"
-                  : "border-border text-foreground-secondary hover:text-foreground"
-              }`}
-            >
-              <Hash className="w-3 h-3" />
-              Org number
-            </button>
+            <div className="inline-flex rounded-md border border-border bg-surface p-0.5">
+              <button
+                type="button"
+                onClick={() => setMode("name")}
+                aria-pressed={mode === "name"}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  mode === "name"
+                    ? "bg-elevated text-foreground border border-border-accent/60 shadow-sm"
+                    : "text-foreground-muted hover:text-foreground"
+                }`}
+              >
+                <Search className="w-3 h-3" />
+                Search by name
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("org_number")}
+                aria-pressed={mode === "org_number"}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  mode === "org_number"
+                    ? "bg-elevated text-foreground border border-border-accent/60 shadow-sm"
+                    : "text-foreground-muted hover:text-foreground"
+                }`}
+              >
+                <Hash className="w-3 h-3" />
+                Org number
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-2">
@@ -353,10 +363,12 @@ const RegistryImportPage = () => {
           <div
             className={`border rounded-md p-3 text-sm ${
               banner.kind === "imported"
-                ? "border-accent-green/60 bg-accent-green/10 text-foreground"
+                ? "border-success/60 bg-success/10 text-foreground"
                 : banner.kind === "error"
-                  ? "border-red-500/60 bg-red-500/10 text-foreground"
-                  : "border-yellow-500/60 bg-yellow-500/10 text-foreground"
+                  ? "border-destructive/60 bg-destructive/10 text-foreground"
+                  : banner.kind === "duplicate_queue"
+                    ? "border-warning/60 bg-warning/10 text-foreground"
+                    : "border-info/60 bg-info/10 text-foreground"
             }`}
           >
             {banner.kind === "imported" && (
@@ -474,7 +486,7 @@ const RegistryImportPage = () => {
                       {importing === key ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        "Import to queue"
+                        <><Download className="w-3 h-3 mr-1" /> Import to queue</>
                       )}
                     </Button>
                   </div>
@@ -485,7 +497,12 @@ const RegistryImportPage = () => {
         )}
 
         {!loading && candidates.length === 0 && query && (
-          <div className="text-xs text-foreground-muted">No results yet. Try a search.</div>
+          <div className="text-xs text-foreground-muted italic">No results for "{query}". Try a different name or org number, or switch registry.</div>
+        )}
+        {!loading && candidates.length === 0 && !query && !banner && (
+          <div className="rounded-md border border-dashed border-border bg-surface/40 p-4 text-xs text-foreground-muted">
+            Enter an organisation name or org number above to search the selected registry. Results land here and can be previewed before importing into the verification queue.
+          </div>
         )}
       </div>
 
