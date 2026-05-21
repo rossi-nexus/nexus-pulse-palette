@@ -15,6 +15,9 @@ export interface SearchSource {
 
 export type ActorTypeTag = "commercial" | "government" | "academic" | "industry_body";
 
+/** B3: per-role source-of-truth toggle for Step 3. */
+export type RoleSearchMode = "web" | "db" | "both";
+
 export interface ActorCardData {
   id: string;
   name: string;
@@ -31,11 +34,14 @@ export interface ActorCardData {
   triage_decision?: "included" | "saved_for_later";
   cross_role: boolean;
   cross_role_ids?: string[];
+  /** B3 — provenance for downstream steps and audit logging. */
+  source?: "web" | "db";
+  /** B3 — set when source === "db". Stable link to public.actors.id. */
+  db_actor_id?: string | null;
+  /** B3 — rank metric from fn_rank_actors_by_ontology_overlap (db source only). */
+  ontology_overlap_count?: number;
   /**
-   * Verification lifecycle pulled from a matched DB actor. Will be populated
-   * once pipeline matching against verified records ships (6.5.5b). Today
-   * always undefined, so VerifiedStatusBadge in ActorCard never renders —
-   * surface is wired so 6.5.5b only needs to fill the data.
+   * Verification lifecycle pulled from a matched DB actor.
    */
   matched_verified_at?: string | null;
   matched_decays_at?: string | null;
@@ -47,7 +53,8 @@ export interface RoleSearchResult {
   status: RoleStatus;
   actors: ActorCardData[];
   queries_used: string[];
-  search_mode: "web" | "ai_only";
+  /** Includes db / both for B3 modes. "ai_only" kept for legacy edge-function fallback. */
+  search_mode: RoleSearchMode | "ai_only";
   processing_time_ms?: number;
   error?: string;
 }
