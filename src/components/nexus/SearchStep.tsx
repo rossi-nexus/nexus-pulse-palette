@@ -140,6 +140,8 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
     totalSavedForLater,
     crossRoleCount,
     canLock,
+    roleSearchModes,
+    setRoleSearchMode,
     setExpandedRoleId,
     startSearch,
     includeActor,
