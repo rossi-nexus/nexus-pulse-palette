@@ -98,7 +98,10 @@ export interface ActorProfile {
   city?: string;
   region?: string;
   country?: string;
-  coordinates?: { x: number; y: number };
+  latitude?: number | null;
+  longitude?: number | null;
+  geocodedAt?: string | null;
+  geocodedPrecision?: 'street' | 'postal' | 'city' | 'country' | 'failed' | null;
   websites: string[];
   source: 'search' | 'manual' | 'url_import' | 'file_import' | 'batch_import' | 'api_connector';
   verificationStatus: 'unverified' | 'verified' | 'admin_verified';
