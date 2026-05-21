@@ -363,10 +363,12 @@ const RegistryImportPage = () => {
           <div
             className={`border rounded-md p-3 text-sm ${
               banner.kind === "imported"
-                ? "border-accent-green/60 bg-accent-green/10 text-foreground"
+                ? "border-success/60 bg-success/10 text-foreground"
                 : banner.kind === "error"
-                  ? "border-red-500/60 bg-red-500/10 text-foreground"
-                  : "border-yellow-500/60 bg-yellow-500/10 text-foreground"
+                  ? "border-destructive/60 bg-destructive/10 text-foreground"
+                  : banner.kind === "duplicate_queue"
+                    ? "border-warning/60 bg-warning/10 text-foreground"
+                    : "border-info/60 bg-info/10 text-foreground"
             }`}
           >
             {banner.kind === "imported" && (
