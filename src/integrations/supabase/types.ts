@@ -1297,6 +1297,32 @@ export type Database = {
           },
         ]
       }
+      user_notification_state: {
+        Row: {
+          last_seen_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_personal_actors: {
         Row: {
           actor_description: string | null
@@ -1614,6 +1640,16 @@ export type Database = {
           p_registry: string
         }
         Returns: Json
+      }
+      fn_notifications_decay_for_me: {
+        Args: { _within?: string }
+        Returns: {
+          actor_id: string
+          decays_at: string
+          legal_name: string
+          state: string
+          verified_at: string
+        }[]
       }
       fn_onboard_verified_actor:
         | {
