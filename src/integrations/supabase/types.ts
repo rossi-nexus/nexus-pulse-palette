@@ -1622,6 +1622,22 @@ export type Database = {
           verified_actor_count: number
         }[]
       }
+      fn_rank_actors_by_ontology_overlap: {
+        Args: { p_entry_ids: string[]; p_limit?: number }
+        Returns: {
+          actor_id: string
+          city: string
+          country: string
+          decays_at: string
+          legal_name: string
+          matched_entry_ids: string[]
+          overlap_count: number
+          region: string
+          verification_status: string
+          verified_at: string
+          websites: string[]
+        }[]
+      }
       fn_record_outcome: {
         Args: {
           p_actor_id: string
