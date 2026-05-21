@@ -297,34 +297,38 @@ const RegistryImportPage = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-foreground-secondary">
-              Mode
+          <div className="space-y-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+              Search mode
             </span>
-            <button
-              type="button"
-              onClick={() => setMode("name")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs border transition-colors ${
-                mode === "name"
-                  ? "border-accent-teal text-foreground bg-surface"
-                  : "border-border text-foreground-secondary hover:text-foreground"
-              }`}
-            >
-              <Search className="w-3 h-3" />
-              Search by name
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("org_number")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs border transition-colors ${
-                mode === "org_number"
-                  ? "border-accent-teal text-foreground bg-surface"
-                  : "border-border text-foreground-secondary hover:text-foreground"
-              }`}
-            >
-              <Hash className="w-3 h-3" />
-              Org number
-            </button>
+            <div className="inline-flex rounded-md border border-border bg-surface p-0.5">
+              <button
+                type="button"
+                onClick={() => setMode("name")}
+                aria-pressed={mode === "name"}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  mode === "name"
+                    ? "bg-elevated text-foreground border border-border-accent/60 shadow-sm"
+                    : "text-foreground-muted hover:text-foreground"
+                }`}
+              >
+                <Search className="w-3 h-3" />
+                Search by name
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("org_number")}
+                aria-pressed={mode === "org_number"}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  mode === "org_number"
+                    ? "bg-elevated text-foreground border border-border-accent/60 shadow-sm"
+                    : "text-foreground-muted hover:text-foreground"
+                }`}
+              >
+                <Hash className="w-3 h-3" />
+                Org number
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-2">
