@@ -1,6 +1,7 @@
 import logo from "@/assets/logo_aexs.png";
 import { useAuth } from "@/hooks/useAuth";
 import { LogOut } from "lucide-react";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
 const TopBar = () => {
   const { user, signOut, signingOut } = useAuth();
@@ -20,6 +21,7 @@ const TopBar = () => {
       </div>
 
       <div className="flex items-center gap-3">
+        <NotificationsBell />
         <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center">
           <span className="text-mono-xs font-mono text-foreground-muted">{initials}</span>
         </div>
