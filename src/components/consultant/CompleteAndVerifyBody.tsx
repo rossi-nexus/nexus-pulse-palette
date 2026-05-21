@@ -96,6 +96,10 @@ interface Props {
   actorContext: { actor_name: string; country: string | null };
   /** Initial pre-seeded items per section. */
   seed: CompletionSeed;
+  /** First evidence URL captured before expansion — used to pre-fill enrichment URL when no website on file. */
+  initialEvidenceUrl?: string | null;
+  /** Called when the consultant commits an enrichment URL (blur or Enrich click) so it can be mirrored into evidence. */
+  onEnrichmentUrlCommit?: (url: string) => void;
   /** Fires whenever decisions or seed-removal change. */
   onChange: (payload: {
     decisions: CompletionDecision[];
