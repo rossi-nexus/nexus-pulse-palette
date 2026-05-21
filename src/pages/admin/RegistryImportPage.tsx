@@ -497,7 +497,12 @@ const RegistryImportPage = () => {
         )}
 
         {!loading && candidates.length === 0 && query && (
-          <div className="text-xs text-foreground-muted">No results yet. Try a search.</div>
+          <div className="text-xs text-foreground-muted italic">No results for "{query}". Try a different name or org number, or switch registry.</div>
+        )}
+        {!loading && candidates.length === 0 && !query && !banner && (
+          <div className="rounded-md border border-dashed border-border bg-surface/40 p-4 text-xs text-foreground-muted">
+            Enter an organisation name or org number above to search the selected registry. Results land here and can be previewed before importing into the verification queue.
+          </div>
         )}
       </div>
 
