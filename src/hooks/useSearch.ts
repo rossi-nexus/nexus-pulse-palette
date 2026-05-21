@@ -500,6 +500,7 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     setActiveRoleId(null);
     setExpandedRoleId(null);
     setError(null);
+    setRoleSearchModes(new Map());
   }, [sessionId]);
 
   // Computed
