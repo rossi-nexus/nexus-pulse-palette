@@ -1518,6 +1518,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_admin_dashboard_summary: {
+        Args: never
+        Returns: {
+          actor_total: number
+          actor_unverified: number
+          actor_verified: number
+          attribute_holders_by_kv: Json
+          audit_events_30d: number
+          audit_events_7d: number
+          audit_top_event_types_7d: Json
+          decay_due_30d: number
+          decay_expired: number
+          ontology_active: number
+          ontology_archived: number
+          ontology_decisions_30d: number
+          ontology_decisions_7d: number
+          ontology_proposed: number
+          programme_total: number
+          registry_imports_by_action_30d: Json
+          user_admin: number
+          user_total: number
+          validation_queue_by_status: Json
+          verification_events_30d: number
+          verification_events_7d: number
+        }[]
+      }
       fn_admin_ontology_decision: {
         Args: {
           p_action: string
