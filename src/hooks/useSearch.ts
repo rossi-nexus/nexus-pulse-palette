@@ -69,6 +69,16 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** B3: per-role mode toggle. Defaults to "web" to match legacy behaviour. */
+  const [roleSearchModes, setRoleSearchModes] = useState<Map<string, RoleSearchMode>>(new Map());
+
+  const setRoleSearchMode = useCallback((roleId: string, mode: RoleSearchMode) => {
+    setRoleSearchModes(prev => {
+      const next = new Map(prev);
+      next.set(roleId, mode);
+      return next;
+    });
+  }, []);
 
   // Load existing locked state from DB on init
   useEffect(() => {
