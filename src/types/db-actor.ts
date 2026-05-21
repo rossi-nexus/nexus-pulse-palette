@@ -10,8 +10,9 @@
  * column friction on this table (unlike PersonalActor's analysis_data /
  * search_data), so the generated type works without modification.
  *
- * The `coordinates` column is typed `unknown` upstream (Postgres `point`)
- * and is not consumed by the frontend; consumers ignore it.
+ * Geographic coordinates live on `latitude` / `longitude` (numeric) with
+ * `geocoded_at` and `geocoded_precision` metadata (D2a). The legacy
+ * `coordinates point` column was dropped.
  */
 import type { Database } from "@/integrations/supabase/types";
 
