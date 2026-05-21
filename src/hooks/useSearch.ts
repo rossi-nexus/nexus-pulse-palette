@@ -360,14 +360,19 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     });
 
     setStatus("reviewing");
-  }, []);
+  }, [sessionId, roleSearchModes]);
 
   // Triage actions
   const includeActor = useCallback((roleId: string, actorId: string) => {
+    let dbActorIncluded: { db_actor_id: string; role_name: string } | null = null;
     setRoleResults(prev => {
       const next = new Map(prev);
       const result = next.get(roleId);
       if (!result) return prev;
+      const target = result.actors.find(a => a.id === actorId);
+      if (target?.source === "db" && target.db_actor_id) {
+        dbActorIncluded = { db_actor_id: target.db_actor_id, role_name: result.role_name };
+      }
       next.set(roleId, {
         ...result,
         actors: result.actors.map(a =>
@@ -376,7 +381,24 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
       });
       return next;
     });
-  }, []);
+    // B3 — audit moat: log every DB-actor selection so we can show which verified
+    // actors flowed back into pipeline runs. Fire-and-forget; failures don't block UX.
+    if (dbActorIncluded) {
+      const { db_actor_id, role_name } = dbActorIncluded;
+      (supabase.rpc as any)("fn_audit_log_event", {
+        p_event_type: "db_actor_included_in_pipeline",
+        p_target_table: "actors",
+        p_target_record_id: db_actor_id,
+        p_actor_id: db_actor_id,
+        p_programme_id: null,
+        p_changes: { session_id: sessionId, role_id: roleId, role_name },
+        p_reason: null,
+      }).then(({ error }: { error: any }) => {
+        if (error) console.warn("audit log (db_actor_included_in_pipeline) failed:", error.message);
+      });
+    }
+  }, [sessionId]);
+
 
   const saveForLater = useCallback((roleId: string, actorId: string) => {
     setRoleResults(prev => {
