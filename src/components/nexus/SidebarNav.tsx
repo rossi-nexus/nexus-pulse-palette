@@ -264,7 +264,7 @@ const SidebarNav = () => {
                     {programmes.map((p) => (
                       <NavLink
                         key={p.id}
-                        to={`/programmes/${p.id}`}
+                        to={`/consultant/programmes/${p.id}`}
                         className={({ isActive }) =>
                           cn(
                             "flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors",

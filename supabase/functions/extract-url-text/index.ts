@@ -1,3 +1,19 @@
+/**
+ * extract-url-text — INTERNAL-ONLY edge function.
+ *
+ * Auth model: shared-secret header (`X-Internal-Secret` matched against
+ * `INTERNAL_FUNCTION_SECRET`). Deliberately NOT JWT-gated.
+ *
+ * Why: this function is called server-to-server from `interpret-need` only.
+ * No user-facing client should ever hit it directly. Routing user JWTs
+ * through a second edge function for an internal extraction step adds
+ * latency without security benefit.
+ *
+ * Exception to Rule #23 (all edge functions JWT-gated). Documented here so
+ * audits don't flag it as a missing gate.
+ *
+ * Last reviewed: 2026-05-21 (Access architecture audit, A4 close).
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {

@@ -118,7 +118,7 @@ const ProgrammeAnalyticsPage = () => {
             </Select>
             {selectedProg && (
               <Link
-                to={`/programmes/${selectedProg.id}`}
+                to={`/consultant/programmes/${selectedProg.id}`}
                 className="text-accent-teal hover:underline text-xs flex items-center gap-1"
               >
                 Open programme <ExternalLink className="w-3 h-3" />

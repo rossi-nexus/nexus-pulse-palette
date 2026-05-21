@@ -1411,7 +1411,6 @@ export type Database = {
       }
       users: {
         Row: {
-          access_tier: string
           created_at: string
           email: string
           id: string
@@ -1421,7 +1420,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          access_tier?: string
           created_at?: string
           email: string
           id: string
@@ -1431,7 +1429,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          access_tier?: string
           created_at?: string
           email?: string
           id?: string
@@ -1693,7 +1690,6 @@ export type Database = {
             }
             Returns: string
           }
-      get_user_tier: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
