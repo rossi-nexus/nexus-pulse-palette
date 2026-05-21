@@ -1,1 +1,4 @@
 project_id = "ekuherkwhkyzqyodzpji"
+
+[functions.geocode-actor]
+verify_jwt = true
