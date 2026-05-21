@@ -15,6 +15,9 @@ export interface SearchSource {
 
 export type ActorTypeTag = "commercial" | "government" | "academic" | "industry_body";
 
+/** B3: per-role source-of-truth toggle for Step 3. */
+export type RoleSearchMode = "web" | "db" | "both";
+
 export interface ActorCardData {
   id: string;
   name: string;
@@ -31,11 +34,14 @@ export interface ActorCardData {
   triage_decision?: "included" | "saved_for_later";
   cross_role: boolean;
   cross_role_ids?: string[];
+  /** B3 — provenance for downstream steps and audit logging. */
+  source?: "web" | "db";
+  /** B3 — set when source === "db". Stable link to public.actors.id. */
+  db_actor_id?: string | null;
+  /** B3 — rank metric from fn_rank_actors_by_ontology_overlap (db source only). */
+  ontology_overlap_count?: number;
   /**
-   * Verification lifecycle pulled from a matched DB actor. Will be populated
-   * once pipeline matching against verified records ships (6.5.5b). Today
-   * always undefined, so VerifiedStatusBadge in ActorCard never renders —
-   * surface is wired so 6.5.5b only needs to fill the data.
+   * Verification lifecycle pulled from a matched DB actor.
    */
   matched_verified_at?: string | null;
   matched_decays_at?: string | null;
@@ -47,7 +53,8 @@ export interface RoleSearchResult {
   status: RoleStatus;
   actors: ActorCardData[];
   queries_used: string[];
-  search_mode: "web" | "ai_only";
+  /** Includes db / both for B3 modes. "ai_only" kept for legacy edge-function fallback. */
+  search_mode: RoleSearchMode | "ai_only";
   processing_time_ms?: number;
   error?: string;
 }
@@ -62,6 +69,16 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** B3: per-role mode toggle. Defaults to "web" to match legacy behaviour. */
+  const [roleSearchModes, setRoleSearchModes] = useState<Map<string, RoleSearchMode>>(new Map());
+
+  const setRoleSearchMode = useCallback((roleId: string, mode: RoleSearchMode) => {
+    setRoleSearchModes(prev => {
+      const next = new Map(prev);
+      next.set(roleId, mode);
+      return next;
+    });
+  }, []);
 
   // Load existing locked state from DB on init
   useEffect(() => {
@@ -120,110 +137,192 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
 
     // Process sequentially
     for (const role of roles) {
+      const mode: RoleSearchMode = roleSearchModes.get(role.id) ?? "web";
+
       setActiveRoleId(role.id);
       setRoleResults(prev => {
         const next = new Map(prev);
         const existing = next.get(role.id)!;
-        next.set(role.id, { ...existing, status: "searching" });
+        next.set(role.id, { ...existing, status: "searching", search_mode: mode });
         return next;
       });
 
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) throw new Error("Not authenticated");
+      // Collect selected targets once (used by both branches).
+      const selectedTargets = (selections: any[]) =>
+        selections.filter((s: any) => s.selected);
+      const selectedAll = [
+        ...selectedTargets(role.targets.capabilities),
+        ...selectedTargets(role.targets.competences),
+        ...selectedTargets(role.targets.domains),
+        ...selectedTargets(role.targets.productTypes),
+        ...selectedTargets(role.targets.serviceTypes),
+      ];
+      const targetEntryIds: string[] = selectedAll
+        .map((s: any) => s.entryId)
+        .filter((id: any): id is string => typeof id === "string" && id.length > 0);
 
-        // Build selected targets with names
-        const buildTargets = (selections: any[]) =>
-          selections
-            .filter((s: any) => s.selected)
-            .map((s: any) => ({
-              ontology_entry_id: s.entryId,
-              selected: true,
-              entry_name: s.rawName,
-            }));
+      let webActors: ActorCardData[] = [];
+      let dbActors: ActorCardData[] = [];
+      let queriesUsed: string[] = [];
+      let processingTimeMs: number | undefined;
+      let errMsg: string | undefined;
 
-        const payload = {
-          role: {
-            id: role.id,
-            name: role.name,
-            description: role.description || '',
-            reasoning: role.reasoning || '',
-            targets: {
-              capabilities: buildTargets(role.targets.capabilities),
-              competences: buildTargets(role.targets.competences),
-              domains: buildTargets(role.targets.domains),
-              product_types: buildTargets(role.targets.productTypes),
-              service_types: buildTargets(role.targets.serviceTypes),
+      // --- Web branch -----------------------------------------------------
+      if (mode === "web" || mode === "both") {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          if (!token) throw new Error("Not authenticated");
+
+          const buildTargets = (selections: any[]) =>
+            selections
+              .filter((s: any) => s.selected)
+              .map((s: any) => ({
+                ontology_entry_id: s.entryId,
+                selected: true,
+                entry_name: s.rawName,
+              }));
+
+          const payload = {
+            role: {
+              id: role.id,
+              name: role.name,
+              description: role.description || '',
+              reasoning: role.reasoning || '',
+              targets: {
+                capabilities: buildTargets(role.targets.capabilities),
+                competences: buildTargets(role.targets.competences),
+                domains: buildTargets(role.targets.domains),
+                product_types: buildTargets(role.targets.productTypes),
+                service_types: buildTargets(role.targets.serviceTypes),
+              },
             },
-          },
-          constraints: interpretation.constraints,
-          session_id: "current",
-        };
+            constraints: interpretation.constraints,
+            // B3 fix: pass the real session id instead of the literal "current".
+            session_id: sessionId ?? null,
+          };
 
-        const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-role`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify(payload),
+          const resp = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-role`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          if (!resp.ok) {
+            const errBody = await resp.json().catch(() => ({ error: "Unknown error" }));
+            throw new Error(errBody.error || `HTTP ${resp.status}`);
           }
-        );
 
-        if (!resp.ok) {
-          const errBody = await resp.json().catch(() => ({ error: "Unknown error" }));
-          throw new Error(errBody.error || `HTTP ${resp.status}`);
+          const data = await resp.json();
+          queriesUsed = data.queries_used || [];
+          processingTimeMs = data.processing_time_ms;
+          if (data.error) errMsg = data.error;
+
+          webActors = (data.actors || []).map((a: any) => ({
+            id: a.id || crypto.randomUUID(),
+            name: a.name,
+            location: a.location,
+            country: a.country,
+            website: a.website,
+            description: a.description,
+            match_strength: a.match_strength || "moderate",
+            actor_type: (a.actor_type as ActorTypeTag) || "commercial",
+            classification_found: a.classification_found,
+            standards_found: a.standards_found,
+            sources: a.sources || [],
+            evidence_snippets: a.evidence_snippets || [],
+            triage_decision: undefined,
+            cross_role: false,
+            source: "web" as const,
+            db_actor_id: null,
+          }));
+        } catch (err: any) {
+          errMsg = err?.message ?? String(err);
         }
+      }
 
-        const data = await resp.json();
-
-        const actors: ActorCardData[] = (data.actors || []).map((a: any) => ({
-          id: a.id || crypto.randomUUID(),
-          name: a.name,
-          location: a.location,
-          country: a.country,
-          website: a.website,
-          description: a.description,
-          match_strength: a.match_strength || "moderate",
-          actor_type: (a.actor_type as ActorTypeTag) || "commercial",
-          classification_found: a.classification_found,
-          standards_found: a.standards_found,
-          sources: a.sources || [],
-          evidence_snippets: a.evidence_snippets || [],
-          triage_decision: undefined,
-          cross_role: false,
-        }));
-
-        setRoleResults(prev => {
-          const next = new Map(prev);
-          next.set(role.id, {
-            role_id: role.id,
-            role_name: role.name,
-            status: data.error ? "error" : "complete",
-            actors,
-            queries_used: data.queries_used || [],
-            search_mode: data.search_mode || "web",
-            processing_time_ms: data.processing_time_ms,
-            error: data.error,
+      // --- DB branch ------------------------------------------------------
+      if ((mode === "db" || mode === "both") && targetEntryIds.length > 0) {
+        try {
+          const { data, error: rpcErr } = await (supabase.rpc as any)(
+            "fn_rank_actors_by_ontology_overlap",
+            { p_entry_ids: targetEntryIds, p_limit: 20 },
+          );
+          if (rpcErr) throw rpcErr;
+          dbActors = (data || []).map((row: any) => {
+            const website: string | undefined = Array.isArray(row.websites) && row.websites.length > 0
+              ? row.websites[0]
+              : undefined;
+            const locationBits = [row.city, row.region, row.country].filter(Boolean);
+            return {
+              id: `db:${row.actor_id}`,
+              name: row.legal_name,
+              location: locationBits.join(", ") || undefined,
+              country: row.country ?? undefined,
+              website,
+              description: `Verified actor (${row.overlap_count} matching ontology tag${row.overlap_count === 1 ? "" : "s"}).`,
+              match_strength: row.overlap_count >= 3 ? "strong" : row.overlap_count === 2 ? "moderate" : "weak",
+              actor_type: "commercial" as ActorTypeTag,
+              sources: website ? [{ url: website, title: row.legal_name, type: "company_website" as const, credibility: "high" as const }] : [],
+              evidence_snippets: [],
+              triage_decision: undefined,
+              cross_role: false,
+              source: "db" as const,
+              db_actor_id: row.actor_id,
+              ontology_overlap_count: row.overlap_count,
+              matched_verified_at: row.verified_at,
+              matched_decays_at: row.decays_at,
+            } as ActorCardData;
           });
-          return next;
-        });
-
-        if (!firstCompleted && !data.error) {
-          setExpandedRoleId(role.id);
-          firstCompleted = true;
+        } catch (err: any) {
+          const msg = err?.message ?? String(err);
+          errMsg = errMsg ? `${errMsg}; db: ${msg}` : `db: ${msg}`;
         }
-      } catch (err: any) {
-        setRoleResults(prev => {
-          const next = new Map(prev);
-          const existing = next.get(role.id)!;
-          next.set(role.id, { ...existing, status: "error", error: err.message });
-          return next;
+      }
+
+      // --- Merge (both): dedupe web rows whose website matches a db row --
+      let actors: ActorCardData[];
+      if (mode === "both") {
+        const dbWebsites = new Set(
+          dbActors.map(a => (a.website || "").toLowerCase()).filter(Boolean),
+        );
+        const filteredWeb = webActors.filter(
+          a => !a.website || !dbWebsites.has(a.website.toLowerCase()),
+        );
+        actors = [...dbActors, ...filteredWeb];
+      } else if (mode === "db") {
+        actors = dbActors;
+      } else {
+        actors = webActors;
+      }
+
+      const isError = !!errMsg && actors.length === 0;
+
+      setRoleResults(prev => {
+        const next = new Map(prev);
+        next.set(role.id, {
+          role_id: role.id,
+          role_name: role.name,
+          status: isError ? "error" : "complete",
+          actors,
+          queries_used: queriesUsed,
+          search_mode: mode,
+          processing_time_ms: processingTimeMs,
+          error: errMsg,
         });
+        return next;
+      });
+
+      if (!firstCompleted && !isError) {
+        setExpandedRoleId(role.id);
+        firstCompleted = true;
       }
     }
 
@@ -261,14 +360,19 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     });
 
     setStatus("reviewing");
-  }, []);
+  }, [sessionId, roleSearchModes]);
 
   // Triage actions
   const includeActor = useCallback((roleId: string, actorId: string) => {
+    let dbActorIncluded: { db_actor_id: string; role_name: string } | null = null;
     setRoleResults(prev => {
       const next = new Map(prev);
       const result = next.get(roleId);
       if (!result) return prev;
+      const target = result.actors.find(a => a.id === actorId);
+      if (target?.source === "db" && target.db_actor_id) {
+        dbActorIncluded = { db_actor_id: target.db_actor_id, role_name: result.role_name };
+      }
       next.set(roleId, {
         ...result,
         actors: result.actors.map(a =>
@@ -277,7 +381,24 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
       });
       return next;
     });
-  }, []);
+    // B3 — audit moat: log every DB-actor selection so we can show which verified
+    // actors flowed back into pipeline runs. Fire-and-forget; failures don't block UX.
+    if (dbActorIncluded) {
+      const { db_actor_id, role_name } = dbActorIncluded;
+      (supabase.rpc as any)("fn_audit_log_event", {
+        p_event_type: "db_actor_included_in_pipeline",
+        p_target_table: "actors",
+        p_target_record_id: db_actor_id,
+        p_actor_id: db_actor_id,
+        p_programme_id: null,
+        p_changes: { session_id: sessionId, role_id: roleId, role_name },
+        p_reason: null,
+      }).then(({ error }: { error: any }) => {
+        if (error) console.warn("audit log (db_actor_included_in_pipeline) failed:", error.message);
+      });
+    }
+  }, [sessionId]);
+
 
   const saveForLater = useCallback((roleId: string, actorId: string) => {
     setRoleResults(prev => {
@@ -379,6 +500,7 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     setActiveRoleId(null);
     setExpandedRoleId(null);
     setError(null);
+    setRoleSearchModes(new Map());
   }, [sessionId]);
 
   // Computed
@@ -426,6 +548,8 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
     totalSavedForLater,
     crossRoleCount,
     canLock,
+    roleSearchModes,
+    setRoleSearchMode,
     setExpandedRoleId,
     startSearch,
     includeActor,

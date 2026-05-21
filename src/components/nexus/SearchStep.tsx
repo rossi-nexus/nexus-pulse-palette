@@ -140,6 +140,8 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
     totalSavedForLater,
     crossRoleCount,
     canLock,
+    roleSearchModes,
+    setRoleSearchMode,
     setExpandedRoleId,
     startSearch,
     includeActor,
@@ -157,14 +159,59 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
 
   // Not started
   if (status === "not_started") {
+    const acceptedRoles = interpretation?.roles?.filter((r: any) => r.status === "accepted") ?? [];
+    const modes: Array<{ key: "web" | "db" | "both"; label: string }> = [
+      { key: "web", label: "Search the web" },
+      { key: "db", label: "Select from DB" },
+      { key: "both", label: "Both" },
+    ];
     return (
       <StepContainer stepNumber={3} title="Search" status="not_started" isActive={step2Locked}>
-        <div className="flex flex-col items-center justify-center py-8 gap-3">
+        <div className="flex flex-col items-center justify-center py-8 gap-4">
           {error && (
-            <div className="px-3 py-2 rounded border border-destructive/50 bg-destructive/10 text-caption text-destructive mb-2 max-w-md text-center">
+            <div className="px-3 py-2 rounded border border-destructive/50 bg-destructive/10 text-caption text-destructive max-w-md text-center">
               {error}
             </div>
           )}
+
+          {step2Locked && acceptedRoles.length > 0 && (
+            <div className="w-full max-w-2xl space-y-2">
+              <p className="text-caption text-foreground-muted uppercase tracking-wider">
+                Source per role
+              </p>
+              <div className="space-y-1.5">
+                {acceptedRoles.map((role: any) => {
+                  const current = roleSearchModes.get(role.id) ?? "web";
+                  return (
+                    <div
+                      key={role.id}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded border border-border-subtle bg-surface"
+                    >
+                      <span className="text-body-sm text-foreground truncate">{role.name}</span>
+                      <div className="flex rounded border border-border-subtle overflow-hidden shrink-0">
+                        {modes.map(m => (
+                          <button
+                            key={m.key}
+                            type="button"
+                            onClick={() => setRoleSearchMode(role.id, m.key)}
+                            className={
+                              "px-2.5 py-1 text-caption transition-colors " +
+                              (current === m.key
+                                ? "bg-accent-teal/15 text-accent-teal"
+                                : "text-foreground-muted hover:text-foreground hover:bg-elevated")
+                            }
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {step2Locked && interpretation && (
             <Button
               onClick={() => startSearch(interpretation)}
