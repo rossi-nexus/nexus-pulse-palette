@@ -1,12 +1,20 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import TopBar from "./TopBar";
 import SidebarNav from "./SidebarNav";
 import PipelineView from "./PipelineView";
 import ActorsView from "./ActorsView";
 import ActorProfile from "@/pages/ActorProfile";
-import AdminPlaceholder from "@/pages/AdminPlaceholder";
-import ProgrammeView from "@/pages/ProgrammeView";
 import { SessionProvider } from "@/contexts/SessionContext";
+
+/**
+ * A4 Area 2 — Canonical programme route is /consultant/programmes/:id.
+ * Legacy any-auth /programmes/:id redirects (preserving search + hash).
+ */
+const LegacyProgrammeRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  const { search, hash } = useLocation();
+  return <Navigate to={`/consultant/programmes/${id ?? ""}${search}${hash}`} replace />;
+};
 
 const AppLayout = () => {
   return (
@@ -21,8 +29,9 @@ const AppLayout = () => {
               <Route path="/pipeline" element={<PipelineView />} />
               <Route path="/actors" element={<ActorsView />} />
               <Route path="/actors/:id" element={<ActorProfile />} />
-              <Route path="/programmes/:id" element={<ProgrammeView />} />
-              <Route path="/admin" element={<AdminPlaceholder />} />
+              {/* A4 Area 2: redirect legacy any-auth programme URLs to canonical consultant path. */}
+              <Route path="/programmes/:id" element={<LegacyProgrammeRedirect />} />
+              {/* A4 Area 1: /admin is gated by AdminLayout (mounted in Index). */}
             </Routes>
           </div>
         </div>
