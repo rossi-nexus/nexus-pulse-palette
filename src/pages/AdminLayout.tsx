@@ -30,7 +30,8 @@ const AdminLayout = () => {
           <AdminSidebar />
           <div className="flex-1 overflow-hidden min-w-0">
             <Routes>
-              <Route index element={<Navigate to="ontology" replace />} />
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboardPage />} />
               <Route path="ontology" element={<OntologyQueuePage />} />
               <Route path="registry-import" element={<RegistryImportPage />} />
             </Routes>
