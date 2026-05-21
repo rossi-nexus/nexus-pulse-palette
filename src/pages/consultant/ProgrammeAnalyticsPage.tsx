@@ -11,35 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShieldCheck, AlertTriangle, ExternalLink } from "lucide-react";
-
-const StatCard = ({
-  label,
-  value,
-  hint,
-  tone = "default",
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-  tone?: "default" | "warning" | "success";
-}) => {
-  const toneClass =
-    tone === "warning"
-      ? "text-warning"
-      : tone === "success"
-      ? "text-success"
-      : "text-foreground";
-  return (
-    <div className="bg-surface border border-border rounded-md p-4 space-y-1">
-      <div className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-muted">
-        {label}
-      </div>
-      <div className={`text-2xl font-light ${toneClass}`}>{value}</div>
-      {hint && <div className="text-xs text-foreground-muted">{hint}</div>}
-    </div>
-  );
-};
+import { ShieldCheck, AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/analytics/StatCard";
 
 const ConfidencePill = ({ c }: { c: "high" | "medium" | "low" | null }) => {
   if (!c) return null;
