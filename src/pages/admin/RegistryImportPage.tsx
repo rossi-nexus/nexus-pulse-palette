@@ -220,7 +220,10 @@ const RegistryImportPage = () => {
     <div className="h-full overflow-y-auto bg-background">
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <header className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-accent-teal/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
+              <ShieldCheck className="w-3 h-3" /> Admin
+            </span>
             <h1 className="text-2xl font-semibold text-foreground">
               Registry import
             </h1>
@@ -266,29 +269,32 @@ const RegistryImportPage = () => {
         </header>
 
         <section className="bg-elevated border border-border rounded-md p-4 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-foreground-secondary">
+          <div className="space-y-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
               Registry
             </span>
-            {REGISTRIES.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => {
-                  setRegistryId(r.id);
-                  setCandidates([]);
-                  setResults({});
-                  setBanner(null);
-                }}
-                className={`px-3 py-1 rounded text-xs border transition-colors ${
-                  registryId === r.id
-                    ? "border-accent-teal text-foreground bg-surface"
-                    : "border-border text-foreground-secondary hover:text-foreground"
-                }`}
-              >
-                {r.name}
-              </button>
-            ))}
+            <div className="inline-flex rounded-md border border-border bg-surface p-0.5">
+              {REGISTRIES.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => {
+                    setRegistryId(r.id);
+                    setCandidates([]);
+                    setResults({});
+                    setBanner(null);
+                  }}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                    registryId === r.id
+                      ? "bg-elevated text-foreground shadow-sm border border-border-accent/60"
+                      : "text-foreground-muted hover:text-foreground"
+                  }`}
+                  aria-pressed={registryId === r.id}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
