@@ -29,6 +29,7 @@ const AppLayout = () => {
               <Route path="/" element={<Navigate to="/pipeline" replace />} />
               <Route path="/pipeline" element={<PipelineView />} />
               <Route path="/actors" element={<ActorsView />} />
+              <Route path="/actors/map" element={<ActorsMapPage />} />
               <Route path="/actors/:id" element={<ActorProfile />} />
               {/* A4 Area 2: redirect legacy any-auth programme URLs to canonical consultant path. */}
               <Route path="/programmes/:id" element={<LegacyProgrammeRedirect />} />
