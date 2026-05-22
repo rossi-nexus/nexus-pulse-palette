@@ -177,7 +177,7 @@ const ActorsMapPage = () => {
   }, [data, selectedDomains, selectedVerification, selectedCountries]);
 
   const geocoded = filtered.filter(hasCoords);
-  const ungeocodedAll = data.filter((a) => !hasCoords(a));
+  const ungeocodedAll: ActorsMapEntry[] = data.filter((a) => a.latitude == null || a.longitude == null);
   const totalPlotted = data.filter(hasCoords).length;
 
   const legendData = useMemo(() => {
