@@ -239,6 +239,24 @@ const SidebarNav = () => {
                   <span>{item.label}</span>
                 </NavLink>
 
+                {/* Map sub-entry under Actors */}
+                {item.to === "/actors" && (
+                  <NavLink
+                    to="/actors/map"
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 ml-6 mt-1 px-2 py-1.5 rounded text-xs transition-colors",
+                        isActive
+                          ? "bg-surface text-foreground font-semibold"
+                          : "text-foreground-secondary hover:bg-surface/50"
+                      )
+                    }
+                  >
+                    <MapIcon className="w-3 h-3 shrink-0" />
+                    <span>Map</span>
+                  </NavLink>
+                )}
+
                 {/* Programmes + Sessions appear under Pipeline */}
                 {item.to === "/pipeline" && (
                   <div className="mt-3 ml-2 mr-1 space-y-1">
