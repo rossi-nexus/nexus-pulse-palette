@@ -299,7 +299,27 @@ const ActorsView = () => {
   return (
     <div className="h-full overflow-y-auto bg-background">
       <div className="max-w-5xl mx-auto px-8 py-8">
-        <h1 className="text-2xl font-semibold text-foreground mb-6">Actors</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold text-foreground">Actors</h1>
+          <div className="inline-flex rounded-md border border-border overflow-hidden">
+            <button
+              className="px-3 py-1.5 text-xs font-medium bg-surface text-foreground flex items-center gap-1.5"
+              disabled
+              title="List view"
+            >
+              <ListIcon className="w-3.5 h-3.5" />
+              List
+            </button>
+            <button
+              onClick={() => navigate("/actors/map")}
+              className="px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface/60 transition-colors border-l border-border flex items-center gap-1.5"
+              title="Map view"
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+              Map
+            </button>
+          </div>
+        </div>
 
         {/* Tabs */}
         <div className="flex items-center gap-2 mb-6 border-b border-border">
