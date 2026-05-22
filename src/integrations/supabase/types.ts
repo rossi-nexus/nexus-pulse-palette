@@ -1553,6 +1553,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_actors_for_map: {
+        Args: never
+        Returns: {
+          city: string
+          country: string
+          decays_at: string
+          geocoded_precision: string
+          id: string
+          latitude: number
+          legal_name: string
+          longitude: number
+          primary_domain_category: string
+          primary_domain_name: string
+          verification_status: string
+          verified_at: string
+        }[]
+      }
       fn_admin_dashboard_summary: {
         Args: never
         Returns: {

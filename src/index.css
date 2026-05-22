@@ -142,3 +142,98 @@
     box-shadow: var(--shadow-glow);
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   D2b — Leaflet map styles
+   ────────────────────────────────────────────────────────────────── */
+
+/* Dark-mode OSM tile inversion — ported from v1 MAP spec */
+.dark-map-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(85%) saturate(80%) !important;
+}
+
+/* Marker tweaks: divIcon wrapper has no default border */
+.leaflet-div-icon.actor-marker,
+.actor-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.actor-marker-icon {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border-width: 2px;
+  border-color: hsl(var(--foreground) / 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.actor-marker-letter {
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.actor-marker-decay-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid hsl(var(--warning));
+  pointer-events: none;
+}
+
+/* Popup theming to match dark surface */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: hsl(var(--elevated)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+}
+.leaflet-popup-close-button {
+  color: hsl(var(--foreground-muted)) !important;
+}
+
+/* Tooltip theming */
+.leaflet-tooltip {
+  background: hsl(var(--elevated)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: none !important;
+  font-size: 11px;
+}
+.leaflet-tooltip-top:before {
+  border-top-color: hsl(var(--border)) !important;
+}
+
+/* Cluster bubble: match design tokens */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: hsl(var(--accent-teal) / 0.25) !important;
+}
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: hsl(var(--accent-teal) / 0.85) !important;
+  color: hsl(var(--background)) !important;
+  font-weight: 600;
+}
+
+/* Attribution: tone down on dark theme */
+.leaflet-control-attribution {
+  background: hsl(var(--elevated) / 0.85) !important;
+  color: hsl(var(--foreground-muted)) !important;
+}
+.leaflet-control-attribution a {
+  color: hsl(var(--accent-teal)) !important;
+}
