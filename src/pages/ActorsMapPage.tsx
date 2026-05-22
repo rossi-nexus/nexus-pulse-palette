@@ -12,6 +12,8 @@ import {
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { List as ListIcon, Map as MapIcon, Maximize2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import "react-leaflet-cluster/lib/assets/MarkerCluster.css";
+import "react-leaflet-cluster/lib/assets/MarkerCluster.Default.css";
 
 import { useActorsMap, type ActorsMapEntry } from "@/hooks/useActorsMap";
 import { buildActorIcon, colorForDomain, DOMAIN_FALLBACK_COLOR, isDecayWarning } from "@/components/map/actorIcon";
