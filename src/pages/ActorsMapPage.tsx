@@ -491,7 +491,7 @@ function ActorPopupCard({
     <div className="min-w-[220px] text-foreground">
       <div className="font-semibold text-sm mb-1">{actor.legal_name}</div>
       <div className="mb-2">
-        <VerifiedStatusBadge verified_at={actor.verified_at} decays_at={actor.decays_at} />
+        <VerifiedStatusBadge verifiedAt={actor.verified_at} decaysAt={actor.decays_at} size="sm" />
       </div>
       {actor.primary_domain_name && (
         <div className="text-xs mb-1">
