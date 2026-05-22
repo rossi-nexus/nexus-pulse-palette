@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Database, FolderOpen, CheckCircle2, Search, ArrowRight, X } from "lucide-react";
+import { Database, FolderOpen, CheckCircle2, Search, ArrowRight, X, List as ListIcon, Map as MapIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionContext } from "@/contexts/SessionContext";
