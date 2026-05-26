@@ -64,6 +64,8 @@ export interface CompletionConfig {
   actorContext: { actor_name: string; country: string | null };
   /** Pre-seeded pills per section. */
   seed: CompletionSeed;
+  /** Body mode (default 'from-queue'). Re-verify callers should pass 're-verify'. */
+  mode?: SharedVerificationMode;
   /** Whether the current viewer is allowed to use completion (admin gate). */
   enabled: boolean;
   /** Disabled-state tooltip (shown when enabled=false). */
