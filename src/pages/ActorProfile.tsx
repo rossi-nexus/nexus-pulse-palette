@@ -65,6 +65,8 @@ import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
 import { ActorMiniMap } from "@/components/map/ActorMiniMap";
+import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
+import { EditableText } from "@/components/ui/editable/EditableText";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
