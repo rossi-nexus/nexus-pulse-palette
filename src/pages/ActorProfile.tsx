@@ -1401,6 +1401,13 @@ const ActorProfile = () => {
           </ProfileSection>
         )}
 
+        {/* Capacity (DB only, when present) */}
+        {source === "database" && capacityRows.length > 0 && (
+          <ProfileSection title="Capacity" count={capacityRows.length}>
+            <CapacityPanel rows={capacityRows} />
+          </ProfileSection>
+        )}
+
         {/* Ontology sections — always render for personal actors (with toolbar). DB actors only render when populated. */}
         {(["capabilities", "competences", "domains", "products", "services"] as const).map((key) => {
           const items = ontology[key];
