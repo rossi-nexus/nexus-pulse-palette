@@ -413,6 +413,7 @@ const ActorProfile = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [reverifyBusy, setReverifyBusy] = useState(false);
+  const [enrichMode, setEnrichMode] = useState(false);
   const [outcomeOpen, setOutcomeOpen] = useState(false);
   const { programmes: managedProgrammes } = useManagedProgrammes();
   const canRecordOutcome = isAdmin || managedProgrammes.length > 0;
@@ -1925,7 +1926,8 @@ const ActorProfile = () => {
                 onEdit={openDbEdit}
                 onSave={saveDbEdit}
                 onCancel={cancelDbEdit}
-                onReverify={isAdmin ? () => setReverifyOpen(true) : undefined}
+                onReverify={isAdmin ? () => { setEnrichMode(false); setReverifyOpen(true); } : undefined}
+                onEnrich={isAdmin ? () => { setEnrichMode(true); setReverifyOpen(true); } : undefined}
               />
             )}
           </div>
@@ -1971,9 +1973,15 @@ const ActorProfile = () => {
       {dbActor && (
         <VerificationReviewDialog
           open={reverifyOpen}
-          onOpenChange={setReverifyOpen}
-          title={`Re-verify ${dbActor.legal_name}`}
-          description="Record a new verification event with current evidence and a fresh decay window."
+          onOpenChange={(next) => {
+            if (!next) setEnrichMode(false);
+            setReverifyOpen(next);
+          }}
+          initialMode={enrichMode ? "complete" : "approve"}
+          title={enrichMode ? `Enrich · ${dbActor.legal_name}` : `Re-verify ${dbActor.legal_name}`}
+          description={enrichMode
+            ? "Scrape the actor's website for new ontology proposals, review them via the four-action UX, and submit to update the actor's verified record."
+            : "Record a new verification event with current evidence and a fresh decay window."}
           primaryLabel="Verify"
           busy={reverifyBusy}
           outcomesPanel={
@@ -2017,7 +2025,8 @@ const ActorProfile = () => {
             });
             setReverifyBusy(false);
             if (error) { toast.error(error.message); return; }
-            toast.success("Verification recorded");
+            toast.success("Actor re-verified");
+            setEnrichMode(false);
             setReverifyOpen(false);
             // Refresh denormalised columns
             const { data: refreshed, error: refreshErr } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
@@ -2051,9 +2060,12 @@ const ActorProfile = () => {
               });
               setReverifyBusy(false);
               if (error) { toast.error(error.message); return; }
-              toast.success(
-                `Re-verified · ${decisions.length} ontology decision${decisions.length === 1 ? "" : "s"} recorded`,
-              );
+              if (decisions.length > 0) {
+                toast.success("Actor enriched and re-verified");
+              } else {
+                toast.success("Actor re-verified");
+              }
+              setEnrichMode(false);
               setReverifyOpen(false);
               const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
               if (refreshed) setDbActor(refreshed as DbActor);
