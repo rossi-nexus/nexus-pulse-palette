@@ -109,6 +109,17 @@ const OnboardingPage = () => {
 
   // Step 2 — Ontology decisions captured from SharedVerificationBody
   const [decisions, setDecisions] = useState<CompletionDecision[]>([]);
+  // Profile-8: stable session id for draft persistence across reloads
+  const onboardingSessionId = useMemo(() => {
+    const KEY = "nexus:onboarding:session_id";
+    let v = typeof window !== "undefined" ? localStorage.getItem(KEY) : null;
+    if (!v && typeof window !== "undefined") {
+      v = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
+      localStorage.setItem(KEY, v);
+    }
+    return v ?? "fallback-session";
+  }, []);
+  const draftDiscardRef = useRef<(() => Promise<void>) | null>(null);
 
   // Step 3 — Verification
   const [evidence, setEvidence] = useState<VerificationEvidenceItem[]>([{}]);
