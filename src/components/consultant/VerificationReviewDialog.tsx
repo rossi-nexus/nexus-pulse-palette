@@ -216,11 +216,12 @@ export const VerificationReviewDialog = ({
           <>
             {/* B4: completion-mode body */}
             {mode === "complete" && completion && (
-              <CompleteAndVerifyBody
-                websiteUrl={completion.websiteUrl}
+              <SharedVerificationBody
+                mode={completion.mode ?? "from-queue"}
                 actorContext={completion.actorContext}
                 seed={completion.seed}
-                initialEvidenceUrl={evidence[0]?.source_url ?? null}
+                urlSeed={completion.websiteUrl}
+                evidenceSeed={evidence[0]?.source_url ?? null}
                 onEnrichmentUrlCommit={(url) => {
                   setEvidence((prev) => {
                     if (prev.some((e) => e.source_url === url)) return prev;
