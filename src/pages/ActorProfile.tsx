@@ -2120,6 +2120,24 @@ const ActorProfile = () => {
           onRecorded={refreshOutcomes}
         />
       )}
+
+      {source === "database" && dbActor && (
+        <MergeActorsDialog
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+          survivor={{
+            id: dbActor.id,
+            legal_name: dbActor.legal_name,
+            org_number: dbActor.org_number ?? null,
+            country: dbActor.country ?? null,
+            city: dbActor.city ?? null,
+          }}
+          onMerged={() => {
+            // Reload profile to surface merged data
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 };
