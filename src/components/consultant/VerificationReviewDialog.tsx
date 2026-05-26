@@ -38,6 +38,8 @@ import {
   type CompletionSeed,
   type SharedVerificationMode,
 } from "@/components/verification/SharedVerificationBody";
+import type { DraftTarget } from "@/hooks/useDraftPersistence";
+import { useRef } from "react";
 
 const DECAY_OPTIONS: { value: string; label: string; days: number | null }[] = [
   { value: "30", label: "30 days", days: 30 },
