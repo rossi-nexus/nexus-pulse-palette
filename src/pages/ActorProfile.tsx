@@ -413,6 +413,7 @@ const ActorProfile = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [reverifyBusy, setReverifyBusy] = useState(false);
+  const [enrichMode, setEnrichMode] = useState(false);
   const [outcomeOpen, setOutcomeOpen] = useState(false);
   const { programmes: managedProgrammes } = useManagedProgrammes();
   const canRecordOutcome = isAdmin || managedProgrammes.length > 0;
