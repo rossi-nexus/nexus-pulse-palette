@@ -2060,9 +2060,12 @@ const ActorProfile = () => {
               });
               setReverifyBusy(false);
               if (error) { toast.error(error.message); return; }
-              toast.success(
-                `Re-verified · ${decisions.length} ontology decision${decisions.length === 1 ? "" : "s"} recorded`,
-              );
+              if (decisions.length > 0) {
+                toast.success("Actor enriched and re-verified");
+              } else {
+                toast.success("Actor re-verified");
+              }
+              setEnrichMode(false);
               setReverifyOpen(false);
               const { data: refreshed } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
               if (refreshed) setDbActor(refreshed as DbActor);
