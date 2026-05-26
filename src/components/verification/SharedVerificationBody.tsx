@@ -9,8 +9,8 @@
 //
 // Adds a "Scrape all sections" primary action (lifted from OnboardingPage) that
 // fires per-section scrape calls when at least one section is not_started.
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Check, X as XIcon, Sparkles, CircleDashed } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Plus, Check, X as XIcon, Sparkles, CircleDashed, History } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,11 @@ import { Input } from "@/components/ui/input";
 import { ProposedNewCard } from "@/components/ontology/ProposedNewCard";
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import type { MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
+import {
+  useDraftPersistence,
+  timeAgo,
+  type DraftTarget,
+} from "@/hooks/useDraftPersistence";
 
 // ---------- Public types (re-exported from CompleteAndVerifyBody for back-compat) ----------
 
