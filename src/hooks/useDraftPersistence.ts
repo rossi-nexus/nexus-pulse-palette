@@ -128,7 +128,7 @@ export function useDraftPersistence<T>({
             target.targetType === "fresh_onboarding"
               ? target.clientSessionId ?? null
               : null,
-          draft_payload: payload as unknown as object,
+          draft_payload: payload as any,
         };
         if (draftIdRef.current) {
           const { error } = await supabase
