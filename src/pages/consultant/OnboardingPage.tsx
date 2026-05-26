@@ -320,6 +320,12 @@ const OnboardingPage = () => {
       }
 
       localStorage.removeItem(DRAFT_KEY);
+      try {
+        await draftDiscardRef.current?.();
+      } catch { /* non-fatal */ }
+      try {
+        localStorage.removeItem("nexus:onboarding:session_id");
+      } catch { /* non-fatal */ }
       navigate(`/actors/${result.actor_id}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Onboarding failed");
