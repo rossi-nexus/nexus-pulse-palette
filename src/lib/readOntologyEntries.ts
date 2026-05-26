@@ -96,6 +96,8 @@ export function readOntologyEntries(arr: unknown): DisplayEntry[] {
           if (!name) continue;
           const evidence = evidenceOfObject(eo);
           const confidence = confidenceOfObject(eo);
+          const description = descriptionOfObject(eo);
+          const source_url = sourceUrlOfObject(eo);
           out.push({
             name,
             meta: {
@@ -103,6 +105,8 @@ export function readOntologyEntries(arr: unknown): DisplayEntry[] {
               source: evidence ? "pipeline_analysis" : "pipeline_search",
               evidence,
               confidence,
+              description,
+              source_url,
             },
           });
         }
@@ -115,6 +119,8 @@ export function readOntologyEntries(arr: unknown): DisplayEntry[] {
     if (!name) continue;
     const evidence = evidenceOfObject(o);
     const confidence = confidenceOfObject(o);
+    const description = descriptionOfObject(o);
+    const source_url = sourceUrlOfObject(o);
     out.push({
       name,
       meta: {
@@ -122,6 +128,8 @@ export function readOntologyEntries(arr: unknown): DisplayEntry[] {
         source: evidence ? "pipeline_analysis" : "pipeline_search",
         evidence,
         confidence,
+        description,
+        source_url,
       },
     });
   }
