@@ -66,18 +66,33 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the page
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; NEXUS/1.0; +https://nexus.app)",
-        "Accept": "text/html,application/xhtml+xml,text/plain,*/*",
-      },
-      redirect: "follow",
-    });
+    // Fetch the page — use a real browser UA. Many sites (esp. behind
+    // Cloudflare / corporate WAFs) return 403/429 to obvious bot UAs.
+    // Retry once with backoff on 429/503.
+    const fetchHeaders: HeadersInit = {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept":
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    };
+
+    let response = await fetch(url, { headers: fetchHeaders, redirect: "follow" });
+    if (response.status === 429 || response.status === 503) {
+      try { await response.body?.cancel(); } catch { /* ignore */ }
+      await new Promise((r) => setTimeout(r, 1500));
+      response = await fetch(url, { headers: fetchHeaders, redirect: "follow" });
+    }
 
     if (!response.ok) {
+      const friendly =
+        response.status === 429
+          ? "The website is rate-limiting automated requests (HTTP 429). Try again in a minute, or pick a different page on the same site."
+          : response.status === 403
+          ? "The website blocked the request (HTTP 403). It may require login or block automated access."
+          : `Failed to fetch URL: HTTP ${response.status}`;
       return new Response(
-        JSON.stringify({ error: `Failed to fetch URL: HTTP ${response.status}` }),
+        JSON.stringify({ error: friendly }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
