@@ -1763,6 +1763,10 @@ export type Database = {
         Args: { p_personal_actor_id: string }
         Returns: string
       }
+      fn_update_actor: {
+        Args: { p_actor_id: string; p_reason?: string; p_updates: Json }
+        Returns: string
+      }
       fn_user_has_attr: {
         Args: { _key: string; _uid: string; _value?: string }
         Returns: boolean
