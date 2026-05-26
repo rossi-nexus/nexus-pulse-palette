@@ -1059,7 +1059,34 @@ const ActorProfile = () => {
           Back to Actors
         </button>
 
-        {/* Hero banner (DB only, when present) */}
+        {/* Archived/merged banner */}
+        {source === "database" && dbActor?.verification_status === "merged_into_other" && (
+          <div className="mb-4 bg-warning/10 border border-warning/30 rounded-md p-4 flex items-start gap-3">
+            <div className="text-sm">
+              <div className="font-medium text-foreground mb-1">This actor has been merged</div>
+              <div className="text-foreground-secondary">
+                It was archived
+                {(dbActor as any).merged_at
+                  ? ` on ${new Date((dbActor as any).merged_at).toLocaleDateString()}`
+                  : ""}
+                {(dbActor as any).merged_into_id && (
+                  <>
+                    {" "}— see the{" "}
+                    <Link
+                      to={`/actors/${(dbActor as any).merged_into_id}`}
+                      className="text-accent-teal hover:underline"
+                    >
+                      surviving record
+                    </Link>
+                    .
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {source === "database" && (() => {
           const hero = media.find((m) => m.type === "hero");
           return hero ? <ActorHeroBanner url={hero.url} alt={`${name} hero`} /> : null;
