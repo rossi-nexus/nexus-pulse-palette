@@ -1926,7 +1926,8 @@ const ActorProfile = () => {
                 onEdit={openDbEdit}
                 onSave={saveDbEdit}
                 onCancel={cancelDbEdit}
-                onReverify={isAdmin ? () => setReverifyOpen(true) : undefined}
+                onReverify={isAdmin ? () => { setEnrichMode(false); setReverifyOpen(true); } : undefined}
+                onEnrich={isAdmin ? () => { setEnrichMode(true); setReverifyOpen(true); } : undefined}
               />
             )}
           </div>
