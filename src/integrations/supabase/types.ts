@@ -377,25 +377,37 @@ export type Database = {
       }
       actor_ontology_tags: {
         Row: {
+          accepted_at: string | null
           actor_id: string
+          confidence: string | null
           created_at: string
+          evidence: string | null
           id: string
           ontology_entry_id: string
           source: string
+          source_url: string | null
         }
         Insert: {
+          accepted_at?: string | null
           actor_id: string
+          confidence?: string | null
           created_at?: string
+          evidence?: string | null
           id?: string
           ontology_entry_id: string
           source: string
+          source_url?: string | null
         }
         Update: {
+          accepted_at?: string | null
           actor_id?: string
+          confidence?: string | null
           created_at?: string
+          evidence?: string | null
           id?: string
           ontology_entry_id?: string
           source?: string
+          source_url?: string | null
         }
         Relationships: [
           {
