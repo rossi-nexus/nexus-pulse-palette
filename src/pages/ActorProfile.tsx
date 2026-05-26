@@ -1973,9 +1973,15 @@ const ActorProfile = () => {
       {dbActor && (
         <VerificationReviewDialog
           open={reverifyOpen}
-          onOpenChange={setReverifyOpen}
-          title={`Re-verify ${dbActor.legal_name}`}
-          description="Record a new verification event with current evidence and a fresh decay window."
+          onOpenChange={(next) => {
+            if (!next) setEnrichMode(false);
+            setReverifyOpen(next);
+          }}
+          initialMode={enrichMode ? "complete" : "approve"}
+          title={enrichMode ? `Enrich · ${dbActor.legal_name}` : `Re-verify ${dbActor.legal_name}`}
+          description={enrichMode
+            ? "Scrape the actor's website for new ontology proposals, review them via the four-action UX, and submit to update the actor's verified record."
+            : "Record a new verification event with current evidence and a fresh decay window."}
           primaryLabel="Verify"
           busy={reverifyBusy}
           outcomesPanel={
