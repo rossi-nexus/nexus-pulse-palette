@@ -1916,17 +1916,17 @@ const ActorProfile = () => {
                 )}
               </>
             )}
-            {source === "database" && isAdmin && (
-              <>
-                <DisabledAction label="Edit profile" />
-                <DisabledAction label="Merge" />
-                <DisabledAction label="Enrich" />
-              </>
-            )}
-            {source === "database" && !isAdmin && (
-              <span className="text-xs text-foreground-muted">
-                Read-only — main database actors are managed by administrators.
-              </span>
+            {source === "database" && dbActor && (
+              <ProfileEditToolbar
+                editing={editingDbIdentity}
+                isAdmin={isAdmin}
+                saving={savingDb}
+                hasChanges={!!dbDraft}
+                onEdit={openDbEdit}
+                onSave={saveDbEdit}
+                onCancel={cancelDbEdit}
+                onReverify={isAdmin ? () => setReverifyOpen(true) : undefined}
+              />
             )}
           </div>
         </ProfileSection>
