@@ -33,10 +33,11 @@ import type {
   VerifierConfidence,
 } from "@/types/verification";
 import {
-  CompleteAndVerifyBody,
+  SharedVerificationBody,
   type CompletionDecision,
   type CompletionSeed,
-} from "./CompleteAndVerifyBody";
+  type SharedVerificationMode,
+} from "@/components/verification/SharedVerificationBody";
 
 const DECAY_OPTIONS: { value: string; label: string; days: number | null }[] = [
   { value: "30", label: "30 days", days: 30 },
@@ -63,6 +64,8 @@ export interface CompletionConfig {
   actorContext: { actor_name: string; country: string | null };
   /** Pre-seeded pills per section. */
   seed: CompletionSeed;
+  /** Body mode (default 'from-queue'). Re-verify callers should pass 're-verify'. */
+  mode?: SharedVerificationMode;
   /** Whether the current viewer is allowed to use completion (admin gate). */
   enabled: boolean;
   /** Disabled-state tooltip (shown when enabled=false). */
@@ -213,11 +216,12 @@ export const VerificationReviewDialog = ({
           <>
             {/* B4: completion-mode body */}
             {mode === "complete" && completion && (
-              <CompleteAndVerifyBody
-                websiteUrl={completion.websiteUrl}
+              <SharedVerificationBody
+                mode={completion.mode ?? "from-queue"}
                 actorContext={completion.actorContext}
                 seed={completion.seed}
-                initialEvidenceUrl={evidence[0]?.source_url ?? null}
+                urlSeed={completion.websiteUrl}
+                evidenceSeed={evidence[0]?.source_url ?? null}
                 onEnrichmentUrlCommit={(url) => {
                   setEvidence((prev) => {
                     if (prev.some((e) => e.source_url === url)) return prev;

@@ -1901,6 +1901,7 @@ const ActorProfile = () => {
             }
           }}
           completion={{
+            mode: "re-verify",
             actionLabel: "Complete & re-verify",
             submitLabel: "Save completion and re-verify",
             websiteUrl: dbActor.websites?.[0] ?? null,
