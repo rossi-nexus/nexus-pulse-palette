@@ -106,6 +106,12 @@ function MetadataPanel({ entry, onClose }: MetadataPanelProps) {
         </p>
       )}
 
+      {meta?.description && (
+        <p className="text-foreground-secondary leading-relaxed mb-2 break-words">
+          {meta.description}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-foreground-muted">
         {meta?.source_url && (
           <a
