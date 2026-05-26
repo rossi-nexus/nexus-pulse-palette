@@ -1185,19 +1185,48 @@ const ActorProfile = () => {
                 saving={savingIdentity}
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                <IdentityRow label="Legal name" value={name} />
-                {tradeNames.length > 0 && (
-                  <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
-                )}
-                <IdentityRow label="Org number" value={orgNumber} />
-                <IdentityRow label="Country" value={country} />
-                <IdentityRow label="Address" value={addressComposed} />
-                {actorType && (
-                  <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
-                )}
-                {website && <IdentityRow label="Website" value={website} />}
-              </div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                  <IdentityRow label="Legal name" value={name} />
+                  {tradeNames.length > 0 && (
+                    <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
+                  )}
+                  <IdentityRow label="Org number" value={orgNumber} />
+                  <IdentityRow label="Country" value={country} />
+                  <IdentityRow label="Address" value={addressComposed} />
+                  {actorType && (
+                    <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
+                  )}
+                  {website && <IdentityRow label="Website" value={website} />}
+                </div>
+                <div className="mt-4">
+                  <ActorMiniMap
+                    latitude={
+                      dbActor?.latitude ??
+                      (personal as unknown as { latitude?: number | null } | null)?.latitude ??
+                      null
+                    }
+                    longitude={
+                      dbActor?.longitude ??
+                      (personal as unknown as { longitude?: number | null } | null)?.longitude ??
+                      null
+                    }
+                    precision={
+                      (dbActor?.geocoded_precision ??
+                        (personal as unknown as { geocoded_precision?: string | null } | null)
+                          ?.geocoded_precision ??
+                        null) as
+                        | "street"
+                        | "postal"
+                        | "city"
+                        | "country"
+                        | "failed"
+                        | null
+                    }
+                    retryHref={typeof window !== "undefined" ? window.location.pathname : "#"}
+                  />
+                </div>
+              </>
             )}
             {registrySectionOpen && isPersonal && personal && (
               <RegistryEnrichmentPanel
