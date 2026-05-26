@@ -111,8 +111,8 @@ function ResetViewButton() {
   return (
     <button
       onClick={() => map.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, { duration: 0.8 })}
-      className="absolute top-3 left-3 z-[400] bg-elevated/95 border border-border rounded-md p-2 hover:bg-surface transition-colors shadow"
-      title="Reset view to Norway"
+      className="absolute top-[95px] left-[10px] z-[400] bg-elevated/95 border border-border rounded-md p-2 hover:bg-surface transition-colors shadow"
+      title="Reset view"
     >
       <Maximize2 className="w-4 h-4 text-foreground" />
     </button>
