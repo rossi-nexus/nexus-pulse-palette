@@ -246,6 +246,8 @@ export const VerificationReviewDialog = ({
                   });
                 }}
                 onChange={({ decisions: d }) => setDecisions(d)}
+                draftTarget={completion.draftTarget}
+                onDraftHandle={(h) => { draftDiscardRef.current = h.discard; }}
               />
             )}
 
