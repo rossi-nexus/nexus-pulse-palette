@@ -69,6 +69,7 @@ import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolba
 import { ActorLogo, ActorHeroBanner, ProductGallery } from "@/components/actor-profile/ActorMedia";
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
+import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -414,6 +415,7 @@ const ActorProfile = () => {
   const [sessionName, setSessionName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reverifyOpen, setReverifyOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [reverifyBusy, setReverifyBusy] = useState(false);
   const [enrichMode, setEnrichMode] = useState(false);
   const [outcomeOpen, setOutcomeOpen] = useState(false);
@@ -1057,7 +1059,34 @@ const ActorProfile = () => {
           Back to Actors
         </button>
 
-        {/* Hero banner (DB only, when present) */}
+        {/* Archived/merged banner */}
+        {source === "database" && dbActor?.verification_status === "merged_into_other" && (
+          <div className="mb-4 bg-warning/10 border border-warning/30 rounded-md p-4 flex items-start gap-3">
+            <div className="text-sm">
+              <div className="font-medium text-foreground mb-1">This actor has been merged</div>
+              <div className="text-foreground-secondary">
+                It was archived
+                {(dbActor as any).merged_at
+                  ? ` on ${new Date((dbActor as any).merged_at).toLocaleDateString()}`
+                  : ""}
+                {(dbActor as any).merged_into_id && (
+                  <>
+                    {" "}— see the{" "}
+                    <Link
+                      to={`/actors/${(dbActor as any).merged_into_id}`}
+                      className="text-accent-teal hover:underline"
+                    >
+                      surviving record
+                    </Link>
+                    .
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {source === "database" && (() => {
           const hero = media.find((m) => m.type === "hero");
           return hero ? <ActorHeroBanner url={hero.url} alt={`${name} hero`} /> : null;
@@ -1963,6 +1992,7 @@ const ActorProfile = () => {
                 onCancel={cancelDbEdit}
                 onReverify={isAdmin ? () => { setEnrichMode(false); setReverifyOpen(true); } : undefined}
                 onEnrich={isAdmin ? () => { setEnrichMode(true); setReverifyOpen(true); } : undefined}
+                onMerge={isAdmin ? () => setMergeOpen(true) : undefined}
               />
             )}
           </div>
@@ -2115,6 +2145,24 @@ const ActorProfile = () => {
           actorId={dbActor.id}
           actorName={dbActor.legal_name}
           onRecorded={refreshOutcomes}
+        />
+      )}
+
+      {source === "database" && dbActor && (
+        <MergeActorsDialog
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+          survivor={{
+            id: dbActor.id,
+            legal_name: dbActor.legal_name,
+            org_number: dbActor.org_number ?? null,
+            country: dbActor.country ?? null,
+            city: dbActor.city ?? null,
+          }}
+          onMerged={() => {
+            // Reload profile to surface merged data
+            window.location.reload();
+          }}
         />
       )}
     </div>

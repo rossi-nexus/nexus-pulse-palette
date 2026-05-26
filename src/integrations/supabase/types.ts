@@ -582,6 +582,8 @@ export type Database = {
           latitude: number | null
           legal_name: string
           longitude: number | null
+          merged_at: string | null
+          merged_into_id: string | null
           org_number: string | null
           postal_code: string | null
           region: string | null
@@ -607,6 +609,8 @@ export type Database = {
           latitude?: number | null
           legal_name: string
           longitude?: number | null
+          merged_at?: string | null
+          merged_into_id?: string | null
           org_number?: string | null
           postal_code?: string | null
           region?: string | null
@@ -632,6 +636,8 @@ export type Database = {
           latitude?: number | null
           legal_name?: string
           longitude?: number | null
+          merged_at?: string | null
+          merged_into_id?: string | null
           org_number?: string | null
           postal_code?: string | null
           region?: string | null
@@ -646,6 +652,13 @@ export type Database = {
           websites?: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "actors_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "actors_verifier_id_fkey"
             columns: ["verifier_id"]
@@ -1687,6 +1700,10 @@ export type Database = {
           p_registry: string
         }
         Returns: Json
+      }
+      fn_merge_actors: {
+        Args: { p_reason?: string; p_source_id: string; p_survivor_id: string }
+        Returns: string
       }
       fn_notifications_decay_for_me: {
         Args: { _within?: string }
