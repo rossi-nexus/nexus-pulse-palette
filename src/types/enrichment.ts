@@ -28,6 +28,8 @@ export interface EnrichmentAcceptedItem {
   /** filename for documents */
   source_description?: string | null;
   evidence?: string;
+  /** Per-item prose description — only set for products/services from analyze-actor. */
+  description?: string;
   confidence?: "high" | "medium" | "low";
   /** ISO 8601; only set by enrichment methods, not pipeline */
   accepted_at?: string;
