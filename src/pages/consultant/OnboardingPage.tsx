@@ -9,7 +9,7 @@
 // Note: Profile-8 owns full draft-persistence restoration; identity + Step 3
 // fields still persist via localStorage, but Step 2 ontology decisions are
 // transient until Profile-8 lands. ("Verify actor" final label per spec.)
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, RotateCcw } from "lucide-react";
