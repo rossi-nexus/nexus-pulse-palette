@@ -160,6 +160,10 @@ interface Props {
     decisions: CompletionDecision[];
     removedExistingTagIds: string[];
   }) => void;
+  /** Profile-8: server-side draft persistence target. Omit to disable. */
+  draftTarget?: DraftTarget;
+  /** Profile-8: parent receives a discard handle to wipe draft on submit. */
+  onDraftHandle?: (handle: { discard: () => Promise<void> }) => void;
 }
 
 export const SharedVerificationBody = ({
@@ -170,6 +174,8 @@ export const SharedVerificationBody = ({
   evidenceSeed,
   onEnrichmentUrlCommit,
   onChange,
+  draftTarget,
+  onDraftHandle,
 }: Props) => {
   const effectiveSeed: CompletionSeed = seed ?? emptyCompletionSeed();
 
