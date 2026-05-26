@@ -125,6 +125,8 @@ export const VerificationReviewDialog = ({
   const [rejectReason, setRejectReason] = useState("");
   const [decisions, setDecisions] = useState<CompletionDecision[]>([]);
 
+  const draftDiscardRef = useRef<(() => Promise<void>) | null>(null);
+
   useEffect(() => {
     if (open) setMode(initialMode ?? "approve");
   }, [open, initialMode]);
