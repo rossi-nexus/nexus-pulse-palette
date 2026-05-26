@@ -1792,7 +1792,6 @@ const ActorProfile = () => {
             {source === "database" && isAdmin && (
               <>
                 <DisabledAction label="Edit profile" />
-                <DisabledAction label="Promote to DB" />
                 <DisabledAction label="Merge" />
                 <DisabledAction label="Enrich" />
               </>
