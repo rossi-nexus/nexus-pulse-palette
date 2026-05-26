@@ -111,21 +111,25 @@ export const VerificationReviewDialog = ({
   outcomesPanel,
   completion,
   busy = false,
+  initialMode,
 }: Props) => {
   const [evidence, setEvidence] = useState<VerificationEvidenceItem[]>([{}]);
   const [decay, setDecay] = useState<string>("90");
   const [confidence, setConfidence] = useState<VerifierConfidence | "">("");
   const [notes, setNotes] = useState("");
-  const [mode, setMode] = useState<Mode>("approve");
+  const [mode, setMode] = useState<Mode>(initialMode ?? "approve");
   const [rejectReason, setRejectReason] = useState("");
   const [decisions, setDecisions] = useState<CompletionDecision[]>([]);
+
+  useEffect(() => {
+    if (open) setMode(initialMode ?? "approve");
+  }, [open, initialMode]);
 
   const reset = () => {
     setEvidence([{}]);
     setDecay("90");
     setConfidence("");
     setNotes("");
-    setMode("approve");
     setRejectReason("");
     setDecisions([]);
   };
