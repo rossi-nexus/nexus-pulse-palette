@@ -362,7 +362,7 @@ const ActorsMapPage = () => {
 
       {/* Ungeocoded dialog */}
       <Dialog open={showUngeocodedDialog} onOpenChange={setShowUngeocodedDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col z-[1100]">
           <DialogHeader>
             <DialogTitle>Actors not yet geocoded ({ungeocodedAll.length})</DialogTitle>
           </DialogHeader>
