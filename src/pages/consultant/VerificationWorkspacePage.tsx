@@ -212,6 +212,7 @@ const VerificationWorkspacePage = () => {
               ? seedFromAnalysisData(active.analysis_data)
               : emptyCompletionSeed(),
             enabled: isAdmin,
+            draftTarget: { targetType: "queue", targetId: active.queue_id },
             disabledReason: isAdmin
               ? undefined
               : "Admin only — non-admin consultants can't read full pipeline analysis for queued actors.",

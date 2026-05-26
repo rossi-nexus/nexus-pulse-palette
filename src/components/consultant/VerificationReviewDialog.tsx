@@ -38,6 +38,8 @@ import {
   type CompletionSeed,
   type SharedVerificationMode,
 } from "@/components/verification/SharedVerificationBody";
+import type { DraftTarget } from "@/hooks/useDraftPersistence";
+import { useRef } from "react";
 
 const DECAY_OPTIONS: { value: string; label: string; days: number | null }[] = [
   { value: "30", label: "30 days", days: 30 },
@@ -75,6 +77,8 @@ export interface CompletionConfig {
     verification: VerificationSubmitPayload,
     decisions: CompletionDecision[],
   ) => Promise<void>;
+  /** Profile-8: draft persistence target. */
+  draftTarget?: DraftTarget;
 }
 
 interface Props {
@@ -120,6 +124,8 @@ export const VerificationReviewDialog = ({
   const [mode, setMode] = useState<Mode>(initialMode ?? "approve");
   const [rejectReason, setRejectReason] = useState("");
   const [decisions, setDecisions] = useState<CompletionDecision[]>([]);
+
+  const draftDiscardRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     if (open) setMode(initialMode ?? "approve");
@@ -172,6 +178,7 @@ export const VerificationReviewDialog = ({
     const payload = buildPayload();
     if (!payload) return;
     await completion.onSubmit(payload, decisions);
+    await draftDiscardRef.current?.();
     reset();
   };
 
@@ -239,6 +246,8 @@ export const VerificationReviewDialog = ({
                   });
                 }}
                 onChange={({ decisions: d }) => setDecisions(d)}
+                draftTarget={completion.draftTarget}
+                onDraftHandle={(h) => { draftDiscardRef.current = h.discard; }}
               />
             )}
 

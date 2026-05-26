@@ -774,6 +774,47 @@ export type Database = {
           },
         ]
       }
+      consultant_drafts: {
+        Row: {
+          client_session_id: string | null
+          created_at: string
+          draft_payload: Json
+          id: string
+          target_id: string | null
+          target_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_session_id?: string | null
+          created_at?: string
+          draft_payload: Json
+          id?: string
+          target_id?: string | null
+          target_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_session_id?: string | null
+          created_at?: string
+          draft_payload?: Json
+          id?: string
+          target_id?: string | null
+          target_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_drafts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intelligence_items: {
         Row: {
           admin_notes: string | null
@@ -1679,6 +1720,7 @@ export type Database = {
           verified_at: string
         }[]
       }
+      fn_cleanup_old_drafts: { Args: never; Returns: number }
       fn_create_programme: {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string

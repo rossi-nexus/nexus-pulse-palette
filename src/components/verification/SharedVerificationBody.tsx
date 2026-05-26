@@ -9,8 +9,8 @@
 //
 // Adds a "Scrape all sections" primary action (lifted from OnboardingPage) that
 // fires per-section scrape calls when at least one section is not_started.
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Check, X as XIcon, Sparkles, CircleDashed } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Plus, Check, X as XIcon, Sparkles, CircleDashed, History } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,11 @@ import { Input } from "@/components/ui/input";
 import { ProposedNewCard } from "@/components/ontology/ProposedNewCard";
 import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import type { MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
+import {
+  useDraftPersistence,
+  timeAgo,
+  type DraftTarget,
+} from "@/hooks/useDraftPersistence";
 
 // ---------- Public types (re-exported from CompleteAndVerifyBody for back-compat) ----------
 
@@ -155,6 +160,10 @@ interface Props {
     decisions: CompletionDecision[];
     removedExistingTagIds: string[];
   }) => void;
+  /** Profile-8: server-side draft persistence target. Omit to disable. */
+  draftTarget?: DraftTarget;
+  /** Profile-8: parent receives a discard handle to wipe draft on submit. */
+  onDraftHandle?: (handle: { discard: () => Promise<void> }) => void;
 }
 
 export const SharedVerificationBody = ({
@@ -165,6 +174,8 @@ export const SharedVerificationBody = ({
   evidenceSeed,
   onEnrichmentUrlCommit,
   onChange,
+  draftTarget,
+  onDraftHandle,
 }: Props) => {
   const effectiveSeed: CompletionSeed = seed ?? emptyCompletionSeed();
 
@@ -232,6 +243,71 @@ export const SharedVerificationBody = ({
     }
     onChange({ decisions, removedExistingTagIds });
   }, [sections, removedSeedNames, seedTagIds, onChange]);
+
+  // ---------- Profile-8: server-side draft persistence ----------
+  const draftPayload = useMemo(() => ({
+    sections,
+    removedSeedNames,
+    manualDrafts,
+    urlDraft,
+    urlSource,
+  }), [sections, removedSeedNames, manualDrafts, urlDraft, urlSource]);
+
+  const draftHasContent = (p: typeof draftPayload) => {
+    if (p.urlDraft && p.urlDraft !== initialUrl) return true;
+    for (const k of Object.keys(p.sections) as SectionKey[]) {
+      const s = p.sections[k];
+      if (s.decisions.length > 0) return true;
+      if (s.proposals.length > 0) return true;
+      if (s.scraped) return true;
+      if (p.removedSeedNames[k].length > 0) return true;
+    }
+    return false;
+  };
+
+  const draft = useDraftPersistence({
+    target: draftTarget ?? { targetType: "fresh_onboarding", clientSessionId: "__disabled__" },
+    payload: draftPayload,
+    enabled: Boolean(draftTarget),
+    hasContent: draftHasContent,
+  });
+
+  // Expose discard handle to parent so submit can wipe.
+  const onDraftHandleRef = useRef(onDraftHandle);
+  onDraftHandleRef.current = onDraftHandle;
+  useEffect(() => {
+    onDraftHandleRef.current?.({ discard: draft.discardDraft });
+  }, [draft.discardDraft]);
+
+  // Hydrate state from existing draft once.
+  const hydratedRef = useRef(false);
+  const [restoredBanner, setRestoredBanner] = useState<string | null>(null);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    if (draft.loading) return;
+    if (!draft.existingDraft) {
+      hydratedRef.current = true;
+      return;
+    }
+    hydratedRef.current = true;
+    const p = draft.existingDraft.payload as typeof draftPayload;
+    try {
+      if (p.sections) setSections(p.sections);
+      if (p.removedSeedNames) setRemovedSeedNames(p.removedSeedNames);
+      if (p.manualDrafts) setManualDrafts(p.manualDrafts);
+      if (typeof p.urlDraft === "string") setUrlDraft(p.urlDraft);
+      if (p.urlSource) setUrlSource(p.urlSource);
+      setRestoredBanner(draft.existingDraft.updatedAt);
+    } catch (e) {
+      console.error("[draft] hydrate failed", e);
+    }
+  }, [draft.loading, draft.existingDraft]);
+
+  const handleDiscardDraft = async () => {
+    await draft.discardDraft();
+    setRestoredBanner(null);
+    toast.success("Draft discarded");
+  };
 
   const scrapeSectionInner = async (def: SectionDef, urlOverride?: string) => {
     const effectiveUrl = (urlOverride ?? urlDraft).trim();
@@ -469,10 +545,28 @@ export const SharedVerificationBody = ({
 
   return (
     <div className="space-y-4">
+      {restoredBanner && (
+        <div className="flex items-start justify-between gap-3 rounded-md border border-accent-teal/40 bg-accent-teal/10 p-3 text-xs">
+          <div className="flex items-start gap-2">
+            <History className="w-3.5 h-3.5 mt-0.5 text-accent-teal shrink-0" />
+            <div>
+              <span className="font-semibold text-foreground">Draft restored</span>
+              <span className="text-foreground-secondary"> from {timeAgo(restoredBanner)}.</span>
+              {draft.pendingSave && (
+                <span className="text-foreground-muted ml-2">Saving…</span>
+              )}
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={handleDiscardDraft}>
+            Discard
+          </Button>
+        </div>
+      )}
       <div className="text-xs text-foreground-muted">
         Review pre-seeded tags, scrape the actor's website for new proposals, or add tags manually.
         On submit, all decisions are recorded with the verification.
       </div>
+
 
       <div
         className={`rounded-md border p-3 space-y-1.5 transition-colors ${

@@ -2109,6 +2109,7 @@ const ActorProfile = () => {
             actorContext: { actor_name: dbActor.legal_name, country: dbActor.country ?? null },
             seed: reverifySeed,
             enabled: isAdmin,
+            draftTarget: { targetType: "actor", targetId: dbActor.id },
             disabledReason: isAdmin
               ? undefined
               : "Admin only — completion writes new ontology tags and proposed entries.",
