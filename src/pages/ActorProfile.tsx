@@ -848,6 +848,69 @@ const ActorProfile = () => {
     }
   };
 
+  // Profile-4: DB-side identity edit ------------------------------------------
+  const openDbEdit = () => {
+    if (!dbActor) return;
+    setDbDraft({
+      legal_name: dbActor.legal_name ?? "",
+      org_number: dbActor.org_number ?? "",
+      street_address: dbActor.street_address ?? "",
+      city: dbActor.city ?? "",
+      region: dbActor.region ?? "",
+      country: dbActor.country ?? "",
+      postal_code: (dbActor as unknown as { postal_code?: string | null }).postal_code ?? "",
+    });
+    setEditingDbIdentity(true);
+  };
+
+  const cancelDbEdit = () => {
+    setEditingDbIdentity(false);
+    setDbDraft(null);
+  };
+
+  const saveDbEdit = async () => {
+    if (!dbActor || !dbDraft) return;
+    setSavingDb(true);
+    try {
+      const fields: (keyof DbIdentityDraft)[] = [
+        "legal_name", "org_number", "street_address", "city", "region", "country", "postal_code",
+      ];
+      const updates: Record<string, string | null> = {};
+      for (const f of fields) {
+        const next = (dbDraft[f] ?? "").trim();
+        const current = ((dbActor as unknown as Record<string, unknown>)[f] as string | null | undefined) ?? "";
+        if (next !== current) updates[f] = next === "" ? null : next;
+      }
+      if (!updates.legal_name && (dbDraft.legal_name ?? "").trim() === "") {
+        toast.error("Legal name cannot be empty");
+        setSavingDb(false);
+        return;
+      }
+      if (Object.keys(updates).length === 0) {
+        setEditingDbIdentity(false);
+        setDbDraft(null);
+        setSavingDb(false);
+        return;
+      }
+      const { error } = await supabase.rpc("fn_update_actor", {
+        p_actor_id: dbActor.id,
+        p_updates: updates as never,
+        p_reason: null,
+      });
+      if (error) throw error;
+      const { data: refreshed } = await supabase
+        .from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+      if (refreshed) setDbActor(refreshed as DbActor);
+      toast.success("Profile updated");
+      setEditingDbIdentity(false);
+      setDbDraft(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSavingDb(false);
+    }
+  };
+
   const saveOntologyAdd = async () => {
     if (!personal || !addingOntology) return;
     const sectionLabel: Record<OntologyKey, string> = {
