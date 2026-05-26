@@ -1284,6 +1284,30 @@ const ActorProfile = () => {
                 ) : undefined
               }
             >
+              {(() => {
+                const descTypeMap: Partial<Record<typeof key, string>> = {
+                  capabilities: "capability",
+                  products: "product",
+                  services: "service",
+                };
+                const descType = descTypeMap[key];
+                const matching =
+                  source === "database" && descType
+                    ? descriptions.filter((d: any) => d?.type === descType)
+                    : [];
+                return matching.length > 0 ? (
+                  <div className="mb-3 space-y-2">
+                    {matching.map((d: any, i: number) => (
+                      <p
+                        key={d.id ?? i}
+                        className="text-sm text-foreground-secondary leading-relaxed"
+                      >
+                        {d.content}
+                      </p>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
