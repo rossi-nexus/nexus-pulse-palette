@@ -391,6 +391,15 @@ function DisabledAction({ label, tip = "Coming soon" }: { label: string; tip?: s
   );
 }
 
+function DbEditRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] uppercase tracking-wider text-foreground-muted">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 const ActorProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
