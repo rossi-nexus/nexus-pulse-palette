@@ -193,6 +193,7 @@ const OnboardingPage = () => {
 
   const clearDraftAndReset = () => {
     localStorage.removeItem(DRAFT_KEY);
+    void draftDiscardRef.current?.().catch(() => { /* non-fatal */ });
     setStep(1);
     setLegalName("");
     setCountry("");
@@ -320,6 +321,12 @@ const OnboardingPage = () => {
       }
 
       localStorage.removeItem(DRAFT_KEY);
+      try {
+        await draftDiscardRef.current?.();
+      } catch { /* non-fatal */ }
+      try {
+        localStorage.removeItem("nexus:onboarding:session_id");
+      } catch { /* non-fatal */ }
       navigate(`/actors/${result.actor_id}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Onboarding failed");
@@ -528,6 +535,13 @@ const OnboardingPage = () => {
               urlSeed={cleanWebsites()[0] ?? null}
               evidenceSeed={null}
               onChange={handleBodyChange}
+              draftTarget={{
+                targetType: "fresh_onboarding",
+                clientSessionId: onboardingSessionId,
+              }}
+              onDraftHandle={({ discard }) => {
+                draftDiscardRef.current = discard;
+              }}
             />
 
             <div className="flex justify-between pt-2">
