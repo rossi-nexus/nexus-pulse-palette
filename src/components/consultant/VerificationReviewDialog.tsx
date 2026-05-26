@@ -178,6 +178,7 @@ export const VerificationReviewDialog = ({
     const payload = buildPayload();
     if (!payload) return;
     await completion.onSubmit(payload, decisions);
+    await draftDiscardRef.current?.();
     reset();
   };
 
