@@ -439,6 +439,20 @@ const ActorProfile = () => {
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [identityErrors, setIdentityErrors] = useState<{ actor_name?: string; actor_website?: string }>({});
 
+  // Profile-4: DB-side identity edit mode
+  type DbIdentityDraft = {
+    legal_name: string;
+    org_number: string;
+    street_address: string;
+    city: string;
+    region: string;
+    country: string;
+    postal_code: string;
+  };
+  const [editingDbIdentity, setEditingDbIdentity] = useState(false);
+  const [dbDraft, setDbDraft] = useState<DbIdentityDraft | null>(null);
+  const [savingDb, setSavingDb] = useState(false);
+
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
   const [addingOntology, setAddingOntology] = useState<OntologyKey | null>(null);
