@@ -1465,6 +1465,12 @@ const ActorProfile = () => {
                   </div>
                 ) : null;
               })()}
+              {source === "database" && key === "products" && (
+                <ProductGallery
+                  images={media.filter((m) => m.type === "product")}
+                  actorName={name}
+                />
+              )}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
