@@ -1057,12 +1057,26 @@ const ActorProfile = () => {
           Back to Actors
         </button>
 
+        {/* Hero banner (DB only, when present) */}
+        {source === "database" && (() => {
+          const hero = media.find((m) => m.type === "hero");
+          return hero ? <ActorHeroBanner url={hero.url} alt={`${name} hero`} /> : null;
+        })()}
+
         {/* Header card */}
         <div className="bg-surface border border-border rounded-lg p-6 mb-2">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-              {name}
-            </h1>
+            <div className="flex items-start gap-4 min-w-0">
+              {source === "database" && (
+                <ActorLogo
+                  name={name}
+                  url={media.find((m) => m.type === "logo")?.url ?? null}
+                />
+              )}
+              <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+                {name}
+              </h1>
+            </div>
           </div>
           {description && (
             <p className="text-sm text-foreground-secondary leading-relaxed mb-4">
