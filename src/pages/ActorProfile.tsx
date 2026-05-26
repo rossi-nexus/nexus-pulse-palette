@@ -64,6 +64,7 @@ import type { SectionKey } from "@/config/enrichmentMethods";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
+import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -1184,19 +1185,48 @@ const ActorProfile = () => {
                 saving={savingIdentity}
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                <IdentityRow label="Legal name" value={name} />
-                {tradeNames.length > 0 && (
-                  <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
-                )}
-                <IdentityRow label="Org number" value={orgNumber} />
-                <IdentityRow label="Country" value={country} />
-                <IdentityRow label="Address" value={addressComposed} />
-                {actorType && (
-                  <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
-                )}
-                {website && <IdentityRow label="Website" value={website} />}
-              </div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                  <IdentityRow label="Legal name" value={name} />
+                  {tradeNames.length > 0 && (
+                    <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
+                  )}
+                  <IdentityRow label="Org number" value={orgNumber} />
+                  <IdentityRow label="Country" value={country} />
+                  <IdentityRow label="Address" value={addressComposed} />
+                  {actorType && (
+                    <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
+                  )}
+                  {website && <IdentityRow label="Website" value={website} />}
+                </div>
+                <div className="mt-4">
+                  <ActorMiniMap
+                    latitude={
+                      dbActor?.latitude ??
+                      (personal as unknown as { latitude?: number | null } | null)?.latitude ??
+                      null
+                    }
+                    longitude={
+                      dbActor?.longitude ??
+                      (personal as unknown as { longitude?: number | null } | null)?.longitude ??
+                      null
+                    }
+                    precision={
+                      (dbActor?.geocoded_precision ??
+                        (personal as unknown as { geocoded_precision?: string | null } | null)
+                          ?.geocoded_precision ??
+                        null) as
+                        | "street"
+                        | "postal"
+                        | "city"
+                        | "country"
+                        | "failed"
+                        | null
+                    }
+                    retryHref={typeof window !== "undefined" ? window.location.pathname : "#"}
+                  />
+                </div>
+              </>
             )}
             {registrySectionOpen && isPersonal && personal && (
               <RegistryEnrichmentPanel
@@ -1254,6 +1284,30 @@ const ActorProfile = () => {
                 ) : undefined
               }
             >
+              {(() => {
+                const descTypeMap: Partial<Record<typeof key, string>> = {
+                  capabilities: "capability",
+                  products: "product",
+                  services: "service",
+                };
+                const descType = descTypeMap[key];
+                const matching =
+                  source === "database" && descType
+                    ? descriptions.filter((d: any) => d?.type === descType)
+                    : [];
+                return matching.length > 0 ? (
+                  <div className="mb-3 space-y-2">
+                    {matching.map((d: any, i: number) => (
+                      <p
+                        key={d.id ?? i}
+                        className="text-sm text-foreground-secondary leading-relaxed"
+                      >
+                        {d.content}
+                      </p>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
@@ -1738,7 +1792,6 @@ const ActorProfile = () => {
             {source === "database" && isAdmin && (
               <>
                 <DisabledAction label="Edit profile" />
-                <DisabledAction label="Promote to DB" />
                 <DisabledAction label="Merge" />
                 <DisabledAction label="Enrich" />
               </>
