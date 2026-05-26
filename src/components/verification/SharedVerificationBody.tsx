@@ -244,6 +244,71 @@ export const SharedVerificationBody = ({
     onChange({ decisions, removedExistingTagIds });
   }, [sections, removedSeedNames, seedTagIds, onChange]);
 
+  // ---------- Profile-8: server-side draft persistence ----------
+  const draftPayload = useMemo(() => ({
+    sections,
+    removedSeedNames,
+    manualDrafts,
+    urlDraft,
+    urlSource,
+  }), [sections, removedSeedNames, manualDrafts, urlDraft, urlSource]);
+
+  const draftHasContent = (p: typeof draftPayload) => {
+    if (p.urlDraft && p.urlDraft !== initialUrl) return true;
+    for (const k of Object.keys(p.sections) as SectionKey[]) {
+      const s = p.sections[k];
+      if (s.decisions.length > 0) return true;
+      if (s.proposals.length > 0) return true;
+      if (s.scraped) return true;
+      if (p.removedSeedNames[k].length > 0) return true;
+    }
+    return false;
+  };
+
+  const draft = useDraftPersistence({
+    target: draftTarget ?? { targetType: "fresh_onboarding", clientSessionId: "__disabled__" },
+    payload: draftPayload,
+    enabled: Boolean(draftTarget),
+    hasContent: draftHasContent,
+  });
+
+  // Expose discard handle to parent so submit can wipe.
+  const onDraftHandleRef = useRef(onDraftHandle);
+  onDraftHandleRef.current = onDraftHandle;
+  useEffect(() => {
+    onDraftHandleRef.current?.({ discard: draft.discardDraft });
+  }, [draft.discardDraft]);
+
+  // Hydrate state from existing draft once.
+  const hydratedRef = useRef(false);
+  const [restoredBanner, setRestoredBanner] = useState<string | null>(null);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    if (draft.loading) return;
+    if (!draft.existingDraft) {
+      hydratedRef.current = true;
+      return;
+    }
+    hydratedRef.current = true;
+    const p = draft.existingDraft.payload as typeof draftPayload;
+    try {
+      if (p.sections) setSections(p.sections);
+      if (p.removedSeedNames) setRemovedSeedNames(p.removedSeedNames);
+      if (p.manualDrafts) setManualDrafts(p.manualDrafts);
+      if (typeof p.urlDraft === "string") setUrlDraft(p.urlDraft);
+      if (p.urlSource) setUrlSource(p.urlSource);
+      setRestoredBanner(draft.existingDraft.updatedAt);
+    } catch (e) {
+      console.error("[draft] hydrate failed", e);
+    }
+  }, [draft.loading, draft.existingDraft]);
+
+  const handleDiscardDraft = async () => {
+    await draft.discardDraft();
+    setRestoredBanner(null);
+    toast.success("Draft discarded");
+  };
+
   const scrapeSectionInner = async (def: SectionDef, urlOverride?: string) => {
     const effectiveUrl = (urlOverride ?? urlDraft).trim();
     if (!effectiveUrl) return;
