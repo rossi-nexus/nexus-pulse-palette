@@ -65,6 +65,8 @@ import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
 import { ActorMiniMap } from "@/components/map/ActorMiniMap";
+import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
+import { EditableText } from "@/components/ui/editable/EditableText";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -389,6 +391,15 @@ function DisabledAction({ label, tip = "Coming soon" }: { label: string; tip?: s
   );
 }
 
+function DbEditRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] uppercase tracking-wider text-foreground-muted">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 const ActorProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -436,6 +447,20 @@ const ActorProfile = () => {
   const [identityDraft, setIdentityDraft] = useState<IdentityDraft | null>(null);
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [identityErrors, setIdentityErrors] = useState<{ actor_name?: string; actor_website?: string }>({});
+
+  // Profile-4: DB-side identity edit mode
+  type DbIdentityDraft = {
+    legal_name: string;
+    org_number: string;
+    street_address: string;
+    city: string;
+    region: string;
+    country: string;
+    postal_code: string;
+  };
+  const [editingDbIdentity, setEditingDbIdentity] = useState(false);
+  const [dbDraft, setDbDraft] = useState<DbIdentityDraft | null>(null);
+  const [savingDb, setSavingDb] = useState(false);
 
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
@@ -832,6 +857,69 @@ const ActorProfile = () => {
     }
   };
 
+  // Profile-4: DB-side identity edit ------------------------------------------
+  const openDbEdit = () => {
+    if (!dbActor) return;
+    setDbDraft({
+      legal_name: dbActor.legal_name ?? "",
+      org_number: dbActor.org_number ?? "",
+      street_address: dbActor.street_address ?? "",
+      city: dbActor.city ?? "",
+      region: dbActor.region ?? "",
+      country: dbActor.country ?? "",
+      postal_code: (dbActor as unknown as { postal_code?: string | null }).postal_code ?? "",
+    });
+    setEditingDbIdentity(true);
+  };
+
+  const cancelDbEdit = () => {
+    setEditingDbIdentity(false);
+    setDbDraft(null);
+  };
+
+  const saveDbEdit = async () => {
+    if (!dbActor || !dbDraft) return;
+    setSavingDb(true);
+    try {
+      const fields: (keyof DbIdentityDraft)[] = [
+        "legal_name", "org_number", "street_address", "city", "region", "country", "postal_code",
+      ];
+      const updates: Record<string, string | null> = {};
+      for (const f of fields) {
+        const next = (dbDraft[f] ?? "").trim();
+        const current = ((dbActor as unknown as Record<string, unknown>)[f] as string | null | undefined) ?? "";
+        if (next !== current) updates[f] = next === "" ? null : next;
+      }
+      if (!updates.legal_name && (dbDraft.legal_name ?? "").trim() === "") {
+        toast.error("Legal name cannot be empty");
+        setSavingDb(false);
+        return;
+      }
+      if (Object.keys(updates).length === 0) {
+        setEditingDbIdentity(false);
+        setDbDraft(null);
+        setSavingDb(false);
+        return;
+      }
+      const { error } = await supabase.rpc("fn_update_actor", {
+        p_actor_id: dbActor.id,
+        p_updates: updates as never,
+        p_reason: null,
+      });
+      if (error) throw error;
+      const { data: refreshed } = await supabase
+        .from("actors").select("*").eq("id", dbActor.id).maybeSingle();
+      if (refreshed) setDbActor(refreshed as DbActor);
+      toast.success("Profile updated");
+      setEditingDbIdentity(false);
+      setDbDraft(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSavingDb(false);
+    }
+  };
+
   const saveOntologyAdd = async () => {
     if (!personal || !addingOntology) return;
     const sectionLabel: Record<OntologyKey, string> = {
@@ -1184,6 +1272,45 @@ const ActorProfile = () => {
                 onCancel={cancelIdentityEdit}
                 saving={savingIdentity}
               />
+            ) : source === "database" && editingDbIdentity && dbDraft ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <DbEditRow label="Legal name">
+                  <EditableText
+                    editing
+                    value={dbDraft.legal_name}
+                    onChange={(v) => setDbDraft({ ...dbDraft, legal_name: v })}
+                    placeholder="Required"
+                  />
+                </DbEditRow>
+                {tradeNames.length > 0 && (
+                  <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
+                )}
+                <DbEditRow label="Org number">
+                  <EditableText editing value={dbDraft.org_number}
+                    onChange={(v) => setDbDraft({ ...dbDraft, org_number: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="Country">
+                  <EditableText editing value={dbDraft.country}
+                    onChange={(v) => setDbDraft({ ...dbDraft, country: v })} placeholder="ISO-2, e.g. NO" />
+                </DbEditRow>
+                <DbEditRow label="Street address">
+                  <EditableText editing value={dbDraft.street_address}
+                    onChange={(v) => setDbDraft({ ...dbDraft, street_address: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="Postal code">
+                  <EditableText editing value={dbDraft.postal_code}
+                    onChange={(v) => setDbDraft({ ...dbDraft, postal_code: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="City">
+                  <EditableText editing value={dbDraft.city}
+                    onChange={(v) => setDbDraft({ ...dbDraft, city: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="Region">
+                  <EditableText editing value={dbDraft.region}
+                    onChange={(v) => setDbDraft({ ...dbDraft, region: v })} placeholder="—" />
+                </DbEditRow>
+                {website && <IdentityRow label="Website" value={website} />}
+              </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
@@ -1789,17 +1916,17 @@ const ActorProfile = () => {
                 )}
               </>
             )}
-            {source === "database" && isAdmin && (
-              <>
-                <DisabledAction label="Edit profile" />
-                <DisabledAction label="Merge" />
-                <DisabledAction label="Enrich" />
-              </>
-            )}
-            {source === "database" && !isAdmin && (
-              <span className="text-xs text-foreground-muted">
-                Read-only — main database actors are managed by administrators.
-              </span>
+            {source === "database" && dbActor && (
+              <ProfileEditToolbar
+                editing={editingDbIdentity}
+                isAdmin={isAdmin}
+                saving={savingDb}
+                hasChanges={!!dbDraft}
+                onEdit={openDbEdit}
+                onSave={saveDbEdit}
+                onCancel={cancelDbEdit}
+                onReverify={isAdmin ? () => setReverifyOpen(true) : undefined}
+              />
             )}
           </div>
         </ProfileSection>
