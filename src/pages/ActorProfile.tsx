@@ -425,6 +425,8 @@ const ActorProfile = () => {
   const [standards, setStandards] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [descriptions, setDescriptions] = useState<any[]>([]);
+  const [media, setMedia] = useState<import("@/components/actor-profile/ActorMedia").ActorMediaRow[]>([]);
+  const [capacityRows, setCapacityRows] = useState<import("@/components/actor-profile/CapacityPanel").CapacityAttributeRow[]>([]);
 
   // Inline editors
   const [editingNotes, setEditingNotes] = useState(false);
