@@ -133,7 +133,7 @@ export function useDraftPersistence<T>({
         if (draftIdRef.current) {
           const { error } = await supabase
             .from(TABLE)
-            .update({ draft_payload: payload as unknown as object })
+            .update({ draft_payload: payload as any })
             .eq("id", draftIdRef.current);
           if (error) throw error;
         } else {
