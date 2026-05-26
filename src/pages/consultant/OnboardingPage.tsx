@@ -1,15 +1,18 @@
-// Phase 6.5 / B1: Direct actor onboarding wizard.
-// Consultant or admin seeds a verified actor in one flow:
+// Profile-3 / D-unify-b: Direct actor onboarding wizard.
 //   Step 1 — Identity (+ optional registry lookup)
-//   Step 2 — AI ontology scrape per section (optional)
-//   Step 3 — Commit (evidence/decay/confidence/notes/programme[optional]) → fn_onboard_verified_actor
+//   Step 2 — SharedVerificationBody (mode='fresh') — same as Complete & verify
+//   Step 3 — Verification (evidence/decay/confidence/notes/programme[optional])
 //
-// B1-fix: wizard state persists in localStorage (key b1_onboarding_draft_v1)
-//         and programme assignment is optional.
-import { useEffect, useState } from "react";
+// On submit calls fn_onboard_verified_actor with the canonical
+// CompletionDecision[] payload produced by SharedVerificationBody.
+//
+// Note: Profile-8 owns full draft-persistence restoration; identity + Step 3
+// fields still persist via localStorage, but Step 2 ontology decisions are
+// transient until Profile-8 lands. ("Verify actor" final label per spec.)
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, X as XIcon, RotateCcw, Sparkles, CircleDashed } from "lucide-react";
+import { Loader2, Plus, Trash2, Check, ChevronRight, ChevronLeft, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,78 +26,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ProposalReviewList, type ReviewProposal } from "@/components/nexus/ProposalReviewList";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
-import { type MapToExistingResult } from "@/components/ontology/MapToExistingPanel";
-import { ProposedNewCard } from "@/components/ontology/ProposedNewCard";
 import { useManagedProgrammes } from "@/hooks/useManagedProgrammes";
 import { cn } from "@/lib/utils";
 import type { VerificationEvidenceItem, VerifierConfidence } from "@/types/verification";
-
-type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
-const SECTIONS: { key: SectionKey; label: string; ontoType: "capability" | "competence" | "domain" | "product_type" | "service_type" }[] = [
-  { key: "capabilities", label: "Capabilities", ontoType: "capability" },
-  { key: "competences", label: "Competences", ontoType: "competence" },
-  { key: "domains", label: "Domains", ontoType: "domain" },
-  { key: "products", label: "Product types", ontoType: "product_type" },
-  { key: "services", label: "Service types", ontoType: "service_type" },
-];
-
-/** Extra metadata returned by enrich-from-url for proposed-new items. */
-interface ProposedCategoryMeta {
-  id: string;
-  normalized_name: string;
-  description: string | null;
-  keywords: string[];
-  example_entries: string[];
-  co_occurring: Array<{ id: string; name: string; type: string }>;
-}
-
-/** Per-proposal extension on top of the shared ReviewProposal shape. */
-interface EnrichedProposal extends ReviewProposal {
-  matched_entry_id: string | null;
-  is_proposed_new: boolean;
-  proposed_category_id: string | null;
-  proposed_category_meta: ProposedCategoryMeta | null;
-}
-
-type ConsultantAction = "map-to-existing" | "accept-as-new" | "map-and-propose" | "reject";
-
-/** Consultant decision recorded for a proposed-new item; flushed to the RPC on submit. */
-interface ConsultantDecision {
-  action: ConsultantAction;
-  proposed_name: string;
-  proposed_category_id: string | null;
-  mapped_to_entry_id: string | null;
-  mapped_to_entry_name?: string | null;
-  proposed_description?: string | null;
-}
-
-interface AcceptedItem {
-  entry_name: string;
-  source: "url_scrape" | "manual";
-  source_url?: string | null;
-  evidence?: string;
-  confidence: "high" | "medium" | "low";
-}
-
-type SectionState = {
-  loading: boolean;
-  error: string | null;
-  proposals: EnrichedProposal[];
-  accepted: AcceptedItem[];
-  decisions: ConsultantDecision[];
-  scraped: boolean;
-};
-
-const emptySection = (): SectionState => ({
-  loading: false,
-  error: null,
-  proposals: [],
-  accepted: [],
-  decisions: [],
-  scraped: false,
-});
+import {
+  SharedVerificationBody,
+  emptyCompletionSeed,
+  type CompletionDecision,
+} from "@/components/verification/SharedVerificationBody";
 
 const DECAY_OPTIONS = [
   { value: "30", label: "30 days", days: 30 },
@@ -125,11 +65,10 @@ const REGISTRY_BY_COUNTRY: Record<string, string> = {
   FI: "prh",
 };
 
-// ---------- localStorage draft persistence ----------
 const DRAFT_KEY = "b1_onboarding_draft_v1";
 const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const SAVE_DEBOUNCE_MS = 300;
-const PROGRAMME_NONE = "__none__"; // sentinel; Radix Select disallows empty-string values
+const PROGRAMME_NONE = "__none__";
 
 interface DraftShape {
   saved_at: string;
@@ -143,16 +82,12 @@ interface DraftShape {
     city: string;
     region: string;
   };
-  // Section accepted items + consultant decisions; proposals/loading/error are transient.
-  accepted: Record<SectionKey, AcceptedItem[]>;
-  decisions: Record<SectionKey, ConsultantDecision[]>;
-  scraped: Record<SectionKey, boolean>;
   verification: {
     evidence: VerificationEvidenceItem[];
     decay: string;
     confidence: VerifierConfidence | "";
     notes: string;
-    programmeId: string; // "" means "no programme"
+    programmeId: string;
   };
 }
 
@@ -172,23 +107,8 @@ const OnboardingPage = () => {
   const [region, setRegion] = useState("");
   const [registryBusy, setRegistryBusy] = useState(false);
 
-  // Step 2 — Ontology
-  const [sections, setSections] = useState<Record<SectionKey, SectionState>>({
-    capabilities: emptySection(),
-    competences: emptySection(),
-    domains: emptySection(),
-    products: emptySection(),
-    services: emptySection(),
-  });
-  const [manualDrafts, setManualDrafts] = useState<
-    Record<SectionKey, { entry_name: string; evidence: string; confidence: "high" | "medium" | "low" } | null>
-  >({
-    capabilities: null,
-    competences: null,
-    domains: null,
-    products: null,
-    services: null,
-  });
+  // Step 2 — Ontology decisions captured from SharedVerificationBody
+  const [decisions, setDecisions] = useState<CompletionDecision[]>([]);
 
   // Step 3 — Verification
   const [evidence, setEvidence] = useState<VerificationEvidenceItem[]>([{}]);
@@ -198,21 +118,15 @@ const OnboardingPage = () => {
   const [programmeId, setProgrammeId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Draft restore tracking
   const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  // State-based hydration flag — guarantees the save effect only runs AFTER
-  // the restore-triggered re-render commits with the restored values, so it
-  // can never overwrite the freshly-restored draft with stale empties.
   const [hydrated, setHydrated] = useState(false);
 
-  // ---------- Restore draft on mount ----------
+  // ---------- Restore draft (identity + Step 3 only — Step 2 is body-local) ----------
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      if (!raw) {
-        return;
-      }
+      if (!raw) return;
       const draft = JSON.parse(raw) as DraftShape;
       const savedAt = new Date(draft.saved_at);
       if (Number.isNaN(savedAt.getTime()) || Date.now() - savedAt.getTime() > STALE_AFTER_MS) {
@@ -223,20 +137,13 @@ const OnboardingPage = () => {
         return;
       }
       setStep(draft.step);
-      setLegalName(draft.identity.legalName ?? "");
-      setCountry(draft.identity.country ?? "");
-      setOrgNumber(draft.identity.orgNumber ?? "");
-      setWebsites(draft.identity.websites?.length ? draft.identity.websites : [""]);
-      setStreetAddress(draft.identity.streetAddress ?? "");
-      setCity(draft.identity.city ?? "");
-      setRegion(draft.identity.region ?? "");
-      setSections({
-        capabilities: { ...emptySection(), accepted: draft.accepted?.capabilities ?? [], decisions: draft.decisions?.capabilities ?? [], scraped: !!draft.scraped?.capabilities },
-        competences: { ...emptySection(), accepted: draft.accepted?.competences ?? [], decisions: draft.decisions?.competences ?? [], scraped: !!draft.scraped?.competences },
-        domains: { ...emptySection(), accepted: draft.accepted?.domains ?? [], decisions: draft.decisions?.domains ?? [], scraped: !!draft.scraped?.domains },
-        products: { ...emptySection(), accepted: draft.accepted?.products ?? [], decisions: draft.decisions?.products ?? [], scraped: !!draft.scraped?.products },
-        services: { ...emptySection(), accepted: draft.accepted?.services ?? [], decisions: draft.decisions?.services ?? [], scraped: !!draft.scraped?.services },
-      });
+      setLegalName(draft.identity?.legalName ?? "");
+      setCountry(draft.identity?.country ?? "");
+      setOrgNumber(draft.identity?.orgNumber ?? "");
+      setWebsites(draft.identity?.websites?.length ? draft.identity.websites : [""]);
+      setStreetAddress(draft.identity?.streetAddress ?? "");
+      setCity(draft.identity?.city ?? "");
+      setRegion(draft.identity?.region ?? "");
       setEvidence(draft.verification?.evidence?.length ? draft.verification.evidence : [{}]);
       setDecay(draft.verification?.decay ?? "90");
       setConfidence(draft.verification?.confidence ?? "");
@@ -244,12 +151,8 @@ const OnboardingPage = () => {
       setProgrammeId(draft.verification?.programmeId ?? "");
       setDraftRestoredAt(draft.saved_at);
     } catch {
-      // corrupted draft — wipe.
       localStorage.removeItem(DRAFT_KEY);
     } finally {
-      // Set last — scheduled together with the setters above, so the save
-      // effect's first run sees BOTH `hydrated === true` AND the restored
-      // sections in the same committed render.
       setHydrated(true);
     }
   }, []);
@@ -263,39 +166,18 @@ const OnboardingPage = () => {
           saved_at: new Date().toISOString(),
           step,
           identity: { legalName, country, orgNumber, websites, streetAddress, city, region },
-          accepted: {
-            capabilities: sections.capabilities.accepted,
-            competences: sections.competences.accepted,
-            domains: sections.domains.accepted,
-            products: sections.products.accepted,
-            services: sections.services.accepted,
-          },
-          decisions: {
-            capabilities: sections.capabilities.decisions,
-            competences: sections.competences.decisions,
-            domains: sections.domains.decisions,
-            products: sections.products.decisions,
-            services: sections.services.decisions,
-          },
-          scraped: {
-            capabilities: sections.capabilities.scraped,
-            competences: sections.competences.scraped,
-            domains: sections.domains.scraped,
-            products: sections.products.scraped,
-            services: sections.services.scraped,
-          },
           verification: { evidence, decay, confidence, notes, programmeId },
         };
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       } catch {
-        // quota / privacy mode — silently ignore.
+        /* quota / private mode */
       }
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [
     hydrated,
     step, legalName, country, orgNumber, websites, streetAddress, city, region,
-    sections, evidence, decay, confidence, notes, programmeId,
+    evidence, decay, confidence, notes, programmeId,
   ]);
 
   const clearDraftAndReset = () => {
@@ -308,14 +190,7 @@ const OnboardingPage = () => {
     setStreetAddress("");
     setCity("");
     setRegion("");
-    setSections({
-      capabilities: emptySection(),
-      competences: emptySection(),
-      domains: emptySection(),
-      products: emptySection(),
-      services: emptySection(),
-    });
-    setManualDrafts({ capabilities: null, competences: null, domains: null, products: null, services: null });
+    setDecisions([]);
     setEvidence([{}]);
     setDecay("90");
     setConfidence("");
@@ -366,217 +241,6 @@ const OnboardingPage = () => {
     }
   };
 
-  // ---------- Ontology scraping ----------
-  const scrapeSection = async (key: SectionKey, label: string) => {
-    const url = cleanWebsites()[0];
-    if (!url) {
-      toast.error("Add a website URL on Step 1 first.");
-      return;
-    }
-    setSections((prev) => ({ ...prev, [key]: { ...prev[key], loading: true, error: null } }));
-    try {
-      const { data, error } = await supabase.functions.invoke("enrich-from-url", {
-        body: {
-          url,
-          section_key: key,
-          actor_context: {
-            actor_name: legalName,
-            country: country || null,
-            actor_website: url,
-          },
-          existing_items: sections[key].accepted.map((a) => a.entry_name),
-        },
-      });
-      if (error) throw new Error(error.message);
-      const proposals = (data?.proposals ?? []) as EnrichedProposal[];
-      setSections((prev) => ({
-        ...prev,
-        [key]: { ...prev[key], loading: false, proposals, scraped: true },
-      }));
-      if (proposals.length === 0) {
-        toast.info(`No new ${label.toLowerCase()} proposals from this URL.`);
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Scrape failed";
-      setSections((prev) => ({ ...prev, [key]: { ...prev[key], loading: false, error: msg } }));
-      toast.error(msg);
-    }
-  };
-
-  const scrapeAll = async () => {
-    for (const s of SECTIONS) {
-      await scrapeSection(s.key, s.label);
-    }
-  };
-
-  const acceptProposal = (key: SectionKey, proposal: EnrichedProposal) => {
-    const url = cleanWebsites()[0] ?? null;
-    setSections((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        accepted: [
-          ...prev[key].accepted,
-          {
-            entry_name: proposal.entry_name,
-            source: "url_scrape",
-            source_url: proposal.source_url ?? url,
-            evidence: proposal.evidence,
-            confidence: proposal.confidence,
-          },
-        ],
-        proposals: prev[key].proposals.filter((p) => p !== proposal),
-      },
-    }));
-  };
-
-  const dismissProposal = (key: SectionKey, idx: number) => {
-    setSections((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], proposals: prev[key].proposals.filter((_, i) => i !== idx) },
-    }));
-  };
-
-  const acceptAll = (key: SectionKey) => {
-    const url = cleanWebsites()[0] ?? null;
-    setSections((prev) => {
-      const sec = prev[key];
-      // Bulk accept only applies to AI-matched proposals; proposed-new items
-      // require a per-item consultant decision and stay in the queue.
-      const matched = sec.proposals.filter((p) => !p.is_proposed_new);
-      const remaining = sec.proposals.filter((p) => p.is_proposed_new);
-      const newAccepted = matched.map((p) => ({
-        entry_name: p.entry_name,
-        source: "url_scrape" as const,
-        source_url: p.source_url ?? url,
-        evidence: p.evidence,
-        confidence: p.confidence,
-      }));
-      return {
-        ...prev,
-        [key]: { ...sec, accepted: [...sec.accepted, ...newAccepted], proposals: remaining },
-      };
-    });
-  };
-
-  // ---- Four-action consultant decisions on proposed-new items ----
-  const recordDecision = (key: SectionKey, proposal: EnrichedProposal, decision: ConsultantDecision, alsoTag?: { entry_name: string; source_url?: string | null }) => {
-    setSections((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        decisions: [...prev[key].decisions, decision],
-        accepted: alsoTag
-          ? [
-              ...prev[key].accepted,
-              {
-                entry_name: alsoTag.entry_name,
-                source: "url_scrape",
-                source_url: alsoTag.source_url ?? null,
-                evidence: proposal.evidence,
-                confidence: proposal.confidence,
-              },
-            ]
-          : prev[key].accepted,
-        proposals: prev[key].proposals.filter((p) => p !== proposal),
-      },
-    }));
-  };
-
-  const handleMapToExisting = (key: SectionKey, proposal: EnrichedProposal, pick: MapToExistingResult) => {
-    recordDecision(
-      key,
-      proposal,
-      {
-        action: "map-to-existing",
-        proposed_name: proposal.entry_name,
-        proposed_category_id: proposal.proposed_category_id,
-        mapped_to_entry_id: pick.entry_id,
-        mapped_to_entry_name: pick.entry_name,
-      },
-      { entry_name: pick.entry_name, source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
-    );
-  };
-
-  const handleAcceptAsNew = (key: SectionKey, proposal: EnrichedProposal, description: string | null) => {
-    if (!proposal.proposed_category_id) {
-      toast.error("No proposed category set; cannot accept as new.");
-      return;
-    }
-    recordDecision(
-      key,
-      proposal,
-      {
-        action: "accept-as-new",
-        proposed_name: proposal.entry_name,
-        proposed_category_id: proposal.proposed_category_id,
-        mapped_to_entry_id: null,
-        proposed_description: description,
-      },
-      { entry_name: proposal.entry_name + " (proposed)", source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
-    );
-  };
-
-  const handleMapAndPropose = (key: SectionKey, proposal: EnrichedProposal, pick: MapToExistingResult) => {
-    recordDecision(
-      key,
-      proposal,
-      {
-        action: "map-and-propose",
-        proposed_name: proposal.entry_name,
-        proposed_category_id: proposal.proposed_category_id,
-        mapped_to_entry_id: pick.entry_id,
-        mapped_to_entry_name: pick.entry_name,
-      },
-      { entry_name: pick.entry_name, source_url: proposal.source_url ?? cleanWebsites()[0] ?? null },
-    );
-  };
-
-  const handleReject = (key: SectionKey, proposal: EnrichedProposal) => {
-    recordDecision(key, proposal, {
-      action: "reject",
-      proposed_name: proposal.entry_name,
-      proposed_category_id: proposal.proposed_category_id,
-      mapped_to_entry_id: null,
-    });
-  };
-
-  const removeAccepted = (key: SectionKey, idx: number) =>
-    setSections((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], accepted: prev[key].accepted.filter((_, i) => i !== idx) },
-    }));
-
-  const startManual = (key: SectionKey) =>
-    setManualDrafts((prev) => ({
-      ...prev,
-      [key]: { entry_name: "", evidence: "", confidence: "medium" },
-    }));
-
-  const cancelManual = (key: SectionKey) =>
-    setManualDrafts((prev) => ({ ...prev, [key]: null }));
-
-  const saveManual = (key: SectionKey) => {
-    const draft = manualDrafts[key];
-    if (!draft || !draft.entry_name.trim()) return;
-    setSections((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        accepted: [
-          ...prev[key].accepted,
-          {
-            entry_name: draft.entry_name.trim(),
-            source: "manual",
-            evidence: draft.evidence.trim() || undefined,
-            confidence: draft.confidence,
-          },
-        ],
-      },
-    }));
-    cancelManual(key);
-  };
-
   // ---------- Step 3 helpers ----------
   const addEvidence = () =>
     evidence.length < 5 && setEvidence((prev) => [...prev, {}]);
@@ -597,21 +261,6 @@ const OnboardingPage = () => {
         : null;
       const cleanEvidence = evidence.filter((e) => e.source_url || e.note);
 
-      const ontologyItems = SECTIONS.flatMap((s) =>
-        sections[s.key].accepted
-          // Exclude UI-only markers from accept-as-new; those tag via decisions.
-          .filter((a) => !a.entry_name.endsWith(" (proposed)"))
-          .map((a) => ({
-            entry_name: a.entry_name,
-            source: a.source,
-            confidence: a.confidence,
-            evidence: a.evidence ?? null,
-            source_url: a.source_url ?? null,
-          })),
-      );
-
-      const consultantDecisions = SECTIONS.flatMap((s) => sections[s.key].decisions);
-
       const identity = {
         legal_name: legalName.trim(),
         org_number: orgNumber.trim() || null,
@@ -624,7 +273,9 @@ const OnboardingPage = () => {
 
       const { data, error } = await supabase.rpc("fn_onboard_verified_actor", {
         p_identity: identity as never,
-        p_ontology_items: ontologyItems as never,
+        // Ontology items are now carried entirely through decisions (Profile-3
+        // unification). Bulk-accepted matches arrive as map-to-existing entries.
+        p_ontology_items: [] as never,
         p_verification: {
           evidence: cleanEvidence,
           decays_at,
@@ -632,7 +283,7 @@ const OnboardingPage = () => {
           notes: notes.trim() || null,
         } as never,
         p_programme_id: programmeId || null,
-        p_consultant_decisions: consultantDecisions as never,
+        p_consultant_decisions: decisions as never,
       });
 
       if (error) throw new Error(error.message);
@@ -650,14 +301,13 @@ const OnboardingPage = () => {
           ? ` ${unmatched.length} entr${unmatched.length === 1 ? "y" : "ies"} didn't match (not stored).`
           : "");
       if (programmeId) {
-        toast.success(`Onboarded ${legalName.trim()}. ${tagFragment}`);
+        toast.success(`Verified ${legalName.trim()}. ${tagFragment}`);
       } else {
         toast.success(
-          `Onboarded ${legalName.trim()} (no programme assigned). ${tagFragment} Link to a programme later via re-verify on the actor profile.`,
+          `Verified ${legalName.trim()} (no programme assigned). ${tagFragment} Link to a programme later via re-verify on the actor profile.`,
         );
       }
 
-      // Clear draft on successful submit.
       localStorage.removeItem(DRAFT_KEY);
       navigate(`/actors/${result.actor_id}`);
     } catch (e) {
@@ -667,7 +317,14 @@ const OnboardingPage = () => {
     }
   };
 
-  // ---------- Render ----------
+  // Stable onChange handler for shared body to avoid effect thrash.
+  const handleBodyChange = useCallback(
+    ({ decisions: d }: { decisions: CompletionDecision[]; removedExistingTagIds: string[] }) => {
+      setDecisions(d);
+    },
+    [],
+  );
+
   const canContinueStep1 = legalName.trim().length > 0;
   const canSubmit = !!confidence && !submitting;
 
@@ -683,32 +340,24 @@ const OnboardingPage = () => {
           </p>
         </div>
 
-        {/* Draft restored indicator */}
-        {draftRestoredAt && (() => {
-          const sectionsWithItems = SECTIONS.filter((s) => sections[s.key].accepted.length > 0).length;
-          const totalItems = SECTIONS.reduce((n, s) => n + sections[s.key].accepted.length, 0);
-          return (
-            <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground">
-              <span>
-                Draft restored from{" "}
-                <span className="font-mono">
-                  {new Date(draftRestoredAt).toLocaleString()}
-                </span>
-                .{" "}
-                {totalItems > 0
-                  ? `${totalItems} ontology item${totalItems === 1 ? "" : "s"} preserved across ${sectionsWithItems} section${sectionsWithItems === 1 ? "" : "s"}.`
-                  : "No ontology items captured yet."}
+        {draftRestoredAt && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground">
+            <span>
+              Draft restored from{" "}
+              <span className="font-mono">
+                {new Date(draftRestoredAt).toLocaleString()}
               </span>
-              <button
-                type="button"
-                onClick={() => setResetConfirmOpen(true)}
-                className="inline-flex items-center gap-1 text-info hover:underline"
-              >
-                <RotateCcw className="w-3 h-3" /> Reset
-              </button>
-            </div>
-          );
-        })()}
+              . Identity and verification details preserved; re-enter ontology selections on Step 2.
+            </span>
+            <button
+              type="button"
+              onClick={() => setResetConfirmOpen(true)}
+              className="inline-flex items-center gap-1 text-info hover:underline"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset
+            </button>
+          </div>
+        )}
 
         {/* Step indicator */}
         <div className="mb-2 flex items-center justify-between">
@@ -850,206 +499,25 @@ const OnboardingPage = () => {
           </div>
         )}
 
-        {/* STEP 2 */}
+        {/* STEP 2 — Shared verification body (mode='fresh') */}
         {step === 2 && (
           <div className="space-y-5">
-            <div className="bg-surface border border-border rounded-md p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">AI ontology scrape</h3>
-                  <p className="text-xs text-foreground-muted mt-1">
-                    Pulls proposals from {cleanWebsites()[0] || "(no website set)"} per category.
-                    Ontology is optional — you can skip and add it later from the actor profile.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={scrapeAll}
-                  disabled={!cleanWebsites()[0] || SECTIONS.some((s) => sections[s.key].loading)}
-                >
-                  Scrape all sections
-                </Button>
-              </div>
+            <div className="bg-surface border border-border rounded-md p-5">
+              <h3 className="text-sm font-semibold text-foreground">Ontology</h3>
+              <p className="text-xs text-foreground-muted mt-1">
+                Pulls proposals from {cleanWebsites()[0] || "(no website set)"} per category.
+                Ontology is optional — you can skip and add it later from the actor profile.
+              </p>
             </div>
 
-            {SECTIONS.map((s) => {
-              const sec = sections[s.key];
-              const draft = manualDrafts[s.key];
-              const pending = sec.proposals.length;
-              const totalDone = sec.accepted.length + sec.decisions.length;
-              const status: "not_started" | "loading" | "in_progress" | "completed" =
-                sec.loading ? "loading"
-                : (sec.scraped && pending === 0 && totalDone > 0) ? "completed"
-                : (totalDone > 0 || pending > 0 || sec.scraped) ? "in_progress"
-                : "not_started";
-              const pill =
-                status === "loading" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Scraping
-                  </span>
-                ) : status === "completed" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-success">
-                    <Check className="w-2.5 h-2.5" /> All reviewed
-                  </span>
-                ) : status === "in_progress" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border-accent/60 bg-accent-teal/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground">
-                    {pending > 0 ? `${totalDone} reviewed · ${pending} to review` : `${totalDone} reviewed`}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-transparent px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
-                    <CircleDashed className="w-2.5 h-2.5" /> Not started
-                  </span>
-                );
-              return (
-                <div key={s.key} className="bg-surface border border-border rounded-md p-5 space-y-3">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold text-foreground">{s.label}</h4>
-                      {pill}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => scrapeSection(s.key, s.label)}
-                        disabled={sec.loading || !cleanWebsites()[0]}
-                      >
-                        {sec.loading ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Scraping…</>
-                        ) : (
-                          <><Sparkles className="w-3.5 h-3.5 mr-1" /> {sec.scraped ? "Re-scrape" : "Enrich from URL"}</>
-                        )}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => startManual(s.key)} disabled={!!draft}>
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Add manual
-                      </Button>
-                    </div>
-                  </div>
-
-                  {status === "not_started" && !draft && (
-                    <p className="text-xs text-foreground-muted italic">
-                      {cleanWebsites()[0]
-                        ? `No ${s.label.toLowerCase()} yet. Click Enrich from URL to fetch AI proposals, or add one manually.`
-                        : `No ${s.label.toLowerCase()} yet. Add a website on Step 1 to enable AI enrichment, or add one manually.`}
-                    </p>
-                  )}
-
-                  {sec.error && (
-                    <p className="text-xs text-destructive">{sec.error}</p>
-                  )}
-
-                  {sec.accepted.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted">Accepted</div>
-                      <ul className="space-y-1">
-                        {sec.accepted.map((a, i) => (
-                          <li key={i} className="flex items-center gap-2 text-sm bg-elevated/50 border border-border rounded px-2 py-1">
-                            <Check className="w-3.5 h-3.5 text-success shrink-0" />
-                            <span className="font-mono">{a.entry_name}</span>
-                            <span className="text-[10px] text-foreground-muted uppercase">{a.source}</span>
-                            <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0" onClick={() => removeAccepted(s.key, i)}>
-                              <XIcon className="w-3 h-3" />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {draft && (
-                    <div className="border border-dashed border-border rounded-md p-3 space-y-2">
-                      <Input
-                        placeholder="Entry name (must match an existing ontology entry)"
-                        value={draft.entry_name}
-                        onChange={(e) =>
-                          setManualDrafts((prev) => ({ ...prev, [s.key]: { ...draft, entry_name: e.target.value } }))
-                        }
-                      />
-                      <Input
-                        placeholder="Evidence (optional)"
-                        value={draft.evidence}
-                        onChange={(e) =>
-                          setManualDrafts((prev) => ({ ...prev, [s.key]: { ...draft, evidence: e.target.value } }))
-                        }
-                      />
-                      <div className="flex items-center justify-between">
-                        <RadioGroup
-                          value={draft.confidence}
-                          onValueChange={(v) =>
-                            setManualDrafts((prev) => ({ ...prev, [s.key]: { ...draft, confidence: v as "high" | "medium" | "low" } }))
-                          }
-                          className="flex gap-3"
-                        >
-                          {(["high", "medium", "low"] as const).map((c) => (
-                            <div key={c} className="flex items-center gap-1">
-                              <RadioGroupItem value={c} id={`${s.key}-mc-${c}`} />
-                              <Label htmlFor={`${s.key}-mc-${c}`} className="text-xs capitalize">{c}</Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => cancelManual(s.key)}>Cancel</Button>
-                          <Button size="sm" onClick={() => saveManual(s.key)} disabled={!draft.entry_name.trim()}>Add</Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* AI-matched proposals: classic accept/dismiss */}
-                  {sec.proposals.filter((p) => !p.is_proposed_new).length > 0 && (
-                    <ProposalReviewList
-                      proposals={sec.proposals.filter((p) => !p.is_proposed_new)}
-                      acceptingIdx={null}
-                      bulkAccepting={false}
-                      onAcceptOne={(p) => acceptProposal(s.key, p as EnrichedProposal)}
-                      onDismissOne={(idx) => {
-                        // map filtered idx back to full index
-                        const matched = sec.proposals.filter((p) => !p.is_proposed_new);
-                        const target = matched[idx];
-                        const realIdx = sec.proposals.indexOf(target);
-                        if (realIdx >= 0) dismissProposal(s.key, realIdx);
-                      }}
-                      onAcceptAll={() => acceptAll(s.key)}
-                      onDismissAll={() =>
-                        setSections((prev) => ({
-                          ...prev,
-                          [s.key]: { ...prev[s.key], proposals: prev[s.key].proposals.filter((p) => p.is_proposed_new) },
-                        }))
-                      }
-                      onClose={() =>
-                        setSections((prev) => ({
-                          ...prev,
-                          [s.key]: { ...prev[s.key], proposals: prev[s.key].proposals.filter((p) => p.is_proposed_new) },
-                        }))
-                      }
-                    />
-                  )}
-
-                  {/* Proposed-new items: four-action consultant UX */}
-                  {sec.proposals.filter((p) => p.is_proposed_new).map((p) => (
-                    <ProposedNewCard
-                      key={`${p.entry_name}-${p.proposed_category_id ?? "none"}`}
-                      proposal={p}
-                      categoryType={s.ontoType}
-                      onMap={(pick) => handleMapToExisting(s.key, p, pick)}
-                      onAcceptNew={(desc) => handleAcceptAsNew(s.key, p, desc)}
-                      onMapAndPropose={(pick) => handleMapAndPropose(s.key, p, pick)}
-                      onReject={() => handleReject(s.key, p)}
-                    />
-                  ))}
-
-                  {sec.decisions.length > 0 && (
-                    <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
-                      {sec.decisions.length} consultant decision{sec.decisions.length === 1 ? "" : "s"} recorded
-                    </div>
-                  )}
-
-                  {!sec.loading && sec.scraped && sec.proposals.length === 0 && sec.accepted.length === 0 && (
-                    <p className="text-xs text-foreground-muted italic">No proposals.</p>
-                  )}
-                </div>
-              );
-            })}
+            <SharedVerificationBody
+              mode="fresh"
+              actorContext={{ actor_name: legalName, country: country || null }}
+              seed={emptyCompletionSeed()}
+              urlSeed={cleanWebsites()[0] ?? null}
+              evidenceSeed={null}
+              onChange={handleBodyChange}
+            />
 
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep(1)}>
@@ -1178,12 +646,16 @@ const OnboardingPage = () => {
               />
             </div>
 
+            <div className="text-[11px] text-foreground-muted">
+              {decisions.length} ontology decision{decisions.length === 1 ? "" : "s"} captured on Step 2.
+            </div>
+
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep(2)} disabled={submitting}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
               </Button>
               <Button onClick={handleSubmit} disabled={!canSubmit}>
-                {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Onboarding…</> : "Onboard actor"}
+                {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Verifying…</> : "Verify actor"}
               </Button>
             </div>
           </div>
