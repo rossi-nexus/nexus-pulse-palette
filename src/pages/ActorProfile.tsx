@@ -591,6 +591,8 @@ const ActorProfile = () => {
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
+            supabase.from("actor_media").select("id, type, url").eq("actor_id", id),
+            supabase.from("actor_capacity_attributes").select("id, attribute_type, value_text, value_min, value_max, unit, evidence").eq("actor_id", id),
           ]);
 
           if (cancelled) return;
@@ -600,6 +602,8 @@ const ActorProfile = () => {
           setStandards(settledOk<any[]>(results[3] as any, "standards") ?? []);
           setCustomers(settledOk<any[]>(results[4] as any, "customer history") ?? []);
           setDescriptions(settledOk<any[]>(results[5] as any, "descriptions") ?? []);
+          setMedia((settledOk<any[]>(results[6] as any, "media") ?? []) as any);
+          setCapacityRows((settledOk<any[]>(results[7] as any, "capacity") ?? []) as any);
         }
       } finally {
         if (!cancelled) setLoading(false);
