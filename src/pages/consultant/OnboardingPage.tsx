@@ -528,6 +528,13 @@ const OnboardingPage = () => {
               urlSeed={cleanWebsites()[0] ?? null}
               evidenceSeed={null}
               onChange={handleBodyChange}
+              draftTarget={{
+                targetType: "fresh_onboarding",
+                clientSessionId: onboardingSessionId,
+              }}
+              onDraftHandle={({ discard }) => {
+                draftDiscardRef.current = discard;
+              }}
             />
 
             <div className="flex justify-between pt-2">
