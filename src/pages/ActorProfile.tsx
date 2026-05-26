@@ -1963,6 +1963,7 @@ const ActorProfile = () => {
                 onCancel={cancelDbEdit}
                 onReverify={isAdmin ? () => { setEnrichMode(false); setReverifyOpen(true); } : undefined}
                 onEnrich={isAdmin ? () => { setEnrichMode(true); setReverifyOpen(true); } : undefined}
+                onMerge={isAdmin ? () => setMergeOpen(true) : undefined}
               />
             )}
           </div>
