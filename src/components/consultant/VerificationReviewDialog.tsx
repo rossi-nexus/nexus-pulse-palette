@@ -33,10 +33,11 @@ import type {
   VerifierConfidence,
 } from "@/types/verification";
 import {
-  CompleteAndVerifyBody,
+  SharedVerificationBody,
   type CompletionDecision,
   type CompletionSeed,
-} from "./CompleteAndVerifyBody";
+  type SharedVerificationMode,
+} from "@/components/verification/SharedVerificationBody";
 
 const DECAY_OPTIONS: { value: string; label: string; days: number | null }[] = [
   { value: "30", label: "30 days", days: 30 },
