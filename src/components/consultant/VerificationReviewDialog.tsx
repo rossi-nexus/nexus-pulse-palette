@@ -77,6 +77,8 @@ export interface CompletionConfig {
     verification: VerificationSubmitPayload,
     decisions: CompletionDecision[],
   ) => Promise<void>;
+  /** Profile-8: draft persistence target. */
+  draftTarget?: DraftTarget;
 }
 
 interface Props {
