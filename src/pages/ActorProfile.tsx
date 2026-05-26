@@ -64,6 +64,7 @@ import type { SectionKey } from "@/config/enrichmentMethods";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
+import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
