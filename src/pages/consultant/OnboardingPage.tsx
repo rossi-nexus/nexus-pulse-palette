@@ -193,6 +193,7 @@ const OnboardingPage = () => {
 
   const clearDraftAndReset = () => {
     localStorage.removeItem(DRAFT_KEY);
+    void draftDiscardRef.current?.().catch(() => { /* non-fatal */ });
     setStep(1);
     setLegalName("");
     setCountry("");
