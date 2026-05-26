@@ -2025,7 +2025,8 @@ const ActorProfile = () => {
             });
             setReverifyBusy(false);
             if (error) { toast.error(error.message); return; }
-            toast.success("Verification recorded");
+            toast.success("Actor re-verified");
+            setEnrichMode(false);
             setReverifyOpen(false);
             // Refresh denormalised columns
             const { data: refreshed, error: refreshErr } = await supabase.from("actors").select("*").eq("id", dbActor.id).maybeSingle();
