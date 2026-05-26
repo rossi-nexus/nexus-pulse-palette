@@ -111,8 +111,8 @@ function ResetViewButton() {
   return (
     <button
       onClick={() => map.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, { duration: 0.8 })}
-      className="absolute top-3 left-3 z-[400] bg-elevated/95 border border-border rounded-md p-2 hover:bg-surface transition-colors shadow"
-      title="Reset view to Norway"
+      className="absolute top-[95px] left-[10px] z-[400] bg-elevated/95 border border-border rounded-md p-2 hover:bg-surface transition-colors shadow"
+      title="Reset view"
     >
       <Maximize2 className="w-4 h-4 text-foreground" />
     </button>
@@ -308,20 +308,11 @@ const ActorsMapPage = () => {
                   key={actor.id}
                   position={[actor.latitude!, actor.longitude!]}
                   icon={buildActorIcon(actor)}
-                  eventHandlers={{
-                    click: (e) => {
-                      e.target._map?.flyTo(
-                        [actor.latitude!, actor.longitude!],
-                        Math.max(e.target._map.getZoom(), 9),
-                        { duration: 0.8 },
-                      );
-                    },
-                  }}
                 >
                   <LeafletTooltip direction="top" offset={[0, -14]} opacity={0.95}>
                     {actor.legal_name}
                   </LeafletTooltip>
-                  <Popup>
+                  <Popup autoClose={false} closeOnClick={false} closeOnEscapeKey>
                     <ActorPopupCard actor={actor} onNavigate={(id) => navigate(`/actors/${id}`)} />
                   </Popup>
                 </Marker>
@@ -371,7 +362,7 @@ const ActorsMapPage = () => {
 
       {/* Ungeocoded dialog */}
       <Dialog open={showUngeocodedDialog} onOpenChange={setShowUngeocodedDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col z-[1100]">
           <DialogHeader>
             <DialogTitle>Actors not yet geocoded ({ungeocodedAll.length})</DialogTitle>
           </DialogHeader>
