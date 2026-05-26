@@ -66,6 +66,8 @@ import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
 import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
+import { ActorLogo, ActorHeroBanner, ProductGallery } from "@/components/actor-profile/ActorMedia";
+import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { cn } from "@/lib/utils";
 
@@ -425,6 +427,8 @@ const ActorProfile = () => {
   const [standards, setStandards] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [descriptions, setDescriptions] = useState<any[]>([]);
+  const [media, setMedia] = useState<import("@/components/actor-profile/ActorMedia").ActorMediaRow[]>([]);
+  const [capacityRows, setCapacityRows] = useState<import("@/components/actor-profile/CapacityPanel").CapacityAttributeRow[]>([]);
 
   // Inline editors
   const [editingNotes, setEditingNotes] = useState(false);
@@ -589,6 +593,8 @@ const ActorProfile = () => {
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
+            supabase.from("actor_media").select("id, type, url").eq("actor_id", id),
+            supabase.from("actor_capacity_attributes").select("id, attribute_type, value_text, value_min, value_max, unit, evidence").eq("actor_id", id),
           ]);
 
           if (cancelled) return;
@@ -598,6 +604,8 @@ const ActorProfile = () => {
           setStandards(settledOk<any[]>(results[3] as any, "standards") ?? []);
           setCustomers(settledOk<any[]>(results[4] as any, "customer history") ?? []);
           setDescriptions(settledOk<any[]>(results[5] as any, "descriptions") ?? []);
+          setMedia((settledOk<any[]>(results[6] as any, "media") ?? []) as any);
+          setCapacityRows((settledOk<any[]>(results[7] as any, "capacity") ?? []) as any);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -1049,12 +1057,26 @@ const ActorProfile = () => {
           Back to Actors
         </button>
 
+        {/* Hero banner (DB only, when present) */}
+        {source === "database" && (() => {
+          const hero = media.find((m) => m.type === "hero");
+          return hero ? <ActorHeroBanner url={hero.url} alt={`${name} hero`} /> : null;
+        })()}
+
         {/* Header card */}
         <div className="bg-surface border border-border rounded-lg p-6 mb-2">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-              {name}
-            </h1>
+            <div className="flex items-start gap-4 min-w-0">
+              {source === "database" && (
+                <ActorLogo
+                  name={name}
+                  url={media.find((m) => m.type === "logo")?.url ?? null}
+                />
+              )}
+              <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+                {name}
+              </h1>
+            </div>
           </div>
           {description && (
             <p className="text-sm text-foreground-secondary leading-relaxed mb-4">
@@ -1379,6 +1401,13 @@ const ActorProfile = () => {
           </ProfileSection>
         )}
 
+        {/* Capacity (DB only, when present) */}
+        {source === "database" && capacityRows.length > 0 && (
+          <ProfileSection title="Capacity" count={capacityRows.length}>
+            <CapacityPanel rows={capacityRows} />
+          </ProfileSection>
+        )}
+
         {/* Ontology sections — always render for personal actors (with toolbar). DB actors only render when populated. */}
         {(["capabilities", "competences", "domains", "products", "services"] as const).map((key) => {
           const items = ontology[key];
@@ -1436,6 +1465,12 @@ const ActorProfile = () => {
                   </div>
                 ) : null;
               })()}
+              {source === "database" && key === "products" && (
+                <ProductGallery
+                  images={media.filter((m) => m.type === "product")}
+                  actorName={name}
+                />
+              )}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
