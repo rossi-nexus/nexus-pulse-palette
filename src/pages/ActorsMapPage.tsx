@@ -308,20 +308,11 @@ const ActorsMapPage = () => {
                   key={actor.id}
                   position={[actor.latitude!, actor.longitude!]}
                   icon={buildActorIcon(actor)}
-                  eventHandlers={{
-                    click: (e) => {
-                      e.target._map?.flyTo(
-                        [actor.latitude!, actor.longitude!],
-                        Math.max(e.target._map.getZoom(), 9),
-                        { duration: 0.8 },
-                      );
-                    },
-                  }}
                 >
                   <LeafletTooltip direction="top" offset={[0, -14]} opacity={0.95}>
                     {actor.legal_name}
                   </LeafletTooltip>
-                  <Popup>
+                  <Popup autoClose={false} closeOnClick={false} closeOnEscapeKey>
                     <ActorPopupCard actor={actor} onNavigate={(id) => navigate(`/actors/${id}`)} />
                   </Popup>
                 </Marker>
