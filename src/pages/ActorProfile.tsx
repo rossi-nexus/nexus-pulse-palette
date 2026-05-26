@@ -1263,6 +1263,45 @@ const ActorProfile = () => {
                 onCancel={cancelIdentityEdit}
                 saving={savingIdentity}
               />
+            ) : source === "database" && editingDbIdentity && dbDraft ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <DbEditRow label="Legal name">
+                  <EditableText
+                    editing
+                    value={dbDraft.legal_name}
+                    onChange={(v) => setDbDraft({ ...dbDraft, legal_name: v })}
+                    placeholder="Required"
+                  />
+                </DbEditRow>
+                {tradeNames.length > 0 && (
+                  <IdentityRow label="Trade names" value={tradeNames.join(", ")} />
+                )}
+                <DbEditRow label="Org number">
+                  <EditableText editing value={dbDraft.org_number}
+                    onChange={(v) => setDbDraft({ ...dbDraft, org_number: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="Country">
+                  <EditableText editing value={dbDraft.country}
+                    onChange={(v) => setDbDraft({ ...dbDraft, country: v })} placeholder="ISO-2, e.g. NO" />
+                </DbEditRow>
+                <DbEditRow label="Street address">
+                  <EditableText editing value={dbDraft.street_address}
+                    onChange={(v) => setDbDraft({ ...dbDraft, street_address: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="Postal code">
+                  <EditableText editing value={dbDraft.postal_code}
+                    onChange={(v) => setDbDraft({ ...dbDraft, postal_code: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="City">
+                  <EditableText editing value={dbDraft.city}
+                    onChange={(v) => setDbDraft({ ...dbDraft, city: v })} placeholder="—" />
+                </DbEditRow>
+                <DbEditRow label="Region">
+                  <EditableText editing value={dbDraft.region}
+                    onChange={(v) => setDbDraft({ ...dbDraft, region: v })} placeholder="—" />
+                </DbEditRow>
+                {website && <IdentityRow label="Website" value={website} />}
+              </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
