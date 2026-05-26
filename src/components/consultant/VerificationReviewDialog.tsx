@@ -93,6 +93,8 @@ interface Props {
   /** B4: optional completion-mode config. When set, surfaces a second primary action. */
   completion?: CompletionConfig;
   busy?: boolean;
+  /** Profile-5: open directly in completion mode (Enrich) vs approval mode (Re-verify). */
+  initialMode?: Mode;
 }
 
 type Mode = "approve" | "reject" | "complete";
