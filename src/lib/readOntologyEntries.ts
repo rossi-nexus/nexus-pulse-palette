@@ -43,6 +43,16 @@ function evidenceOfObject(o: Record<string, unknown>): string | undefined {
   return typeof e === "string" && e.trim() ? e : undefined;
 }
 
+function descriptionOfObject(o: Record<string, unknown>): string | undefined {
+  const d = o.description;
+  return typeof d === "string" && d.trim() ? d : undefined;
+}
+
+function sourceUrlOfObject(o: Record<string, unknown>): string | undefined {
+  const u = o.source_url;
+  return typeof u === "string" && u.trim() ? u : undefined;
+}
+
 function confidenceOfObject(
   o: Record<string, unknown>,
 ): EnrichmentAcceptedItem["confidence"] | undefined {
