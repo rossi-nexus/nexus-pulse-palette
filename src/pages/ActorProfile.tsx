@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -420,6 +421,9 @@ const ActorProfile = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [deleteArchivedOpen, setDeleteArchivedOpen] = useState(false);
+  const [deleteArchivedReason, setDeleteArchivedReason] = useState("");
+  const [deleteArchivedBusy, setDeleteArchivedBusy] = useState(false);
   const [reverifyBusy, setReverifyBusy] = useState(false);
   const [enrichMode, setEnrichMode] = useState(false);
   const [outcomeOpen, setOutcomeOpen] = useState(false);
@@ -1114,7 +1118,7 @@ const ActorProfile = () => {
         {/* Archived/merged banner */}
         {source === "database" && dbActor?.verification_status === "merged_into_other" && (
           <div className="mb-4 bg-warning/10 border border-warning/30 rounded-md p-4 flex items-start gap-3">
-            <div className="text-sm">
+            <div className="text-sm flex-1">
               <div className="font-medium text-foreground mb-1">This actor has been merged</div>
               <div className="text-foreground-secondary">
                 It was archived
@@ -1135,6 +1139,14 @@ const ActorProfile = () => {
                 )}
               </div>
             </div>
+            {isAdmin && (
+              <button
+                onClick={() => setDeleteArchivedOpen(true)}
+                className="text-xs px-3 py-1.5 rounded border border-destructive/40 text-destructive hover:bg-destructive/10 whitespace-nowrap"
+              >
+                Delete permanently
+              </button>
+            )}
           </div>
         )}
 
@@ -2319,6 +2331,53 @@ const ActorProfile = () => {
             window.location.reload();
           }}
         />
+      )}
+
+      {/* Part 2 / Prompt 5: permanently delete an archived (merged) actor. Admin-only. */}
+      {source === "database" && dbActor?.verification_status === "merged_into_other" && (
+        <Dialog open={deleteArchivedOpen} onOpenChange={setDeleteArchivedOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Permanently delete {dbActor.legal_name}?</DialogTitle>
+              <DialogDescription>
+                This cannot be undone. The merge audit history will be preserved.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={deleteArchivedReason}
+              onChange={(e) => setDeleteArchivedReason(e.target.value)}
+              placeholder="Reason (optional)…"
+              rows={3}
+            />
+            <DialogFooter>
+              <Button variant="ghost" disabled={deleteArchivedBusy} onClick={() => setDeleteArchivedOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteArchivedBusy}
+                onClick={async () => {
+                  if (!dbActor) return;
+                  setDeleteArchivedBusy(true);
+                  const { error } = await (supabase.rpc as any)("fn_delete_archived_actor", {
+                    p_actor_id: dbActor.id,
+                    p_reason: deleteArchivedReason || null,
+                  });
+                  setDeleteArchivedBusy(false);
+                  if (error) {
+                    toast.error(error.message);
+                    return;
+                  }
+                  toast.success("Actor permanently deleted");
+                  setDeleteArchivedOpen(false);
+                  navigate("/actors");
+                }}
+              >
+                {deleteArchivedBusy ? "Deleting…" : "Delete permanently"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Part 2 / Prompt 2: registry refresh — feeds DB-side edit draft, no auto-write. */}

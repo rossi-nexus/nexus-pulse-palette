@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import { ArchivedActorsTab } from "@/components/nexus/ArchivedActorsTab";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
@@ -32,7 +33,7 @@ import { cn } from "@/lib/utils";
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
 
-type TabKey = "collection" | "database";
+type TabKey = "collection" | "database" | "archived";
 
 interface SessionInfo {
   id: string;
@@ -329,6 +330,11 @@ const ActorsView = () => {
           <TabButton active={tab === "database"} onClick={() => setTab("database")}>
             Database
           </TabButton>
+          {isAdmin && (
+            <TabButton active={tab === "archived"} onClick={() => setTab("archived")}>
+              Archived
+            </TabButton>
+          )}
           {/* Phase 6.5.5b: validation queue tab removed — superseded by /consultant/verification */}
         </div>
 
@@ -441,7 +447,9 @@ const ActorsView = () => {
         )}
 
         {/* Content */}
-        {loading ? (
+        {tab === "archived" ? (
+          <ArchivedActorsTab />
+        ) : loading ? (
           <LoadingSkeletons />
         ) : tab === "collection" ? (
           filteredCollection.length === 0 ? (

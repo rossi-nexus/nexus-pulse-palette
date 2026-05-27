@@ -1744,6 +1744,10 @@ export type Database = {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string
       }
+      fn_delete_archived_actor: {
+        Args: { p_actor_id: string; p_reason?: string }
+        Returns: string
+      }
       fn_geocode_missing_actors: {
         Args: never
         Returns: {
