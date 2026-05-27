@@ -40,6 +40,7 @@ export const ProfileEditToolbar = ({
   onReverify,
   onMerge,
   onEnrich,
+  onRegistryRefresh,
 }: Props) => {
   if (!isAdmin) {
     return (
@@ -59,6 +60,11 @@ export const ProfileEditToolbar = ({
             ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving…</>
             : <><Check className="w-3.5 h-3.5 mr-1.5" /> Save</>}
         </Button>
+        {onRegistryRefresh && (
+          <Button size="sm" variant="outline" onClick={onRegistryRefresh} disabled={saving}>
+            <Building2 className="w-3.5 h-3.5 mr-1.5" /> Refresh from registry
+          </Button>
+        )}
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={saving}>
           <XIcon className="w-3.5 h-3.5 mr-1.5" /> Cancel
         </Button>
