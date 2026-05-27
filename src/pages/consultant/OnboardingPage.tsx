@@ -325,6 +325,43 @@ const OnboardingPage = () => {
         );
       }
 
+      // P3: persist any pending media now that the actor exists
+      const persistPending = async (slot: MediaSlotType, rec: ActorMediaRecord | null) => {
+        if (!rec || !rec.url.startsWith("data:")) return;
+        try {
+          const dataUrlToBlob = (dataUrl: string): Blob => {
+            const [meta, b64] = dataUrl.split(",");
+            const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? "image/png";
+            const bin = atob(b64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            return new Blob([arr], { type: mime });
+          };
+          const extFor = (m: string) =>
+            m.includes("png") ? "png" : m.includes("webp") ? "webp" : m.includes("gif") ? "gif" : "jpg";
+          const croppedBlob = dataUrlToBlob(rec.url);
+          const originalBlob = rec.original_url ? dataUrlToBlob(rec.original_url) : croppedBlob;
+          const baseId = crypto.randomUUID();
+          const folder = `${result.actor_id}/${slot}`;
+          const cPath = `${folder}/${baseId}.${extFor(croppedBlob.type)}`;
+          const oPath = `${folder}/${baseId}.original.${extFor(originalBlob.type)}`;
+          await supabase.storage.from("actor-media").upload(cPath, croppedBlob, { contentType: croppedBlob.type });
+          await supabase.storage.from("actor-media").upload(oPath, originalBlob, { contentType: originalBlob.type });
+          const cUrl = supabase.storage.from("actor-media").getPublicUrl(cPath).data.publicUrl;
+          const oUrl = supabase.storage.from("actor-media").getPublicUrl(oPath).data.publicUrl;
+          await supabase.from("actor_media").insert({
+            actor_id: result.actor_id,
+            type: slot,
+            url: cUrl,
+            original_url: oUrl,
+            crop_data: (rec.crop_data ?? null) as any,
+            source: rec.source ?? "upload",
+          });
+        } catch { /* non-fatal */ }
+      };
+      await persistPending("logo", pendingLogo);
+      await persistPending("hero", pendingHero);
+
       localStorage.removeItem(DRAFT_KEY);
       try {
         await draftDiscardRef.current?.();
