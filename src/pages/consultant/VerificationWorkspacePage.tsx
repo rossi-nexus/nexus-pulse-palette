@@ -493,6 +493,27 @@ const VerificationWorkspacePage = () => {
           }
         />
       )}
+
+      {conflictQueue.length > 0 && conflictQueue[conflictIdx] && (
+        <ActorDuplicateComparison
+          open
+          onOpenChange={(o) => !o && setConflictQueue([])}
+          incoming={{
+            queue_id: conflictQueue[conflictIdx].queue_id,
+            legal_name: conflictQueue[conflictIdx].actor_name,
+            org_number: conflictQueue[conflictIdx].org_number,
+            country: conflictQueue[conflictIdx].country,
+            city: conflictQueue[conflictIdx].city,
+            postal_code: null,
+            street_address: conflictQueue[conflictIdx].street_address,
+          }}
+          candidates={candMap.get(conflictQueue[conflictIdx].queue_id) ?? []}
+          index={conflictIdx + 1}
+          total={conflictQueue.length}
+          busy={bulkBusy}
+          onResolve={resolveConflict}
+        />
+      )}
     </div>
   );
 };
