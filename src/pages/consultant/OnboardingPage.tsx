@@ -35,6 +35,7 @@ import {
   emptyCompletionSeed,
   type CompletionDecision,
 } from "@/components/verification/SharedVerificationBody";
+import { MediaSlotEditor, type ActorMediaRecord, type MediaSlotType } from "@/components/actor-media/MediaSlotEditor";
 
 const DECAY_OPTIONS = [
   { value: "30", label: "30 days", days: 30 },
@@ -128,6 +129,10 @@ const OnboardingPage = () => {
   const [notes, setNotes] = useState("");
   const [programmeId, setProgrammeId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  // P3: pending media (held in component state until actor is created)
+  const [pendingLogo, setPendingLogo] = useState<ActorMediaRecord | null>(null);
+  const [pendingHero, setPendingHero] = useState<ActorMediaRecord | null>(null);
+  const [pendingMediaSlot, setPendingMediaSlot] = useState<MediaSlotType | null>(null);
 
   const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -320,6 +325,43 @@ const OnboardingPage = () => {
         );
       }
 
+      // P3: persist any pending media now that the actor exists
+      const persistPending = async (slot: MediaSlotType, rec: ActorMediaRecord | null) => {
+        if (!rec || !rec.url.startsWith("data:")) return;
+        try {
+          const dataUrlToBlob = (dataUrl: string): Blob => {
+            const [meta, b64] = dataUrl.split(",");
+            const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? "image/png";
+            const bin = atob(b64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            return new Blob([arr], { type: mime });
+          };
+          const extFor = (m: string) =>
+            m.includes("png") ? "png" : m.includes("webp") ? "webp" : m.includes("gif") ? "gif" : "jpg";
+          const croppedBlob = dataUrlToBlob(rec.url);
+          const originalBlob = rec.original_url ? dataUrlToBlob(rec.original_url) : croppedBlob;
+          const baseId = crypto.randomUUID();
+          const folder = `${result.actor_id}/${slot}`;
+          const cPath = `${folder}/${baseId}.${extFor(croppedBlob.type)}`;
+          const oPath = `${folder}/${baseId}.original.${extFor(originalBlob.type)}`;
+          await supabase.storage.from("actor-media").upload(cPath, croppedBlob, { contentType: croppedBlob.type });
+          await supabase.storage.from("actor-media").upload(oPath, originalBlob, { contentType: originalBlob.type });
+          const cUrl = supabase.storage.from("actor-media").getPublicUrl(cPath).data.publicUrl;
+          const oUrl = supabase.storage.from("actor-media").getPublicUrl(oPath).data.publicUrl;
+          await supabase.from("actor_media").insert({
+            actor_id: result.actor_id,
+            type: slot,
+            url: cUrl,
+            original_url: oUrl,
+            crop_data: (rec.crop_data ?? null) as any,
+            source: rec.source ?? "upload",
+          });
+        } catch { /* non-fatal */ }
+      };
+      await persistPending("logo", pendingLogo);
+      await persistPending("hero", pendingHero);
+
       localStorage.removeItem(DRAFT_KEY);
       try {
         await draftDiscardRef.current?.();
@@ -506,6 +548,37 @@ const OnboardingPage = () => {
               <div className="space-y-2">
                 <Label>Region</Label>
                 <Input value={region} onChange={(e) => setRegion(e.target.value)} />
+              </div>
+            </div>
+
+            {/* P3: Media (logo + hero) — held in state until actor is created on submit */}
+            <div className="space-y-3 pt-2">
+              <Label className="text-xs uppercase tracking-wider text-foreground-muted">
+                Media (optional)
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setPendingMediaSlot("logo")}
+                  className="aspect-square rounded-md border border-dashed border-border hover:border-border-accent bg-surface flex items-center justify-center overflow-hidden"
+                >
+                  {pendingLogo ? (
+                    <img src={pendingLogo.url} alt="logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-foreground-muted">+ Logo</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingMediaSlot("hero")}
+                  className="aspect-video rounded-md border border-dashed border-border hover:border-border-accent bg-surface flex items-center justify-center overflow-hidden"
+                >
+                  {pendingHero ? (
+                    <img src={pendingHero.url} alt="hero" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-foreground-muted">+ Hero image</span>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -699,6 +772,21 @@ const OnboardingPage = () => {
           setResetConfirmOpen(false);
         }}
       />
+
+      {pendingMediaSlot && (
+        <MediaSlotEditor
+          open={!!pendingMediaSlot}
+          onOpenChange={(o) => !o && setPendingMediaSlot(null)}
+          actorId={null}
+          slotType={pendingMediaSlot}
+          defaultQuery={legalName}
+          onSave={(rec) => {
+            if (pendingMediaSlot === "logo") setPendingLogo(rec);
+            else if (pendingMediaSlot === "hero") setPendingHero(rec);
+            setPendingMediaSlot(null);
+          }}
+        />
+      )}
     </div>
   );
 };

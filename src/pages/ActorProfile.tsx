@@ -67,6 +67,8 @@ import { toast } from "sonner";
 import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
 import { ActorLogo, ActorHeroBanner, ProductGallery } from "@/components/actor-profile/ActorMedia";
+import { MediaSlotEditor, type MediaSlotType, type ActorMediaRecord } from "@/components/actor-media/MediaSlotEditor";
+import { ImagePlus, Trash2 as MediaTrash2 } from "lucide-react";
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
@@ -472,6 +474,52 @@ const ActorProfile = () => {
   const [savingDb, setSavingDb] = useState(false);
   // Part 2 / Prompt 2: registry refresh dialog for the DB-side edit toolbar.
   const [registryRefreshOpen, setRegistryRefreshOpen] = useState(false);
+  // P3: media slot editor state
+  const [mediaEditor, setMediaEditor] = useState<{ slot: MediaSlotType } | null>(null);
+  const openMediaEditor = (slot: MediaSlotType) => setMediaEditor({ slot });
+  const refreshMedia = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("actor_media")
+      .select("id, type, url")
+      .eq("actor_id", id);
+    if (data) setMedia(data as any);
+  };
+  const handleMediaSaved = async () => {
+    await refreshMedia();
+  };
+  const handleDeleteMedia = async (m: { id: string; url: string; original_url?: string | null }) => {
+    if (!id) return;
+    if (!window.confirm("Delete this image?")) return;
+    try {
+      const paths: string[] = [];
+      const extract = (u: string | null | undefined) => {
+        if (!u) return;
+        const i = u.indexOf("/actor-media/");
+        if (i >= 0) paths.push(u.substring(i + "/actor-media/".length));
+      };
+      extract(m.url);
+      extract(m.original_url ?? null);
+      if (paths.length) await supabase.storage.from("actor-media").remove(paths);
+      const { error } = await supabase.from("actor_media").delete().eq("id", m.id);
+      if (error) throw error;
+      try {
+        await (supabase as any).rpc("fn_audit_log_event", {
+          p_event_type: "actor_media_deleted",
+          p_target_table: "actor_media",
+          p_target_record_id: m.id,
+          p_actor_id: id,
+          p_programme_id: null,
+          p_changes: null,
+          p_reason: null,
+        });
+      } catch { /* non-fatal */ }
+      await refreshMedia();
+      toast.success("Image deleted.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete image.");
+    }
+  };
 
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
@@ -599,7 +647,7 @@ const ActorProfile = () => {
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
-            supabase.from("actor_media").select("id, type, url").eq("actor_id", id),
+            supabase.from("actor_media").select("id, type, url, original_url").eq("actor_id", id),
             supabase.from("actor_capacity_attributes").select("id, attribute_type, value_text, value_min, value_max, unit, evidence").eq("actor_id", id),
           ]);
 
@@ -1092,20 +1140,67 @@ const ActorProfile = () => {
 
 
         {source === "database" && (() => {
-          const hero = media.find((m) => m.type === "hero");
-          return hero ? <ActorHeroBanner url={hero.url} alt={`${name} hero`} /> : null;
+          const hero = media.find((m) => m.type === "hero") as any;
+          if (hero) {
+            return (
+              <div className="relative group">
+                <ActorHeroBanner url={hero.url} alt={`${name} hero`} />
+                {editingDbIdentity && (
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <Button size="sm" variant="secondary" onClick={() => openMediaEditor("hero")}>
+                      <ImagePlus className="w-3.5 h-3.5 mr-1" /> Replace
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteMedia(hero)}>
+                      <MediaTrash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return editingDbIdentity ? (
+            <button
+              type="button"
+              onClick={() => openMediaEditor("hero")}
+              className="w-full h-[120px] mb-4 rounded-lg border border-dashed border-border hover:border-border-accent bg-surface text-foreground-muted hover:text-foreground flex items-center justify-center gap-2 transition-colors"
+            >
+              <ImagePlus className="w-4 h-4" />
+              <span className="text-sm">Add hero image</span>
+            </button>
+          ) : null;
         })()}
 
         {/* Header card */}
         <div className="bg-surface border border-border rounded-lg p-6 mb-2">
           <div className="flex items-start justify-between gap-4 mb-3">
             <div className="flex items-start gap-4 min-w-0">
-              {source === "database" && (
-                <ActorLogo
-                  name={name}
-                  url={media.find((m) => m.type === "logo")?.url ?? null}
-                />
-              )}
+              {source === "database" && (() => {
+                const logo = media.find((m) => m.type === "logo") as any;
+                const inner = <ActorLogo name={name} url={logo?.url ?? null} />;
+                if (!editingDbIdentity) return inner;
+                return (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => openMediaEditor("logo")}
+                      className="block rounded-md ring-2 ring-transparent hover:ring-accent-teal/60 transition"
+                      title="Change logo"
+                    >
+                      {inner}
+                    </button>
+                    {logo && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMedia(logo)}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                        title="Delete logo"
+                      >
+                        <MediaTrash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <h1 className="text-2xl font-semibold text-foreground tracking-tight">
                 {name}
               </h1>
@@ -1529,10 +1624,34 @@ const ActorProfile = () => {
                 ) : null;
               })()}
               {source === "database" && key === "products" && (
-                <ProductGallery
-                  images={media.filter((m) => m.type === "product")}
-                  actorName={name}
-                />
+                <div>
+                  <ProductGallery
+                    images={media.filter((m) => m.type === "product")}
+                    actorName={name}
+                  />
+                  {editingDbIdentity && (
+                    <div className="mb-3 space-y-2">
+                      {media
+                        .filter((m) => m.type === "product")
+                        .map((pm: any) => (
+                          <div key={pm.id} className="flex items-center gap-2 text-xs">
+                            <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
+                              <MediaTrash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openMediaEditor("product")}
+                      >
+                        <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                        Add product image
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
               {items.length > 0 ? (
                 isPersonal ? (
@@ -2222,6 +2341,20 @@ const ActorProfile = () => {
               if (field === "actor_website") return prev;
               return { ...prev, [field]: value };
             });
+          }}
+        />
+      )}
+
+      {source === "database" && id && mediaEditor && (
+        <MediaSlotEditor
+          open={!!mediaEditor}
+          onOpenChange={(o) => !o && setMediaEditor(null)}
+          actorId={id}
+          slotType={mediaEditor.slot}
+          defaultQuery={name}
+          onSave={() => {
+            setMediaEditor(null);
+            void handleMediaSaved();
           }}
         />
       )}
