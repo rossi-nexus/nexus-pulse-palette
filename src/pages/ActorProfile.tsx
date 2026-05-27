@@ -647,7 +647,7 @@ const ActorProfile = () => {
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
-            supabase.from("actor_media").select("id, type, url").eq("actor_id", id),
+            supabase.from("actor_media").select("id, type, url, original_url").eq("actor_id", id),
             supabase.from("actor_capacity_attributes").select("id, attribute_type, value_text, value_min, value_max, unit, evidence").eq("actor_id", id),
           ]);
 
