@@ -385,8 +385,52 @@ const OntologyQueuePage = () => {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Sticky bulk action bar */}
+            {selected.size > 0 && (
+              <div className="sticky top-0 z-10 bg-elevated border border-primary/40 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2 shadow-md">
+                <span className="text-sm text-foreground font-medium">{selected.size} selected</span>
+                <div className="flex-1" />
+                <Button size="sm" disabled={bulkBusy} onClick={() => runBulk("approve")}>
+                  {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approve selected"}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={promptReasonAndReject}>
+                  Reject selected
+                </Button>
+                <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={startBulkMerge}>
+                  Merge selected (with duplicate scan)
+                </Button>
+                <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 px-1 pb-1">
+              <button
+                onClick={toggleAllVisible}
+                className="text-foreground-muted hover:text-foreground inline-flex items-center gap-1 text-xs"
+              >
+                {pageItems.length > 0 && pageItems.every((p) => selected.has(p.id)) ? (
+                  <CheckSquare className="w-3.5 h-3.5" />
+                ) : (
+                  <Square className="w-3.5 h-3.5" />
+                )}
+                Select all visible
+              </button>
+            </div>
+
             {pageItems.map((it) => (
-              <ProposedEntryRowCard key={it.id} entry={it} onDecision={refresh} />
+              <div key={it.id} className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.has(it.id)}
+                  onChange={() => toggleRow(it.id)}
+                  className="mt-3 accent-primary"
+                />
+                <div className="flex-1">
+                  <ProposedEntryRowCard entry={it} onDecision={refresh} />
+                </div>
+              </div>
             ))}
             {totalPages > 1 ? (
               <div className="flex items-center justify-between pt-3 text-xs text-foreground-muted">
@@ -407,6 +451,23 @@ const OntologyQueuePage = () => {
           </div>
         )}
       </div>
+
+      {mergeQueue.length > 0 && mergeQueue[mergeIdx] && (
+        <OntologyDuplicateComparison
+          open
+          onOpenChange={(o) => !o && setMergeQueue([])}
+          incoming={{
+            entry_id: mergeQueue[mergeIdx].id,
+            raw_name: mergeQueue[mergeIdx].raw_name,
+            description: mergeQueue[mergeIdx].description,
+          }}
+          candidates={mergeCandMap.get(mergeQueue[mergeIdx].id) ?? []}
+          index={mergeIdx + 1}
+          total={mergeQueue.length}
+          busy={bulkBusy}
+          onResolve={resolveOntMerge}
+        />
+      )}
     </div>
   );
 };
