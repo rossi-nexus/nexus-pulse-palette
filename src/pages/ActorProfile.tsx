@@ -1114,7 +1114,7 @@ const ActorProfile = () => {
         {/* Archived/merged banner */}
         {source === "database" && dbActor?.verification_status === "merged_into_other" && (
           <div className="mb-4 bg-warning/10 border border-warning/30 rounded-md p-4 flex items-start gap-3">
-            <div className="text-sm">
+            <div className="text-sm flex-1">
               <div className="font-medium text-foreground mb-1">This actor has been merged</div>
               <div className="text-foreground-secondary">
                 It was archived
@@ -1135,6 +1135,14 @@ const ActorProfile = () => {
                 )}
               </div>
             </div>
+            {isAdmin && (
+              <button
+                onClick={() => setDeleteArchivedOpen(true)}
+                className="text-xs px-3 py-1.5 rounded border border-destructive/40 text-destructive hover:bg-destructive/10 whitespace-nowrap"
+              >
+                Delete permanently
+              </button>
+            )}
           </div>
         )}
 
