@@ -2200,8 +2200,33 @@ const ActorProfile = () => {
           }}
         />
       )}
+
+      {/* Part 2 / Prompt 2: registry refresh — feeds DB-side edit draft, no auto-write. */}
+      {source === "database" && dbActor && dbDraft && (
+        <RegistryRefreshDialog
+          open={registryRefreshOpen}
+          onOpenChange={setRegistryRefreshOpen}
+          current={{
+            legal_name: dbDraft.legal_name || null,
+            org_number: dbDraft.org_number || null,
+            street_address: dbDraft.street_address || null,
+            city: dbDraft.city || null,
+            region: dbDraft.region || null,
+            country: dbDraft.country || null,
+            actor_website: null,
+          }}
+          onApply={(field, value) => {
+            setDbDraft((prev) => {
+              if (!prev) return prev;
+              if (field === "actor_website") return prev;
+              return { ...prev, [field]: value };
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
+
 
 export default ActorProfile;
