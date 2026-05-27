@@ -474,6 +474,52 @@ const ActorProfile = () => {
   const [savingDb, setSavingDb] = useState(false);
   // Part 2 / Prompt 2: registry refresh dialog for the DB-side edit toolbar.
   const [registryRefreshOpen, setRegistryRefreshOpen] = useState(false);
+  // P3: media slot editor state
+  const [mediaEditor, setMediaEditor] = useState<{ slot: MediaSlotType } | null>(null);
+  const openMediaEditor = (slot: MediaSlotType) => setMediaEditor({ slot });
+  const refreshMedia = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("actor_media")
+      .select("id, type, url")
+      .eq("actor_id", id);
+    if (data) setMedia(data as any);
+  };
+  const handleMediaSaved = async () => {
+    await refreshMedia();
+  };
+  const handleDeleteMedia = async (m: { id: string; url: string; original_url?: string | null }) => {
+    if (!id) return;
+    if (!window.confirm("Delete this image?")) return;
+    try {
+      const paths: string[] = [];
+      const extract = (u: string | null | undefined) => {
+        if (!u) return;
+        const i = u.indexOf("/actor-media/");
+        if (i >= 0) paths.push(u.substring(i + "/actor-media/".length));
+      };
+      extract(m.url);
+      extract(m.original_url ?? null);
+      if (paths.length) await supabase.storage.from("actor-media").remove(paths);
+      const { error } = await supabase.from("actor_media").delete().eq("id", m.id);
+      if (error) throw error;
+      try {
+        await (supabase as any).rpc("fn_audit_log_event", {
+          p_event_type: "actor_media_deleted",
+          p_target_table: "actor_media",
+          p_target_record_id: m.id,
+          p_actor_id: id,
+          p_programme_id: null,
+          p_changes: null,
+          p_reason: null,
+        });
+      } catch { /* non-fatal */ }
+      await refreshMedia();
+      toast.success("Image deleted.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete image.");
+    }
+  };
 
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
