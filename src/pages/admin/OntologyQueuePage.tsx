@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, HelpCircle, Filter as FilterIcon } from "lucide-react";
+import { Loader2, HelpCircle, Filter as FilterIcon, CheckSquare, Square } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useOntologyQueue, type ProposedEntryRow } from "@/hooks/useOntologyQueue";
 import ProposedEntryRowCard from "@/components/admin/ProposedEntryRow";
+import { useDuplicateScanner } from "@/hooks/useDuplicateScanner";
+import { OntologyDuplicateComparison, type OntologyComparisonResolution } from "@/components/verification/DuplicateComparisonView";
 
 const HEADLINES = ["capability", "competence", "domain", "product_type", "service_type"] as const;
 const AGES: Array<{ key: string; label: string; ms: number | null }> = [
