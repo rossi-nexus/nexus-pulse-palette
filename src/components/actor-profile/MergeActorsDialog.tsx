@@ -53,6 +53,11 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
   const [picked, setPicked] = useState<Candidate | null>(null);
   const [reason, setReason] = useState("");
   const [merging, setMerging] = useState(false);
+  // Part 2 / Prompt 2: live registry snapshots displayed under each side once
+  // the consultant clicks "Refresh both from registry". Informational only.
+  const [registryBusy, setRegistryBusy] = useState(false);
+  const [survivorFresh, setSurvivorFresh] = useState<RegistrySnapshot | null>(null);
+  const [pickedFresh, setPickedFresh] = useState<RegistrySnapshot | null>(null);
 
   // Reset on open
   useEffect(() => {
