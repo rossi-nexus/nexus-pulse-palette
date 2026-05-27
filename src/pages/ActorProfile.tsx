@@ -469,6 +469,8 @@ const ActorProfile = () => {
   const [editingDbIdentity, setEditingDbIdentity] = useState(false);
   const [dbDraft, setDbDraft] = useState<DbIdentityDraft | null>(null);
   const [savingDb, setSavingDb] = useState(false);
+  // Part 2 / Prompt 2: registry refresh dialog for the DB-side edit toolbar.
+  const [registryRefreshOpen, setRegistryRefreshOpen] = useState(false);
 
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
