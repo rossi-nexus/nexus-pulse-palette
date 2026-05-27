@@ -38,8 +38,15 @@ const OntologyQueuePage = () => {
   const [actionFilter, setActionFilter] = useState<string>("");
   const [sort, setSort] = useState<"newest" | "oldest" | "parent" | "consultant">("newest");
   const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [mergeQueue, setMergeQueue] = useState<ProposedEntryRow[]>([]);
+  const [mergeIdx, setMergeIdx] = useState(0);
+  const [mergeCandMap, setMergeCandMap] = useState<Map<string, Awaited<ReturnType<ReturnType<typeof useDuplicateScanner>["scanOntology"]>> extends Map<string, infer V> ? V : never>>(new Map());
+  const { scanOntology } = useDuplicateScanner();
 
   useEffect(() => setPage(0), [headlineFilter, parentCatFilter, consultantFilter, actorFilter, ageFilter, actionFilter, sort]);
+  useEffect(() => setSelected(new Set()), [headlineFilter, parentCatFilter, consultantFilter, actorFilter, ageFilter, actionFilter]);
 
   const consultantOptions = useMemo(() => {
     const map = new Map<string, string>();
