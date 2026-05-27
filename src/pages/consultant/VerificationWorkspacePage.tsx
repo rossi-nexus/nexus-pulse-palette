@@ -29,6 +29,188 @@ const VerificationWorkspacePage = () => {
   const { hasAccess: isAdmin } = useAdminAccess();
   const [active, setActive] = useState<PendingSuggestion | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [conflictQueue, setConflictQueue] = useState<PendingSuggestion[]>([]);
+  const [conflictIdx, setConflictIdx] = useState(0);
+  const [candMap, setCandMap] = useState<Map<string, ActorDupCandidate[]>>(new Map());
+  const { scanActors } = useDuplicateScanner();
+
+  const toggleRow = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  const toggleAll = () => {
+    const allChosen = items.length > 0 && items.every((i) => selected.has(i.queue_id));
+    setSelected(allChosen ? new Set() : new Set(items.map((i) => i.queue_id)));
+  };
+  const selectedRows = useMemo(
+    () => items.filter((i) => selected.has(i.queue_id)),
+    [items, selected],
+  );
+
+  const approveOne = async (
+    row: PendingSuggestion,
+    sharedNote: string | null,
+  ): Promise<string | null> => {
+    const { error } = await supabase.rpc("fn_approve_and_verify", {
+      p_queue_id: row.queue_id,
+      p_evidence: [] as unknown as never,
+      p_decays_at: new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString(),
+      p_confidence: "medium",
+      p_notes: sharedNote || null,
+      p_programme_id: row.programme_id ?? undefined,
+    } as never);
+    return error ? error.message : null;
+  };
+
+  const startBulkVerify = async () => {
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const dupMap = await scanActors(
+        selectedRows.map((r) => ({
+          id: r.queue_id,
+          legal_name: r.actor_name,
+          org_number: r.org_number,
+          country: r.country,
+        })),
+      );
+      const conflicted = selectedRows.filter((r) => dupMap.has(r.queue_id));
+      const clean = selectedRows.filter((r) => !dupMap.has(r.queue_id));
+
+      let sharedNote: string | null = null;
+      if (clean.length > 0) {
+        sharedNote = window.prompt(
+          `Verify ${clean.length} clean row${clean.length === 1 ? "" : "s"} with default settings (medium confidence, 90-day decay). Optional shared note:`,
+          "",
+        );
+        if (sharedNote === null) {
+          setBulkBusy(false);
+          return;
+        }
+      }
+
+      let ok = 0;
+      const failures: Array<{ name: string; error: string }> = [];
+      for (const row of clean) {
+        const err = await approveOne(row, sharedNote);
+        if (err) {
+          failures.push({ name: row.actor_name, error: err });
+          break;
+        }
+        ok++;
+      }
+      refresh();
+      if (failures.length) {
+        toast.error(
+          `Verified ${ok}/${clean.length} — stopped at "${failures[0].name}": ${failures[0].error}`,
+        );
+        setBulkBusy(false);
+        return;
+      }
+      if (ok > 0) toast.success(`Verified ${ok} actor${ok === 1 ? "" : "s"} cleanly`);
+
+      if (conflicted.length > 0) {
+        toast.warning(`${conflicted.length} potential duplicate${conflicted.length === 1 ? "" : "s"} — review each below.`);
+        setCandMap(dupMap);
+        setConflictQueue(conflicted);
+        setConflictIdx(0);
+      } else {
+        setSelected(new Set());
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkReject = async () => {
+    if (selectedRows.length === 0) return;
+    const reason = window.prompt(
+      `Reject ${selectedRows.length} suggestion${selectedRows.length === 1 ? "" : "s"}. Shared reason (applied to all):`,
+      "",
+    );
+    if (reason === null) return;
+    setBulkBusy(true);
+    let ok = 0;
+    const failures: Array<{ name: string; error: string }> = [];
+    for (const row of selectedRows) {
+      const { error } = await supabase.rpc("fn_reject_suggestion", {
+        p_queue_id: row.queue_id,
+        p_reason: reason || null,
+        p_programme_id: row.programme_id ?? undefined,
+      } as never);
+      if (error) {
+        failures.push({ name: row.actor_name, error: error.message });
+        break;
+      }
+      ok++;
+    }
+    setBulkBusy(false);
+    setSelected(new Set());
+    refresh();
+    if (failures.length) {
+      toast.error(`Rejected ${ok}/${selectedRows.length} — stopped at "${failures[0].name}": ${failures[0].error}`);
+    } else {
+      toast.success(`Rejected ${ok} suggestion${ok === 1 ? "" : "s"}`);
+    }
+  };
+
+  const resolveConflict = async (r: ActorComparisonResolution) => {
+    const current = conflictQueue[conflictIdx];
+    if (!current) return;
+    setBulkBusy(true);
+    try {
+      if (r.kind === "new" || r.kind === "merge") {
+        const err = await approveOne(current, null);
+        if (err) {
+          toast.error(`Verify failed for "${current.actor_name}": ${err}`);
+          setConflictQueue([]);
+          refresh();
+          return;
+        }
+        if (r.kind === "merge") {
+          // After verify, the queue row's linked actor exists; merge it into the chosen survivor.
+          // We don't have the new actor id surfaced here, so we re-query via legal_name+org_number.
+          const { data: newActor } = await supabase
+            .from("actors")
+            .select("id")
+            .eq("legal_name", current.actor_name)
+            .is("merged_into_id", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (newActor?.id && newActor.id !== r.survivorActorId) {
+            const { error: mErr } = await supabase.rpc("fn_merge_actors", {
+              p_survivor_id: r.survivorActorId,
+              p_source_id: newActor.id,
+              p_reason: "Bulk-verify duplicate resolution",
+            } as never);
+            if (mErr) {
+              toast.error(`Merge failed for "${current.actor_name}": ${mErr.message}`);
+            } else {
+              toast.success(`Merged "${current.actor_name}" into selected survivor`);
+            }
+          }
+        } else {
+          toast.success(`Verified "${current.actor_name}" as new actor`);
+        }
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+    const next = conflictIdx + 1;
+    if (next >= conflictQueue.length) {
+      setConflictQueue([]);
+      setConflictIdx(0);
+      setSelected(new Set());
+      refresh();
+    } else {
+      setConflictIdx(next);
+    }
+  };
 
   const handleApprove = async (p: VerificationSubmitPayload) => {
     if (!active) return;
