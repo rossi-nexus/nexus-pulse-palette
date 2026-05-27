@@ -1140,8 +1140,34 @@ const ActorProfile = () => {
 
 
         {source === "database" && (() => {
-          const hero = media.find((m) => m.type === "hero");
-          return hero ? <ActorHeroBanner url={hero.url} alt={`${name} hero`} /> : null;
+          const hero = media.find((m) => m.type === "hero") as any;
+          if (hero) {
+            return (
+              <div className="relative group">
+                <ActorHeroBanner url={hero.url} alt={`${name} hero`} />
+                {editingDbIdentity && (
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <Button size="sm" variant="secondary" onClick={() => openMediaEditor("hero")}>
+                      <ImagePlus className="w-3.5 h-3.5 mr-1" /> Replace
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteMedia(hero)}>
+                      <MediaTrash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return editingDbIdentity ? (
+            <button
+              type="button"
+              onClick={() => openMediaEditor("hero")}
+              className="w-full h-[120px] mb-4 rounded-lg border border-dashed border-border hover:border-border-accent bg-surface text-foreground-muted hover:text-foreground flex items-center justify-center gap-2 transition-colors"
+            >
+              <ImagePlus className="w-4 h-4" />
+              <span className="text-sm">Add hero image</span>
+            </button>
+          ) : null;
         })()}
 
         {/* Header card */}
