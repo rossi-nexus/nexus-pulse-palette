@@ -772,6 +772,21 @@ const OnboardingPage = () => {
           setResetConfirmOpen(false);
         }}
       />
+
+      {pendingMediaSlot && (
+        <MediaSlotEditor
+          open={!!pendingMediaSlot}
+          onOpenChange={(o) => !o && setPendingMediaSlot(null)}
+          actorId={null}
+          slotType={pendingMediaSlot}
+          defaultQuery={legalName}
+          onSave={(rec) => {
+            if (pendingMediaSlot === "logo") setPendingLogo(rec);
+            else if (pendingMediaSlot === "hero") setPendingHero(rec);
+            setPendingMediaSlot(null);
+          }}
+        />
+      )}
     </div>
   );
 };
