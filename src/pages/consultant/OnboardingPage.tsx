@@ -129,6 +129,10 @@ const OnboardingPage = () => {
   const [notes, setNotes] = useState("");
   const [programmeId, setProgrammeId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  // P3: pending media (held in component state until actor is created)
+  const [pendingLogo, setPendingLogo] = useState<ActorMediaRecord | null>(null);
+  const [pendingHero, setPendingHero] = useState<ActorMediaRecord | null>(null);
+  const [pendingMediaSlot, setPendingMediaSlot] = useState<MediaSlotType | null>(null);
 
   const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
