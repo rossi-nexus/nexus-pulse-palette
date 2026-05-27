@@ -319,6 +319,7 @@ function IdentityEditForm({
       <div>
         <FieldLabel>Street address</FieldLabel>
         <Input
+          id="edit-street-address"
           value={draft.street_address}
           onChange={(e) => update("street_address", e.target.value)}
           placeholder="Storgata 1"
