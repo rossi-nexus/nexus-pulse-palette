@@ -2024,6 +2024,7 @@ const ActorProfile = () => {
                 onReverify={isAdmin ? () => { setEnrichMode(false); setReverifyOpen(true); } : undefined}
                 onEnrich={isAdmin ? () => { setEnrichMode(true); setReverifyOpen(true); } : undefined}
                 onMerge={isAdmin ? () => setMergeOpen(true) : undefined}
+                onRegistryRefresh={isAdmin && dbDraft ? () => setRegistryRefreshOpen(true) : undefined}
               />
             )}
           </div>
