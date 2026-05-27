@@ -420,6 +420,9 @@ const ActorProfile = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [deleteArchivedOpen, setDeleteArchivedOpen] = useState(false);
+  const [deleteArchivedReason, setDeleteArchivedReason] = useState("");
+  const [deleteArchivedBusy, setDeleteArchivedBusy] = useState(false);
   const [reverifyBusy, setReverifyBusy] = useState(false);
   const [enrichMode, setEnrichMode] = useState(false);
   const [outcomeOpen, setOutcomeOpen] = useState(false);
