@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
 
-type TabKey = "collection" | "database";
+type TabKey = "collection" | "database" | "archived";
 
 interface SessionInfo {
   id: string;
