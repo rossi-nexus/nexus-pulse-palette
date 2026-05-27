@@ -447,7 +447,9 @@ const ActorsView = () => {
         )}
 
         {/* Content */}
-        {loading ? (
+        {tab === "archived" ? (
+          <ArchivedActorsTab />
+        ) : loading ? (
           <LoadingSkeletons />
         ) : tab === "collection" ? (
           filteredCollection.length === 0 ? (
