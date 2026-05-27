@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, HelpCircle, Filter as FilterIcon } from "lucide-react";
+import { Loader2, HelpCircle, Filter as FilterIcon, CheckSquare, Square } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useOntologyQueue, type ProposedEntryRow } from "@/hooks/useOntologyQueue";
 import ProposedEntryRowCard from "@/components/admin/ProposedEntryRow";
+import { useDuplicateScanner, type OntologyDupCandidate } from "@/hooks/useDuplicateScanner";
+import { OntologyDuplicateComparison, type OntologyComparisonResolution } from "@/components/verification/DuplicateComparisonView";
 
 const HEADLINES = ["capability", "competence", "domain", "product_type", "service_type"] as const;
 const AGES: Array<{ key: string; label: string; ms: number | null }> = [
@@ -34,8 +38,15 @@ const OntologyQueuePage = () => {
   const [actionFilter, setActionFilter] = useState<string>("");
   const [sort, setSort] = useState<"newest" | "oldest" | "parent" | "consultant">("newest");
   const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [mergeQueue, setMergeQueue] = useState<ProposedEntryRow[]>([]);
+  const [mergeIdx, setMergeIdx] = useState(0);
+  const [mergeCandMap, setMergeCandMap] = useState<Map<string, OntologyDupCandidate[]>>(new Map());
+  const { scanOntology } = useDuplicateScanner();
 
   useEffect(() => setPage(0), [headlineFilter, parentCatFilter, consultantFilter, actorFilter, ageFilter, actionFilter, sort]);
+  useEffect(() => setSelected(new Set()), [headlineFilter, parentCatFilter, consultantFilter, actorFilter, ageFilter, actionFilter]);
 
   const consultantOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -101,6 +112,116 @@ const OntologyQueuePage = () => {
   };
 
   const anyFilter = headlineFilter.size || parentCatFilter.size || consultantFilter || actorFilter || ageFilter !== "all" || actionFilter;
+
+  // ---- Bulk actions ----
+  const toggleRow = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  const toggleAllVisible = () => {
+    const visibleIds = pageItems.map((p) => p.id);
+    const allChosen = visibleIds.every((id) => selected.has(id));
+    setSelected((s) => {
+      const n = new Set(s);
+      if (allChosen) visibleIds.forEach((id) => n.delete(id));
+      else visibleIds.forEach((id) => n.add(id));
+      return n;
+    });
+  };
+
+  const selectedRows = useMemo(() => items.filter((i) => selected.has(i.id)), [items, selected]);
+
+  const runBulk = async (action: "approve" | "reject", reason?: string) => {
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    let ok = 0;
+    const failures: Array<{ name: string; error: string }> = [];
+    for (const row of selectedRows) {
+      const { error } = await (supabase.rpc as any)("fn_admin_ontology_decision", {
+        p_entry_id: row.id,
+        p_action: action,
+        p_reason: reason || null,
+      });
+      if (error) {
+        failures.push({ name: row.raw_name, error: error.message });
+        break; // stop on first error per spec
+      } else ok++;
+    }
+    setBulkBusy(false);
+    setSelected(new Set());
+    refresh();
+    if (failures.length) {
+      toast.error(`${action === "approve" ? "Approved" : "Rejected"} ${ok}/${selectedRows.length} — stopped at "${failures[0].name}": ${failures[0].error}`);
+    } else {
+      toast.success(`${action === "approve" ? "Approved" : "Rejected"} ${ok} entries`);
+    }
+  };
+
+  const startBulkMerge = async () => {
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const candMap = await scanOntology(
+        selectedRows.map((r) => ({ id: r.id, raw_name: r.raw_name, category_id: r.category_id })),
+      );
+      const conflicted = selectedRows.filter((r) => candMap.has(r.id));
+      const clean = selectedRows.filter((r) => !candMap.has(r.id));
+      if (clean.length > 0) {
+        toast.info(`${clean.length} of ${selectedRows.length} have no duplicates — use Approve instead for those.`);
+      }
+      if (conflicted.length === 0) {
+        toast.warning("No duplicates found in selection.");
+        return;
+      }
+      setMergeCandMap(candMap);
+      setMergeQueue(conflicted);
+      setMergeIdx(0);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const resolveOntMerge = async (r: OntologyComparisonResolution) => {
+    const current = mergeQueue[mergeIdx];
+    if (!current) return;
+    if (r.kind === "merge") {
+      setBulkBusy(true);
+      const { error } = await (supabase.rpc as any)("fn_admin_ontology_decision", {
+        p_entry_id: current.id,
+        p_action: "merge",
+        p_target_entry_id: r.targetEntryId,
+      });
+      setBulkBusy(false);
+      if (error) {
+        toast.error(`Merge failed for "${current.raw_name}": ${error.message}`);
+        setMergeQueue([]);
+        refresh();
+        return;
+      }
+      toast.success(`Merged "${current.raw_name}"`);
+    }
+    const next = mergeIdx + 1;
+    if (next >= mergeQueue.length) {
+      setMergeQueue([]);
+      setMergeIdx(0);
+      setSelected(new Set());
+      refresh();
+    } else {
+      setMergeIdx(next);
+    }
+  };
+
+  const promptReasonAndReject = () => {
+    const reason = window.prompt(
+      `Reject ${selectedRows.length} entries. Shared reason (applied to all):`,
+      "",
+    );
+    if (reason === null) return;
+    runBulk("reject", reason);
+  };
+
 
   return (
     <div className="h-full overflow-y-auto">
@@ -264,8 +385,52 @@ const OntologyQueuePage = () => {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Sticky bulk action bar */}
+            {selected.size > 0 && (
+              <div className="sticky top-0 z-10 bg-elevated border border-primary/40 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2 shadow-md">
+                <span className="text-sm text-foreground font-medium">{selected.size} selected</span>
+                <div className="flex-1" />
+                <Button size="sm" disabled={bulkBusy} onClick={() => runBulk("approve")}>
+                  {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approve selected"}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={promptReasonAndReject}>
+                  Reject selected
+                </Button>
+                <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={startBulkMerge}>
+                  Merge selected (with duplicate scan)
+                </Button>
+                <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 px-1 pb-1">
+              <button
+                onClick={toggleAllVisible}
+                className="text-foreground-muted hover:text-foreground inline-flex items-center gap-1 text-xs"
+              >
+                {pageItems.length > 0 && pageItems.every((p) => selected.has(p.id)) ? (
+                  <CheckSquare className="w-3.5 h-3.5" />
+                ) : (
+                  <Square className="w-3.5 h-3.5" />
+                )}
+                Select all visible
+              </button>
+            </div>
+
             {pageItems.map((it) => (
-              <ProposedEntryRowCard key={it.id} entry={it} onDecision={refresh} />
+              <div key={it.id} className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.has(it.id)}
+                  onChange={() => toggleRow(it.id)}
+                  className="mt-3 accent-primary"
+                />
+                <div className="flex-1">
+                  <ProposedEntryRowCard entry={it} onDecision={refresh} />
+                </div>
+              </div>
             ))}
             {totalPages > 1 ? (
               <div className="flex items-center justify-between pt-3 text-xs text-foreground-muted">
@@ -286,6 +451,23 @@ const OntologyQueuePage = () => {
           </div>
         )}
       </div>
+
+      {mergeQueue.length > 0 && mergeQueue[mergeIdx] && (
+        <OntologyDuplicateComparison
+          open
+          onOpenChange={(o) => !o && setMergeQueue([])}
+          incoming={{
+            entry_id: mergeQueue[mergeIdx].id,
+            raw_name: mergeQueue[mergeIdx].raw_name,
+            description: mergeQueue[mergeIdx].description,
+          }}
+          candidates={mergeCandMap.get(mergeQueue[mergeIdx].id) ?? []}
+          index={mergeIdx + 1}
+          total={mergeQueue.length}
+          busy={bulkBusy}
+          onResolve={resolveOntMerge}
+        />
+      )}
     </div>
   );
 };
