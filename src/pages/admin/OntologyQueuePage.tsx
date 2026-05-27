@@ -42,7 +42,7 @@ const OntologyQueuePage = () => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [mergeQueue, setMergeQueue] = useState<ProposedEntryRow[]>([]);
   const [mergeIdx, setMergeIdx] = useState(0);
-  const [mergeCandMap, setMergeCandMap] = useState<Map<string, Awaited<ReturnType<ReturnType<typeof useDuplicateScanner>["scanOntology"]>> extends Map<string, infer V> ? V : never>>(new Map());
+  const [mergeCandMap, setMergeCandMap] = useState<Map<string, OntologyDupCandidate[]>>(new Map());
   const { scanOntology } = useDuplicateScanner();
 
   useEffect(() => setPage(0), [headlineFilter, parentCatFilter, consultantFilter, actorFilter, ageFilter, actionFilter, sort]);
