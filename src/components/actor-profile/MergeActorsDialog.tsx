@@ -2,7 +2,7 @@
 // Survivor = current actor (fixed). Source = picked from search results.
 // Confirms then calls fn_merge_actors RPC.
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, GitMerge, AlertTriangle } from "lucide-react";
+import { Loader2, Search, GitMerge, AlertTriangle, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { similarity } from "@/lib/fuzzyMatch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getRegistryByCountry } from "@/config/registries";
 
 interface Candidate {
   id: string;
@@ -38,6 +39,15 @@ interface Survivor {
   city: string | null;
 }
 
+interface RegistrySnapshot {
+  legal_name: string | null;
+  org_number: string | null;
+  street_address: string | null;
+  city: string | null;
+  country: string | null;
+  source_url: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,6 +62,11 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
   const [picked, setPicked] = useState<Candidate | null>(null);
   const [reason, setReason] = useState("");
   const [merging, setMerging] = useState(false);
+  // Part 2 / Prompt 2: live registry snapshots displayed under each side once
+  // the consultant clicks "Refresh both from registry". Informational only.
+  const [registryBusy, setRegistryBusy] = useState(false);
+  const [survivorFresh, setSurvivorFresh] = useState<RegistrySnapshot | null>(null);
+  const [pickedFresh, setPickedFresh] = useState<RegistrySnapshot | null>(null);
 
   // Reset on open
   useEffect(() => {
@@ -60,8 +75,72 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
       setPicked(null);
       setReason("");
       setResults([]);
+      setSurvivorFresh(null);
+      setPickedFresh(null);
     }
   }, [open, survivor.legal_name]);
+
+  // Clear stale picked-side snapshot whenever the consultant changes selection.
+  useEffect(() => {
+    setPickedFresh(null);
+  }, [picked?.id]);
+
+  const fetchRegistry = async (
+    legalName: string,
+    orgNumber: string | null,
+    country: string | null,
+  ): Promise<RegistrySnapshot | null> => {
+    const reg = getRegistryByCountry(country);
+    if (!reg) return null;
+    const body =
+      orgNumber && orgNumber.trim()
+        ? { mode: "org_number" as const, org_number: orgNumber.trim(), registry: reg.id }
+        : { mode: "name" as const, name: legalName, registry: reg.id };
+    const { data, error } = await supabase.functions.invoke("enrich-from-registry", { body });
+    if (error) throw new Error(error.message);
+    let p = data?.proposal as Record<string, unknown> | undefined;
+    if (!p && data?.mode === "candidates") {
+      const first = (data.candidates ?? [])[0];
+      if (!first) return null;
+      const second = await supabase.functions.invoke("enrich-from-registry", {
+        body: { mode: "org_number", org_number: first.org_number, registry: reg.id },
+      });
+      if (second.error) throw new Error(second.error.message);
+      p = second.data?.proposal as Record<string, unknown> | undefined;
+    }
+    if (!p) return null;
+    const s = (k: string) => (typeof p![k] === "string" ? (p![k] as string) : null);
+    return {
+      legal_name: s("actor_name"),
+      org_number: s("org_number_display") ?? s("org_number"),
+      street_address: s("street_address"),
+      city: s("city"),
+      country: s("country"),
+      source_url: (data?.source?.source_url as string | null) ?? null,
+    };
+  };
+
+  const refreshBoth = async () => {
+    if (!picked) return;
+    setRegistryBusy(true);
+    try {
+      const [s, p] = await Promise.all([
+        fetchRegistry(survivor.legal_name, survivor.org_number, survivor.country),
+        fetchRegistry(picked.legal_name, picked.org_number, picked.country),
+      ]);
+      setSurvivorFresh(s);
+      setPickedFresh(p);
+      if (!s && !p) {
+        toast.error("Neither actor's country maps to a supported registry.");
+      } else {
+        toast.success("Registry snapshots refreshed.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Registry refresh failed");
+    } finally {
+      setRegistryBusy(false);
+    }
+  };
 
   // Debounced search
   useEffect(() => {
@@ -209,6 +288,21 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
               </div>
             </div>
 
+            <div className="flex items-center justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={refreshBoth}
+                disabled={registryBusy}
+              >
+                {registryBusy ? (
+                  <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Refreshing…</>
+                ) : (
+                  <><Building2 className="w-3.5 h-3.5 mr-1.5" /> Refresh both from registry</>
+                )}
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="border border-border rounded-md p-3 bg-surface">
                 <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1">
@@ -218,6 +312,19 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
                 <div className="text-xs text-foreground-muted mt-0.5">
                   {[survivor.org_number, survivor.city, survivor.country].filter(Boolean).join(" · ")}
                 </div>
+                {survivorFresh && (
+                  <div className="mt-2 pt-2 border-t border-border/60 text-xs">
+                    <div className="text-[10px] uppercase tracking-wider text-accent-teal mb-0.5">
+                      Registry now
+                    </div>
+                    <div className="text-foreground">{survivorFresh.legal_name ?? "—"}</div>
+                    <div className="text-foreground-muted">
+                      {[survivorFresh.org_number, survivorFresh.city, survivorFresh.country]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="border border-border rounded-md p-3 bg-surface opacity-70">
                 <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1">
@@ -227,6 +334,19 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
                 <div className="text-xs text-foreground-muted mt-0.5">
                   {[picked.org_number, picked.city, picked.country].filter(Boolean).join(" · ")}
                 </div>
+                {pickedFresh && (
+                  <div className="mt-2 pt-2 border-t border-border/60 text-xs">
+                    <div className="text-[10px] uppercase tracking-wider text-accent-teal mb-0.5">
+                      Registry now
+                    </div>
+                    <div className="text-foreground">{pickedFresh.legal_name ?? "—"}</div>
+                    <div className="text-foreground-muted">
+                      {[pickedFresh.org_number, pickedFresh.city, pickedFresh.country]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

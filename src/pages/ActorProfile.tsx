@@ -70,6 +70,7 @@ import { ActorLogo, ActorHeroBanner, ProductGallery } from "@/components/actor-p
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
+import { RegistryRefreshDialog } from "@/components/actor-profile/RegistryRefreshDialog";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -469,6 +470,8 @@ const ActorProfile = () => {
   const [editingDbIdentity, setEditingDbIdentity] = useState(false);
   const [dbDraft, setDbDraft] = useState<DbIdentityDraft | null>(null);
   const [savingDb, setSavingDb] = useState(false);
+  // Part 2 / Prompt 2: registry refresh dialog for the DB-side edit toolbar.
+  const [registryRefreshOpen, setRegistryRefreshOpen] = useState(false);
 
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
@@ -2024,6 +2027,7 @@ const ActorProfile = () => {
                 onReverify={isAdmin ? () => { setEnrichMode(false); setReverifyOpen(true); } : undefined}
                 onEnrich={isAdmin ? () => { setEnrichMode(true); setReverifyOpen(true); } : undefined}
                 onMerge={isAdmin ? () => setMergeOpen(true) : undefined}
+                onRegistryRefresh={isAdmin && dbDraft ? () => setRegistryRefreshOpen(true) : undefined}
               />
             )}
           </div>
@@ -2197,8 +2201,33 @@ const ActorProfile = () => {
           }}
         />
       )}
+
+      {/* Part 2 / Prompt 2: registry refresh — feeds DB-side edit draft, no auto-write. */}
+      {source === "database" && dbActor && dbDraft && (
+        <RegistryRefreshDialog
+          open={registryRefreshOpen}
+          onOpenChange={setRegistryRefreshOpen}
+          current={{
+            legal_name: dbDraft.legal_name || null,
+            org_number: dbDraft.org_number || null,
+            street_address: dbDraft.street_address || null,
+            city: dbDraft.city || null,
+            region: dbDraft.region || null,
+            country: dbDraft.country || null,
+            actor_website: null,
+          }}
+          onApply={(field, value) => {
+            setDbDraft((prev) => {
+              if (!prev) return prev;
+              if (field === "actor_website") return prev;
+              return { ...prev, [field]: value };
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
+
 
 export default ActorProfile;
