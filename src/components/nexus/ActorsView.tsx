@@ -330,6 +330,11 @@ const ActorsView = () => {
           <TabButton active={tab === "database"} onClick={() => setTab("database")}>
             Database
           </TabButton>
+          {isAdmin && (
+            <TabButton active={tab === "archived"} onClick={() => setTab("archived")}>
+              Archived
+            </TabButton>
+          )}
           {/* Phase 6.5.5b: validation queue tab removed — superseded by /consultant/verification */}
         </div>
 
