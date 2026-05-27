@@ -1624,10 +1624,34 @@ const ActorProfile = () => {
                 ) : null;
               })()}
               {source === "database" && key === "products" && (
-                <ProductGallery
-                  images={media.filter((m) => m.type === "product")}
-                  actorName={name}
-                />
+                <div>
+                  <ProductGallery
+                    images={media.filter((m) => m.type === "product")}
+                    actorName={name}
+                  />
+                  {editingDbIdentity && (
+                    <div className="mb-3 space-y-2">
+                      {media
+                        .filter((m) => m.type === "product")
+                        .map((pm: any) => (
+                          <div key={pm.id} className="flex items-center gap-2 text-xs">
+                            <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
+                              <MediaTrash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openMediaEditor("product")}
+                      >
+                        <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                        Add product image
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
               {items.length > 0 ? (
                 isPersonal ? (
