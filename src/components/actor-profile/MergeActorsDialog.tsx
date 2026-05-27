@@ -75,8 +75,72 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
       setPicked(null);
       setReason("");
       setResults([]);
+      setSurvivorFresh(null);
+      setPickedFresh(null);
     }
   }, [open, survivor.legal_name]);
+
+  // Clear stale picked-side snapshot whenever the consultant changes selection.
+  useEffect(() => {
+    setPickedFresh(null);
+  }, [picked?.id]);
+
+  const fetchRegistry = async (
+    legalName: string,
+    orgNumber: string | null,
+    country: string | null,
+  ): Promise<RegistrySnapshot | null> => {
+    const reg = getRegistryByCountry(country);
+    if (!reg) return null;
+    const body =
+      orgNumber && orgNumber.trim()
+        ? { mode: "org_number" as const, org_number: orgNumber.trim(), registry: reg.id }
+        : { mode: "name" as const, name: legalName, registry: reg.id };
+    const { data, error } = await supabase.functions.invoke("enrich-from-registry", { body });
+    if (error) throw new Error(error.message);
+    let p = data?.proposal as Record<string, unknown> | undefined;
+    if (!p && data?.mode === "candidates") {
+      const first = (data.candidates ?? [])[0];
+      if (!first) return null;
+      const second = await supabase.functions.invoke("enrich-from-registry", {
+        body: { mode: "org_number", org_number: first.org_number, registry: reg.id },
+      });
+      if (second.error) throw new Error(second.error.message);
+      p = second.data?.proposal as Record<string, unknown> | undefined;
+    }
+    if (!p) return null;
+    const s = (k: string) => (typeof p![k] === "string" ? (p![k] as string) : null);
+    return {
+      legal_name: s("actor_name"),
+      org_number: s("org_number_display") ?? s("org_number"),
+      street_address: s("street_address"),
+      city: s("city"),
+      country: s("country"),
+      source_url: (data?.source?.source_url as string | null) ?? null,
+    };
+  };
+
+  const refreshBoth = async () => {
+    if (!picked) return;
+    setRegistryBusy(true);
+    try {
+      const [s, p] = await Promise.all([
+        fetchRegistry(survivor.legal_name, survivor.org_number, survivor.country),
+        fetchRegistry(picked.legal_name, picked.org_number, picked.country),
+      ]);
+      setSurvivorFresh(s);
+      setPickedFresh(p);
+      if (!s && !p) {
+        toast.error("Neither actor's country maps to a supported registry.");
+      } else {
+        toast.success("Registry snapshots refreshed.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Registry refresh failed");
+    } finally {
+      setRegistryBusy(false);
+    }
+  };
 
   // Debounced search
   useEffect(() => {
