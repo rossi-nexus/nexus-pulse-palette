@@ -288,6 +288,21 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
               </div>
             </div>
 
+            <div className="flex items-center justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={refreshBoth}
+                disabled={registryBusy}
+              >
+                {registryBusy ? (
+                  <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Refreshing…</>
+                ) : (
+                  <><Building2 className="w-3.5 h-3.5 mr-1.5" /> Refresh both from registry</>
+                )}
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="border border-border rounded-md p-3 bg-surface">
                 <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1">
@@ -297,6 +312,19 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
                 <div className="text-xs text-foreground-muted mt-0.5">
                   {[survivor.org_number, survivor.city, survivor.country].filter(Boolean).join(" · ")}
                 </div>
+                {survivorFresh && (
+                  <div className="mt-2 pt-2 border-t border-border/60 text-xs">
+                    <div className="text-[10px] uppercase tracking-wider text-accent-teal mb-0.5">
+                      Registry now
+                    </div>
+                    <div className="text-foreground">{survivorFresh.legal_name ?? "—"}</div>
+                    <div className="text-foreground-muted">
+                      {[survivorFresh.org_number, survivorFresh.city, survivorFresh.country]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="border border-border rounded-md p-3 bg-surface opacity-70">
                 <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1">
@@ -306,6 +334,19 @@ export function MergeActorsDialog({ open, onOpenChange, survivor, onMerged }: Pr
                 <div className="text-xs text-foreground-muted mt-0.5">
                   {[picked.org_number, picked.city, picked.country].filter(Boolean).join(" · ")}
                 </div>
+                {pickedFresh && (
+                  <div className="mt-2 pt-2 border-t border-border/60 text-xs">
+                    <div className="text-[10px] uppercase tracking-wider text-accent-teal mb-0.5">
+                      Registry now
+                    </div>
+                    <div className="text-foreground">{pickedFresh.legal_name ?? "—"}</div>
+                    <div className="text-foreground-muted">
+                      {[pickedFresh.org_number, pickedFresh.city, pickedFresh.country]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
