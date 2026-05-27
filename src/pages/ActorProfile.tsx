@@ -2332,6 +2332,53 @@ const ActorProfile = () => {
         />
       )}
 
+      {/* Part 2 / Prompt 5: permanently delete an archived (merged) actor. Admin-only. */}
+      {source === "database" && dbActor?.verification_status === "merged_into_other" && (
+        <Dialog open={deleteArchivedOpen} onOpenChange={setDeleteArchivedOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Permanently delete {dbActor.legal_name}?</DialogTitle>
+              <DialogDescription>
+                This cannot be undone. The merge audit history will be preserved.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={deleteArchivedReason}
+              onChange={(e) => setDeleteArchivedReason(e.target.value)}
+              placeholder="Reason (optional)…"
+              rows={3}
+            />
+            <DialogFooter>
+              <Button variant="ghost" disabled={deleteArchivedBusy} onClick={() => setDeleteArchivedOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteArchivedBusy}
+                onClick={async () => {
+                  if (!dbActor) return;
+                  setDeleteArchivedBusy(true);
+                  const { error } = await (supabase.rpc as any)("fn_delete_archived_actor", {
+                    p_actor_id: dbActor.id,
+                    p_reason: deleteArchivedReason || null,
+                  });
+                  setDeleteArchivedBusy(false);
+                  if (error) {
+                    toast.error(error.message);
+                    return;
+                  }
+                  toast.success("Actor permanently deleted");
+                  setDeleteArchivedOpen(false);
+                  navigate("/actors");
+                }}
+              >
+                {deleteArchivedBusy ? "Deleting…" : "Delete permanently"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Part 2 / Prompt 2: registry refresh — feeds DB-side edit draft, no auto-write. */}
       {source === "database" && dbActor && dbDraft && (
         <RegistryRefreshDialog
