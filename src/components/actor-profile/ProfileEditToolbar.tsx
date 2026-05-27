@@ -1,7 +1,11 @@
 // Profile-4: consolidated edit toolbar for the DB-side actor profile.
 // Hoists the `editing` state to ActorProfile.tsx. Holds Edit / Save / Cancel
 // (+ optional Re-verify, Merge, Enrich passthroughs). Admin-only Edit button.
-import { Loader2, Pencil, Check, X as XIcon, ShieldCheck, Sparkles, GitMerge } from "lucide-react";
+//
+// Part 2 / Prompt 2: when editing, exposes an optional "Refresh from registry"
+// action next to Save / Cancel so the consultant can pull fresh BRREG/CVR/PRH
+// values straight into the draft.
+import { Loader2, Pencil, Check, X as XIcon, ShieldCheck, Sparkles, GitMerge, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -21,6 +25,8 @@ interface Props {
   onReverify?: () => void;
   onMerge?: () => void;
   onEnrich?: () => void;
+  /** Part 2 / Prompt 2: opens the country-aware registry refresh dialog. */
+  onRegistryRefresh?: () => void;
 }
 
 export const ProfileEditToolbar = ({
