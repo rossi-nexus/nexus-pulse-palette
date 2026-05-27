@@ -319,6 +319,7 @@ function IdentityEditForm({
       <div>
         <FieldLabel>Street address</FieldLabel>
         <Input
+          id="edit-street-address"
           value={draft.street_address}
           onChange={(e) => update("street_address", e.target.value)}
           placeholder="Storgata 1"
@@ -1346,8 +1347,10 @@ const ActorProfile = () => {
                     onChange={(v) => setDbDraft({ ...dbDraft, country: v })} placeholder="ISO-2, e.g. NO" />
                 </DbEditRow>
                 <DbEditRow label="Street address">
-                  <EditableText editing value={dbDraft.street_address}
-                    onChange={(v) => setDbDraft({ ...dbDraft, street_address: v })} placeholder="—" />
+                  <div id="edit-street-address">
+                    <EditableText editing value={dbDraft.street_address}
+                      onChange={(v) => setDbDraft({ ...dbDraft, street_address: v })} placeholder="—" />
+                  </div>
                 </DbEditRow>
                 <DbEditRow label="Postal code">
                   <EditableText editing value={dbDraft.postal_code}
@@ -1402,7 +1405,33 @@ const ActorProfile = () => {
                         | "failed"
                         | null
                     }
-                    retryHref={typeof window !== "undefined" ? window.location.pathname : "#"}
+                    retryHref="#"
+                    onAddAddress={
+                      // P1.4 fix: open edit mode + focus first address field.
+                      // Personal-side: any owner. DB-side: admin only.
+                      (source === "personal" && personal) ||
+                      (source === "database" && dbActor && isAdmin)
+                        ? () => {
+                            if (source === "personal") {
+                              openIdentityEdit();
+                            } else {
+                              openDbEdit();
+                            }
+                            setTimeout(() => {
+                              const el = document.getElementById(
+                                "edit-street-address",
+                              ) as HTMLInputElement | null;
+                              if (el) {
+                                el.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                });
+                                el.focus();
+                              }
+                            }, 80);
+                          }
+                        : undefined
+                    }
                   />
                 </div>
               </>
@@ -1471,22 +1500,24 @@ const ActorProfile = () => {
               }
             >
               {(() => {
+                // P1.2 fix: render actor_descriptions of matching type as italic muted
+                // paragraphs above the chip list. Applies to both personal-side and
+                // DB-side profiles (personal-side has no rows today — renders nothing).
                 const descTypeMap: Partial<Record<typeof key, string>> = {
                   capabilities: "capability",
                   products: "product",
                   services: "service",
                 };
                 const descType = descTypeMap[key];
-                const matching =
-                  source === "database" && descType
-                    ? descriptions.filter((d: any) => d?.type === descType)
-                    : [];
+                const matching = descType
+                  ? descriptions.filter((d: any) => d?.type === descType)
+                  : [];
                 return matching.length > 0 ? (
                   <div className="mb-3 space-y-2">
                     {matching.map((d: any, i: number) => (
                       <p
                         key={d.id ?? i}
-                        className="text-sm text-foreground-secondary leading-relaxed"
+                        className="text-sm italic text-foreground-muted leading-relaxed"
                       >
                         {d.content}
                       </p>

@@ -27,8 +27,10 @@ interface ActorMiniMapProps {
   latitude: number | null | undefined;
   longitude: number | null | undefined;
   precision: GeocodedPrecision;
-  /** Path that the "add address" CTA should target. Placeholder until Profile-4. */
+  /** Path that the CTA targets when onAddAddress is not provided. */
   retryHref: string;
+  /** Profile-Part2/P1.4: when provided, the CTA becomes a button that opens edit mode. */
+  onAddAddress?: () => void;
 }
 
 const PRECISION_LABEL: Record<string, string> = {
@@ -57,6 +59,7 @@ export function ActorMiniMap({
   longitude,
   precision,
   retryHref,
+  onAddAddress,
 }: ActorMiniMapProps) {
   const hasCoords =
     typeof latitude === "number" &&
@@ -66,28 +69,26 @@ export function ActorMiniMap({
 
   if (!hasCoords) {
     const failed = precision === "failed";
+    const ctaLabel = failed ? "Edit address" : "Add address";
+    const cta = onAddAddress ? (
+      <button
+        type="button"
+        onClick={onAddAddress}
+        className="text-accent-teal hover:underline"
+      >
+        {ctaLabel}
+      </button>
+    ) : retryHref && retryHref !== "#" ? (
+      <Link to={retryHref} className="text-accent-teal hover:underline">
+        {ctaLabel}
+      </Link>
+    ) : null;
     return (
       <div className="bg-surface border border-border/60 rounded-md p-3 text-xs text-foreground-muted">
         {failed ? (
-          <>
-            Geocoding failed — add address fields to retry.{" "}
-            <Link
-              to={retryHref}
-              className="text-accent-teal hover:underline"
-            >
-              Edit address
-            </Link>
-          </>
+          <>Geocoding failed — add address fields to retry. {cta}</>
         ) : (
-          <>
-            Not yet geocoded.{" "}
-            <Link
-              to={retryHref}
-              className="text-accent-teal hover:underline"
-            >
-              Add address
-            </Link>
-          </>
+          <>Not yet geocoded. {cta}</>
         )}
       </div>
     );
