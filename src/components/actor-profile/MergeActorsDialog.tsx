@@ -2,7 +2,7 @@
 // Survivor = current actor (fixed). Source = picked from search results.
 // Confirms then calls fn_merge_actors RPC.
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, GitMerge, AlertTriangle } from "lucide-react";
+import { Loader2, Search, GitMerge, AlertTriangle, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { similarity } from "@/lib/fuzzyMatch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getRegistryByCountry } from "@/config/registries";
 
 interface Candidate {
   id: string;
