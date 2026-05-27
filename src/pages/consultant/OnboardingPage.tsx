@@ -509,6 +509,37 @@ const OnboardingPage = () => {
               </div>
             </div>
 
+            {/* P3: Media (logo + hero) — held in state until actor is created on submit */}
+            <div className="space-y-3 pt-2">
+              <Label className="text-xs uppercase tracking-wider text-foreground-muted">
+                Media (optional)
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setPendingMediaSlot("logo")}
+                  className="aspect-square rounded-md border border-dashed border-border hover:border-border-accent bg-surface flex items-center justify-center overflow-hidden"
+                >
+                  {pendingLogo ? (
+                    <img src={pendingLogo.url} alt="logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-foreground-muted">+ Logo</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingMediaSlot("hero")}
+                  className="aspect-video rounded-md border border-dashed border-border hover:border-border-accent bg-surface flex items-center justify-center overflow-hidden"
+                >
+                  {pendingHero ? (
+                    <img src={pendingHero.url} alt="hero" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-foreground-muted">+ Hero image</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
             <div className="flex justify-end pt-2">
               <Button onClick={() => setStep(2)} disabled={!canContinueStep1}>
                 Continue <ChevronRight className="w-4 h-4 ml-1" />
