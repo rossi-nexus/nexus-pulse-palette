@@ -308,12 +308,50 @@ const VerificationWorkspacePage = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {items.map((it) => (
+            {/* Sticky bulk action bar */}
+            {selected.size > 0 && (
+              <div className="sticky top-0 z-10 bg-elevated border border-primary/40 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2 shadow-md">
+                <span className="text-sm text-foreground font-medium">{selected.size} selected</span>
+                <div className="flex-1" />
+                <Button size="sm" disabled={bulkBusy} onClick={startBulkVerify}>
+                  {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verify with merge check"}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={bulkReject}>
+                  Reject selected
+                </Button>
+                <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 px-1 pb-1">
               <button
-                key={it.queue_id}
-                onClick={() => setActive(it)}
-                className="w-full text-left bg-surface border border-border rounded-lg p-4 hover:border-border-accent hover:shadow-md transition-all"
+                onClick={toggleAll}
+                className="text-foreground-muted hover:text-foreground inline-flex items-center gap-1 text-xs"
               >
+                {items.length > 0 && items.every((i) => selected.has(i.queue_id)) ? (
+                  <CheckSquare className="w-3.5 h-3.5" />
+                ) : (
+                  <Square className="w-3.5 h-3.5" />
+                )}
+                Select all visible
+              </button>
+            </div>
+
+            {items.map((it) => (
+              <div key={it.queue_id} className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.has(it.queue_id)}
+                  onChange={() => toggleRow(it.queue_id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-5 accent-primary"
+                />
+                <button
+                  onClick={() => setActive(it)}
+                  className="flex-1 text-left bg-surface border border-border rounded-lg p-4 hover:border-border-accent hover:shadow-md transition-all"
+                >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2 min-w-0 flex-wrap">
                     <h3 className="font-semibold text-foreground text-base leading-tight truncate">
