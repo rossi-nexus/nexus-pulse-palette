@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmActorActionDialog } from "@/components/nexus/ConfirmActorActionDialog";
+import { ArchivedActorsTab } from "@/components/nexus/ArchivedActorsTab";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
