@@ -70,6 +70,7 @@ import { ActorLogo, ActorHeroBanner, ProductGallery } from "@/components/actor-p
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
+import { RegistryRefreshDialog } from "@/components/actor-profile/RegistryRefreshDialog";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
