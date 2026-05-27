@@ -2344,6 +2344,20 @@ const ActorProfile = () => {
           }}
         />
       )}
+
+      {source === "database" && id && mediaEditor && (
+        <MediaSlotEditor
+          open={!!mediaEditor}
+          onOpenChange={(o) => !o && setMediaEditor(null)}
+          actorId={id}
+          slotType={mediaEditor.slot}
+          defaultQuery={name}
+          onSave={() => {
+            setMediaEditor(null);
+            void handleMediaSaved();
+          }}
+        />
+      )}
     </div>
   );
 };
