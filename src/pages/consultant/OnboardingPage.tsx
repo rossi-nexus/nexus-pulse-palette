@@ -35,6 +35,7 @@ import {
   emptyCompletionSeed,
   type CompletionDecision,
 } from "@/components/verification/SharedVerificationBody";
+import { MediaSlotEditor, type ActorMediaRecord, type MediaSlotType } from "@/components/actor-media/MediaSlotEditor";
 
 const DECAY_OPTIONS = [
   { value: "30", label: "30 days", days: 30 },
