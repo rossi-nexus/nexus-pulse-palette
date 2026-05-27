@@ -337,25 +337,40 @@ export type Database = {
         Row: {
           actor_id: string
           created_at: string
+          crop_data: Json | null
           id: string
           linked_ontology_entry_id: string | null
+          original_url: string | null
+          source: string | null
           type: string
+          updated_at: string
+          uploaded_by: string | null
           url: string
         }
         Insert: {
           actor_id: string
           created_at?: string
+          crop_data?: Json | null
           id?: string
           linked_ontology_entry_id?: string | null
+          original_url?: string | null
+          source?: string | null
           type: string
+          updated_at?: string
+          uploaded_by?: string | null
           url: string
         }
         Update: {
           actor_id?: string
           created_at?: string
+          crop_data?: Json | null
           id?: string
           linked_ontology_entry_id?: string | null
+          original_url?: string | null
+          source?: string | null
           type?: string
+          updated_at?: string
+          uploaded_by?: string | null
           url?: string
         }
         Relationships: [
@@ -1709,6 +1724,10 @@ export type Database = {
           p_target_table: string
         }
         Returns: string
+      }
+      fn_can_write_actor_media: {
+        Args: { _actor_id: string }
+        Returns: boolean
       }
       fn_check_decay: {
         Args: { _within?: string }
