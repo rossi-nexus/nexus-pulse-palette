@@ -1471,22 +1471,24 @@ const ActorProfile = () => {
               }
             >
               {(() => {
+                // P1.2 fix: render actor_descriptions of matching type as italic muted
+                // paragraphs above the chip list. Applies to both personal-side and
+                // DB-side profiles (personal-side has no rows today — renders nothing).
                 const descTypeMap: Partial<Record<typeof key, string>> = {
                   capabilities: "capability",
                   products: "product",
                   services: "service",
                 };
                 const descType = descTypeMap[key];
-                const matching =
-                  source === "database" && descType
-                    ? descriptions.filter((d: any) => d?.type === descType)
-                    : [];
+                const matching = descType
+                  ? descriptions.filter((d: any) => d?.type === descType)
+                  : [];
                 return matching.length > 0 ? (
                   <div className="mb-3 space-y-2">
                     {matching.map((d: any, i: number) => (
                       <p
                         key={d.id ?? i}
-                        className="text-sm text-foreground-secondary leading-relaxed"
+                        className="text-sm italic text-foreground-muted leading-relaxed"
                       >
                         {d.content}
                       </p>
