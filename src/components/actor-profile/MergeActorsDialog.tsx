@@ -39,6 +39,15 @@ interface Survivor {
   city: string | null;
 }
 
+interface RegistrySnapshot {
+  legal_name: string | null;
+  org_number: string | null;
+  street_address: string | null;
+  city: string | null;
+  country: string | null;
+  source_url: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
