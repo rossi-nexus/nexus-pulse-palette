@@ -1402,7 +1402,33 @@ const ActorProfile = () => {
                         | "failed"
                         | null
                     }
-                    retryHref={typeof window !== "undefined" ? window.location.pathname : "#"}
+                    retryHref="#"
+                    onAddAddress={
+                      // P1.4 fix: open edit mode + focus first address field.
+                      // Personal-side: any owner. DB-side: admin only.
+                      (source === "personal" && personal) ||
+                      (source === "database" && dbActor && isAdmin)
+                        ? () => {
+                            if (source === "personal") {
+                              openIdentityEdit();
+                            } else {
+                              openDbEdit();
+                            }
+                            setTimeout(() => {
+                              const el = document.getElementById(
+                                "edit-street-address",
+                              ) as HTMLInputElement | null;
+                              if (el) {
+                                el.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                });
+                                el.focus();
+                              }
+                            }, 80);
+                          }
+                        : undefined
+                    }
                   />
                 </div>
               </>
