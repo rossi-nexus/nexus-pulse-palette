@@ -1347,8 +1347,10 @@ const ActorProfile = () => {
                     onChange={(v) => setDbDraft({ ...dbDraft, country: v })} placeholder="ISO-2, e.g. NO" />
                 </DbEditRow>
                 <DbEditRow label="Street address">
-                  <EditableText editing value={dbDraft.street_address}
-                    onChange={(v) => setDbDraft({ ...dbDraft, street_address: v })} placeholder="—" />
+                  <div id="edit-street-address">
+                    <EditableText editing value={dbDraft.street_address}
+                      onChange={(v) => setDbDraft({ ...dbDraft, street_address: v })} placeholder="—" />
+                  </div>
                 </DbEditRow>
                 <DbEditRow label="Postal code">
                   <EditableText editing value={dbDraft.postal_code}
