@@ -414,6 +414,7 @@ const VerificationWorkspacePage = () => {
                   )}
                 </div>
               </button>
+              </div>
             ))}
           </div>
         )}
