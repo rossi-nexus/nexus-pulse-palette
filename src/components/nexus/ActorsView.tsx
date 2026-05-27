@@ -494,6 +494,8 @@ const ActorsView = () => {
               ))}
             </div>
           )
+        ) : tab === "archived" ? (
+          <ArchivedActorsTab />
         ) : null}
       </div>
 
