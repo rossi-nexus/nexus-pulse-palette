@@ -1174,12 +1174,33 @@ const ActorProfile = () => {
         <div className="bg-surface border border-border rounded-lg p-6 mb-2">
           <div className="flex items-start justify-between gap-4 mb-3">
             <div className="flex items-start gap-4 min-w-0">
-              {source === "database" && (
-                <ActorLogo
-                  name={name}
-                  url={media.find((m) => m.type === "logo")?.url ?? null}
-                />
-              )}
+              {source === "database" && (() => {
+                const logo = media.find((m) => m.type === "logo") as any;
+                const inner = <ActorLogo name={name} url={logo?.url ?? null} />;
+                if (!editingDbIdentity) return inner;
+                return (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => openMediaEditor("logo")}
+                      className="block rounded-md ring-2 ring-transparent hover:ring-accent-teal/60 transition"
+                      title="Change logo"
+                    >
+                      {inner}
+                    </button>
+                    {logo && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMedia(logo)}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                        title="Delete logo"
+                      >
+                        <MediaTrash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <h1 className="text-2xl font-semibold text-foreground tracking-tight">
                 {name}
               </h1>
