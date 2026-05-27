@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useOntologyQueue, type ProposedEntryRow } from "@/hooks/useOntologyQueue";
 import ProposedEntryRowCard from "@/components/admin/ProposedEntryRow";
-import { useDuplicateScanner } from "@/hooks/useDuplicateScanner";
+import { useDuplicateScanner, type OntologyDupCandidate } from "@/hooks/useDuplicateScanner";
 import { OntologyDuplicateComparison, type OntologyComparisonResolution } from "@/components/verification/DuplicateComparisonView";
 
 const HEADLINES = ["capability", "competence", "domain", "product_type", "service_type"] as const;
