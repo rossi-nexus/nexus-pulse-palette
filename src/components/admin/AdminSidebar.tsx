@@ -1,9 +1,10 @@
 import { NavLink, Link } from "react-router-dom";
-import { Tags, ArrowLeft, Download, LayoutDashboard } from "lucide-react";
+import { Tags, ArrowLeft, Download, LayoutDashboard, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/admin/users", icon: Users, label: "Users" },
   { to: "/admin/ontology", icon: Tags, label: "Ontology" },
   { to: "/admin/registry-import", icon: Download, label: "Registry import" },
 ];
