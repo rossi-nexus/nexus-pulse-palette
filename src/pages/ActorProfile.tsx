@@ -1378,6 +1378,15 @@ const ActorProfile = () => {
             <div className="flex items-start gap-4 min-w-0">
               {source === "database" && (() => {
                 const logo = media.find((m) => m.type === "logo") as any;
+                if (!logo && mediaPolling) {
+                  return (
+                    <div
+                      style={{ width: 72, height: 72 }}
+                      className="rounded-md bg-elevated border border-border animate-pulse shrink-0"
+                      aria-label="Fetching logo…"
+                    />
+                  );
+                }
                 const inner = <ActorLogo name={name} url={logo?.url ?? null} />;
                 if (!editingDbIdentity) return inner;
                 return (
