@@ -5,8 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ActorsMap } from "@/components/map/ActorsMap";
 import { useSessionActorsMap } from "@/hooks/useSessionActorsMap";
 
+import { useSessionContext } from "@/contexts/SessionContext";
+
 interface SessionMapButtonProps {
-  sessionId: string | null;
   /** Storage key prefix so each step has its own persisted view if reused. */
   variant: "search" | "analysis" | "database-check";
 }
@@ -17,7 +18,8 @@ interface SessionMapButtonProps {
  * Personal-collection rows are only created by Step 5 (saveToPersonalSpace), so
  * the map will be empty until Step 5 has run at least once for the session.
  */
-export function SessionMapButton({ sessionId, variant }: SessionMapButtonProps) {
+export function SessionMapButton({ variant }: SessionMapButtonProps) {
+  const { sessionId } = useSessionContext();
   const [open, setOpen] = useState(false);
   const { data, loading } = useSessionActorsMap(open ? sessionId : null);
 
