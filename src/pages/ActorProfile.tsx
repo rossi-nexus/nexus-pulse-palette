@@ -487,11 +487,15 @@ const ActorProfile = () => {
   // P3: media slot editor state
   const [mediaEditor, setMediaEditor] = useState<{ slot: MediaSlotType } | null>(null);
   const openMediaEditor = (slot: MediaSlotType) => setMediaEditor({ slot });
+  // Continuation Area 3: media polling for freshly onboarded actors.
+  const [mediaPolling, setMediaPolling] = useState(false);
+  const [mediaPollTimedOut, setMediaPollTimedOut] = useState(false);
+  const [retryingMediaScrape, setRetryingMediaScrape] = useState(false);
   const refreshMedia = async () => {
     if (!id) return;
     const { data } = await supabase
       .from("actor_media")
-      .select("id, type, url")
+      .select("id, type, url, original_url, crop_data")
       .eq("actor_id", id);
     if (data) setMedia(data as any);
   };
