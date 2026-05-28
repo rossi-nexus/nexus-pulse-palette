@@ -34,7 +34,7 @@ const SidebarNav = () => {
   const [expanded, setExpanded] = useState(false);
   const {
     sessions, sessionId, setSessionId, isAdmin, createSession, renameSession,
-    assignSessionToProgramme,
+    assignSessionToProgramme, deleteSession,
   } = useSessionContext();
   const { programmes, refresh: refreshProgrammes } = useProgrammeList();
   const { hasAccess: hasConsultantAccess } = useConsultantAccess();
@@ -45,6 +45,7 @@ const SidebarNav = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [newProgOpen, setNewProgOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
