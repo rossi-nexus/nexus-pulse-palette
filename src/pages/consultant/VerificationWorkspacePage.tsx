@@ -525,6 +525,20 @@ const VerificationWorkspacePage = () => {
           onResolve={resolveConflict}
         />
       )}
+      {itemAddActive && (
+        <ItemAdditionReviewDialog
+          open={!!itemAddActive}
+          onOpenChange={(o) => !o && setItemAddActive(null)}
+          queueId={itemAddActive.queue_id}
+          targetActorName={itemAddActive.actor_name}
+          proposerName={itemAddActive.suggested_by_name ?? itemAddActive.suggested_by_email}
+          proposedItems={(itemAddActive.proposed_items as any) ?? []}
+          onDone={() => {
+            refresh();
+            setItemAddActive(null);
+          }}
+        />
+      )}
     </div>
   );
 };
