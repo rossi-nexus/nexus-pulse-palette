@@ -218,7 +218,20 @@ ${constraints?.geography?.countries ? `Geography: ${constraints.geography.countr
 ${constraints?.geography?.regions ? `Regions: ${constraints.geography.regions.join(", ")}` : ""}
 ${constraints?.geography?.cities ? `Cities: ${constraints.geography.cities.join(", ")}` : ""}
 ${constraints?.security_classification?.required_level ? `Security level: ${constraints.security_classification.required_level}` : ""}
-${constraints?.standards?.required ? `Required standards: ${constraints.standards.required.join(", ")}` : ""}`;
+${constraints?.standards?.required ? `Required standards: ${constraints.standards.required.join(", ")}` : ""}
+${(() => {
+  const cd = constraints?.contract_duration;
+  if (!cd) return "";
+  if (cd.value && cd.unit) {
+    const typeLabel = cd.type === "minimum" ? "≥" : cd.type === "maximum" ? "≤" : cd.type === "fixed" ? "= " : "~";
+    // Hint the model to bias toward long-term framework agreements when appropriate.
+    const phraseHint = (cd.unit === "year" && cd.value >= 2) || (cd.unit === "month" && cd.value >= 18)
+      ? ' (consider search modifiers like "framework agreement", "long-term contract", "multi-year")'
+      : "";
+    return `Contract duration: ${typeLabel}${cd.value} ${cd.unit}(s)${phraseHint}`;
+  }
+  return cd.duration ? `Contract duration: ${cd.duration}` : "";
+})()}`;
 
     async function callAI(systemPrompt: string, userMessage: string, toolSchema: any, toolName: string, maxTokens: number) {
       const body: any = {
