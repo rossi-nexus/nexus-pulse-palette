@@ -35,6 +35,9 @@ export interface CompletionDecision {
   mapped_to_entry_id: string | null;
   mapped_to_entry_name?: string | null;
   proposed_description?: string | null;
+  /** Per-item prose extracted by the LLM (e.g. product / service description).
+   *  Persisted by verification RPCs into actor_descriptions on accept actions. */
+  description?: string | null;
 }
 
 export type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
