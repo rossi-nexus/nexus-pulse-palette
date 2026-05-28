@@ -328,6 +328,14 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                     step2Locked={isStep2Locked}
                     onUnlock={() => handleUnlockWithCascade(3)}
                     downstreamStepNames={downstreamNamesForStep[3]}
+                    sessionId={sessionId}
+                    onAddRoleFromCoverage={async (name, summaryText) => {
+                      // P13 — adopting a coverage suggestion cascades: unlock Step 2,
+                      // add the manual role (auto-populates via populate-role), then
+                      // the consultant re-locks Step 2 and re-runs Step 3.
+                      await handleUnlockWithCascade(2);
+                      stepA2.addRole(name, summaryText);
+                    }}
                   />
                 )}
 

@@ -7,6 +7,7 @@ import RoleProgressBox from "./RoleProgressBox";
 import ActorCard from "./ActorCard";
 import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
+import CoverageBanner from "./CoverageBanner";
 import type { useSearch } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
 
@@ -122,9 +123,12 @@ interface SearchStepProps {
   step2Locked: boolean;
   onUnlock: () => void;
   downstreamStepNames: string[];
+  sessionId?: string | null;
+  /** P13 — invoked when consultant accepts a coverage-driven role suggestion. */
+  onAddRoleFromCoverage?: (name: string, summaryText: string) => Promise<void> | void;
 }
 
-const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames }: SearchStepProps) => {
+const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames, sessionId = null, onAddRoleFromCoverage }: SearchStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
@@ -347,6 +351,15 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
       <div className="flex flex-col" style={{ height: "calc(100vh - 240px)" }}>
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
+          {/* P13 — coverage-driven role suggestions (deterministic, post-search). */}
+          {status === "reviewing" && interpretation && onAddRoleFromCoverage && (
+            <CoverageBanner
+              interpretation={interpretation}
+              roleResults={orderedRoles}
+              sessionId={sessionId}
+              onAddRole={onAddRoleFromCoverage}
+            />
+          )}
           {/* Role progress boxes */}
           <div className="flex gap-2 pb-2 w-full">
             {orderedRoles.map(result => (

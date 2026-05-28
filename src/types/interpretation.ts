@@ -75,8 +75,16 @@ export interface StandardsConstraint {
   preferred?: string[];
 }
 
+export type ContractDurationUnit = "month" | "year";
+export type ContractDurationType = "minimum" | "expected" | "maximum" | "fixed";
+
 export interface ContractDurationConstraint {
+  /** Legacy free-text fallback. Kept for backward compatibility. */
   duration?: string;
+  /** P12 — typed extraction. value+unit+type drive downstream filters. */
+  value?: number;
+  unit?: ContractDurationUnit;
+  type?: ContractDurationType;
 }
 
 export interface Constraints {

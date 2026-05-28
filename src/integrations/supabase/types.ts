@@ -2043,6 +2043,10 @@ export type Database = {
         Args: { p_personal_actor_id: string }
         Returns: string
       }
+      fn_suggest_role_for_summary_point: {
+        Args: { p_existing_role_names?: string[]; p_summary_point: string }
+        Returns: string
+      }
       fn_update_actor: {
         Args: { p_actor_id: string; p_reason?: string; p_updates: Json }
         Returns: string
