@@ -607,6 +607,17 @@ const ActorProfile = () => {
         }
 
         if (pa) {
+          // Smart Merge: if this personal actor is matched to a verified DB
+          // record, the DB profile becomes the canonical view. Redirect
+          // (replace) so back-button doesn't loop. Personal row stays put.
+          if (pa.matched_main_db_actor_id) {
+            navigate(
+              `/actors/${pa.matched_main_db_actor_id}?from-collection=${pa.id}${window.location.hash || ""}`,
+              { replace: true },
+            );
+            return;
+          }
+
           setPersonal(pa as unknown as PersonalActor);
           setSource("personal");
 
