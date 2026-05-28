@@ -13,6 +13,8 @@ export interface ReviewProposal {
   evidence: string;
   confidence: "high" | "medium" | "low";
   source_url?: string | null;
+  /** Optional per-item prose (e.g. product/service description from analyze-actor). */
+  description?: string | null;
 }
 
 const CONFIDENCE_BADGE: Record<ReviewProposal["confidence"], string> = {
