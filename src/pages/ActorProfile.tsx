@@ -1713,39 +1713,54 @@ const ActorProfile = () => {
                   </div>
                 ) : null;
               })()}
-              {source === "database" && key === "products" && (
-                <div>
-                  <ProductGallery
-                    images={media.filter((m) => m.type === "product")}
-                    actorName={name}
-                  />
-                  {editingDbIdentity && (
-                    <div className="mb-3 space-y-2">
-                      {media
-                        .filter((m) => m.type === "product")
-                        .map((pm: any) => (
-                          <div key={pm.id} className="flex items-center gap-2 text-xs">
-                            <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
-                              <MediaTrash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openMediaEditor("product")}
-                      >
-                        <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
-                        Add product image
-                      </Button>
-                    </div>
-                  )}
+              {source === "database" && key === "products" && editingDbIdentity && (
+                <div className="mb-3 space-y-2">
+                  {media
+                    .filter((m) => m.type === "product")
+                    .map((pm: any) => (
+                      <div key={pm.id} className="flex items-center gap-2 text-xs">
+                        <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
+                          <MediaTrash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openMediaEditor("product")}
+                  >
+                    <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                    Add product image
+                  </Button>
                 </div>
               )}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
+                ) : source === "database" && key === "products" ? (
+                  <ProductCardGrid
+                    products={dbOntologyEntries.products.map((e) => ({
+                      entry_name: e.name,
+                      evidence: e.meta?.evidence ?? null,
+                      confidence: e.meta?.confidence ?? null,
+                      source_url: e.meta?.source_url ?? null,
+                    }))}
+                    descriptions={descriptions
+                      .filter((d: any) => d?.type === "product")
+                      .map((d: any) => ({ type: d.type, content: d.content }))}
+                    media={media
+                      .filter((m: any) => m.type === "product")
+                      .map((m: any) => ({
+                        id: m.id,
+                        type: m.type,
+                        url: m.url,
+                        crop_data: m.crop_data ?? null,
+                      }))}
+                    actorName={name}
+                  />
+                ) : source === "database" ? (
+                  <OntologyEntryList entries={dbOntologyEntries[key]} />
                 ) : (
                   <TagList items={items} />
                 )
