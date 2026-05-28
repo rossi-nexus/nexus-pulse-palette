@@ -1780,26 +1780,16 @@ export type Database = {
           verified_at: string
         }[]
       }
-      fn_onboard_verified_actor:
-        | {
-            Args: {
-              p_identity: Json
-              p_ontology_items: Json
-              p_programme_id: string
-              p_verification: Json
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_consultant_decisions?: Json
-              p_identity: Json
-              p_ontology_items: Json
-              p_programme_id: string
-              p_verification: Json
-            }
-            Returns: Json
-          }
+      fn_onboard_verified_actor: {
+        Args: {
+          p_consultant_decisions?: Json
+          p_identity: Json
+          p_ontology_items: Json
+          p_programme_id: string
+          p_verification: Json
+        }
+        Returns: Json
+      }
       fn_programme_summary: {
         Args: { p_programme_id: string }
         Returns: {
