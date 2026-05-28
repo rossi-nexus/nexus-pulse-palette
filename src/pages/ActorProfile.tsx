@@ -659,7 +659,7 @@ const ActorProfile = () => {
             supabase
               .from("actor_ontology_tags")
               .select(
-                "id, ontology_entry_id, source, ontology_entries(id, raw_name, status, category_id, ontology_categories(type, normalized_name))",
+                "id, ontology_entry_id, source, source_url, evidence, confidence, accepted_at, ontology_entries(id, raw_name, status, category_id, ontology_categories(type, normalized_name))",
               )
               .eq("actor_id", id),
             supabase.from("actor_certifications").select("*").eq("actor_id", id),
