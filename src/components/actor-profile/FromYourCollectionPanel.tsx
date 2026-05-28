@@ -198,6 +198,16 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
     () => (Object.values(diffByCategory) as DiffItem[][]).flat(),
     [diffByCategory],
   );
+  // Area 1: split mappable vs unmappable so bulk "Suggest all" only counts
+  // items that can actually flow through fn_propose_items_for_actor.
+  const mappableItems = useMemo(
+    () => allDiffItems.filter((i) => !!i.ontologyEntryId),
+    [allDiffItems],
+  );
+  const unmappableItems = useMemo(
+    () => allDiffItems.filter((i) => !i.ontologyEntryId),
+    [allDiffItems],
+  );
 
   const toggle = (key: string) =>
     setSelected((s) => {
@@ -210,9 +220,8 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
     async (items: DiffItem[]) => {
       if (!personal || items.length === 0) return;
       const proposable = items.filter((i) => i.ontologyEntryId);
-      const unresolved = items.length - proposable.length;
       if (proposable.length === 0) {
-        toast.error("None of the selected items map to an existing ontology entry.");
+        toast.error("None of the selected items map to an existing ontology entry. Use 'Propose as new' instead.");
         return;
       }
       setSubmitting(true);
@@ -232,9 +241,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
         });
         if (error) throw error;
         toast.success(
-          unresolved > 0
-            ? `Suggested ${proposable.length} item${proposable.length === 1 ? "" : "s"} (${unresolved} skipped — no matching ontology entry).`
-            : `Suggested ${proposable.length} item${proposable.length === 1 ? "" : "s"} for verification.`,
+          `Suggested ${proposable.length} item${proposable.length === 1 ? "" : "s"} for verification.`,
         );
         setSelected(new Set());
       } catch (e: any) {
@@ -256,7 +263,11 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
   if (!personal) return null;
 
   const totalDiff = allDiffItems.length;
-  const selectedItems = allDiffItems.filter((i) => selected.has(i.key));
+  const mappableCount = mappableItems.length;
+  const unmappableCount = unmappableItems.length;
+  const selectedItems = mappableItems.filter((i) => selected.has(i.key));
+
+
 
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
