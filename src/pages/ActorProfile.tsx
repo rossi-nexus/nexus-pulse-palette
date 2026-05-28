@@ -731,7 +731,7 @@ const ActorProfile = () => {
         setMediaPollTimedOut(true);
       }
     }, 5_000);
-    void tick();
+    void refreshMedia();
     return () => {
       cancelled = true;
       window.clearInterval(interval);
