@@ -390,6 +390,7 @@ const AnalysisStep = ({ hook, interpretation, lockedA3Output, step3Locked, onUnl
           )}
 
           <div className="flex justify-end items-center gap-1">
+            <SessionMapButton variant="analysis" />
             <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
