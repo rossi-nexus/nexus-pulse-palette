@@ -362,6 +362,20 @@ const OnboardingPage = () => {
       await persistPending("logo", pendingLogo);
       await persistPending("hero", pendingHero);
 
+      // P7 — Automated media scrape: fire-and-forget. Only runs for slots
+      // that don't already have a row (so consultant-uploaded logo/hero
+      // above wins). Failures are silent; consultant can override later
+      // via MediaSlotEditor.
+      const firstWebsite = cleanWebsites()[0];
+      if (firstWebsite && result.actor_id) {
+        void supabase.functions
+          .invoke("scrape-actor-media", {
+            body: { actor_id: result.actor_id, website_url: firstWebsite },
+          })
+          .catch(() => { /* non-fatal */ });
+      }
+
+
       localStorage.removeItem(DRAFT_KEY);
       try {
         await draftDiscardRef.current?.();
