@@ -45,7 +45,26 @@ export interface ActorCardData {
    */
   matched_verified_at?: string | null;
   matched_decays_at?: string | null;
+  /** P11 — composite relevance score [0,1] from fn_compute_actor_relevance_score. */
+  relevance_score?: number | null;
+  /** P11 — recorded modifier breakdown for hover-explain on the card. */
+  relevance_breakdown?: {
+    overlap?: number;
+    outcome?: number;
+    decay?: number;
+  };
+  /** P11 — per-role weighted match strength used by cross-role ranking. */
+  cross_role_score?: number;
+  /** P11 — per-role match-strength inputs feeding cross_role_score. */
+  cross_role_strengths?: Array<{ role_id: string; role_name: string; strength: "strong" | "moderate" | "weak" }>;
 }
+
+// P11 — match strength → weight used by both per-role and cross-role scoring.
+const STRENGTH_WEIGHT: Record<ActorCardData["match_strength"], number> = {
+  strong: 1.0,
+  moderate: 0.6,
+  weak: 0.3,
+};
 
 export interface RoleSearchResult {
   role_id: string;
