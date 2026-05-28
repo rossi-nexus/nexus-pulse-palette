@@ -67,7 +67,7 @@ const UserManagementPage = () => {
       supabase.from("programmes").select("id, name").order("name"),
     ]);
     if (u.error) toast.error(u.error.message);
-    else setUsers((u.data ?? []) as UserRow[]);
+    else setUsers((u.data ?? []) as unknown as UserRow[]);
     if (!p.error) setProgrammes((p.data ?? []) as Programme[]);
     setLoading(false);
   }, []);
