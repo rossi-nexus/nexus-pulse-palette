@@ -179,6 +179,13 @@ const SidebarNav = () => {
                   {s.programme_id === p.id ? "✓ " : ""}{p.name}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmDeleteId(s.id)}
+                className="text-xs text-destructive focus:text-destructive"
+              >
+                Delete session
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
