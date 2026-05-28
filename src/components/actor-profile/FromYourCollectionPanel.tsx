@@ -402,12 +402,22 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                                   {item.entryName}
                                 </span>
                                 {!item.ontologyEntryId && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] bg-warning/10 text-warning border-warning/30"
-                                  >
-                                    No matching entry — can't suggest
-                                  </Badge>
+                                  <TooltipProvider delayDuration={150}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] bg-warning/10 text-warning border-warning/30 cursor-help"
+                                        >
+                                          No matching entry
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs text-xs">
+                                        This item from your collection doesn't match an existing ontology entry.
+                                        Use 'Propose as new' to add it to the ontology AND suggest it for this actor in one step.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                                 {item.confidence && (
                                   <Badge variant="outline" className="text-[10px]">
@@ -421,15 +431,28 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                                 </p>
                               )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={!item.ontologyEntryId || submitting}
-                              onClick={() => proposeItems([item])}
-                              className="text-xs"
-                            >
-                              Suggest
-                            </Button>
+                            {item.ontologyEntryId ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={submitting}
+                                onClick={() => proposeItems([item])}
+                                className="text-xs"
+                              >
+                                Suggest
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={submitting}
+                                onClick={() => setProposeDialogItem(item)}
+                                className="text-xs"
+                              >
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Propose as new
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
