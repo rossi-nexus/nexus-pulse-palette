@@ -209,7 +209,12 @@ const TOOL_SCHEMA = {
             },
             contract_duration: {
               type: "object",
-              properties: { duration: { type: "string" } },
+              properties: {
+                duration: { type: "string", description: "Original phrase, kept for display." },
+                value: { type: "number", description: "Numeric duration value." },
+                unit: { type: "string", enum: ["month", "year"] },
+                type: { type: "string", enum: ["minimum", "expected", "maximum", "fixed"] },
+              },
             },
             search_context: { type: "string" },
           },
