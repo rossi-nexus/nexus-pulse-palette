@@ -222,7 +222,7 @@ serve(async (req) => {
       .maybeSingle();
     if (actorErr || !actorRow) return json({ error: "Actor not found" }, 404);
 
-    const { data: isAdminData } = await supa.rpc("is_admin", { user_id: user.id });
+    const { data: isAdminData } = await supa.rpc("is_admin", { _user_id: user.id });
     const isAdmin = isAdminData === true;
     if (!isAdmin && actorRow.verifier_id !== user.id) {
       return json({ error: "Forbidden" }, 403);
