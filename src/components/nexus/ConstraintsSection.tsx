@@ -192,16 +192,63 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
           </ConstraintRow>
         )}
 
-        {/* Contract Duration */}
+        {/* Contract Duration (P12: typed) */}
         {constraints.contract_duration && (
           <ConstraintRow label="Contract Duration">
-            <input
-              type="text"
-              value={constraints.contract_duration.duration || ""}
-              onChange={(e) => onUpdate("contract_duration", { duration: e.target.value })}
-              placeholder="e.g. 3 years"
-              className="h-8 px-2 w-[200px] rounded border border-border bg-surface text-body-sm text-foreground outline-none"
-            />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Typed chip preview */}
+              {typeof constraints.contract_duration.value === "number" && constraints.contract_duration.unit && (
+                <span className="px-1.5 py-0.5 rounded-sharp border border-accent-teal/30 bg-accent-teal/5 text-accent-teal text-[10px] font-mono uppercase tracking-wider">
+                  {(() => {
+                    const t = constraints.contract_duration!.type;
+                    const prefix = t === "minimum" ? "≥" : t === "maximum" ? "≤" : t === "fixed" ? "= " : "~";
+                    return `${prefix}${constraints.contract_duration!.value} ${constraints.contract_duration!.unit}${(constraints.contract_duration!.value ?? 0) === 1 ? "" : "s"}`;
+                  })()}
+                </span>
+              )}
+              <input
+                type="number"
+                min={0}
+                value={constraints.contract_duration.value ?? ""}
+                onChange={(e) =>
+                  onUpdate("contract_duration", {
+                    ...constraints.contract_duration,
+                    value: e.target.value === "" ? undefined : Number(e.target.value),
+                  })
+                }
+                placeholder="value"
+                className="h-8 px-2 w-[80px] rounded border border-border bg-surface text-body-sm text-foreground outline-none"
+              />
+              <select
+                value={constraints.contract_duration.unit ?? "year"}
+                onChange={(e) =>
+                  onUpdate("contract_duration", { ...constraints.contract_duration, unit: e.target.value as any })
+                }
+                className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none"
+              >
+                <option value="year">years</option>
+                <option value="month">months</option>
+              </select>
+              <select
+                value={constraints.contract_duration.type ?? "expected"}
+                onChange={(e) =>
+                  onUpdate("contract_duration", { ...constraints.contract_duration, type: e.target.value as any })
+                }
+                className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none"
+              >
+                <option value="minimum">minimum</option>
+                <option value="expected">expected</option>
+                <option value="maximum">maximum</option>
+                <option value="fixed">fixed</option>
+              </select>
+              <input
+                type="text"
+                value={constraints.contract_duration.duration || ""}
+                onChange={(e) => onUpdate("contract_duration", { ...constraints.contract_duration, duration: e.target.value })}
+                placeholder="original phrase"
+                className="h-8 px-2 w-[160px] rounded border border-border bg-surface text-body-sm text-foreground outline-none"
+              />
+            </div>
           </ConstraintRow>
         )}
 
