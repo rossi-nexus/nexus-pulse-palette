@@ -75,7 +75,7 @@ const ActorsView = () => {
   const { isAdmin } = useSessionContext();
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState<TabKey>("collection");
+  const [tab, setTab] = useState<TabKey>("database");
   const [loading, setLoading] = useState(true);
 
   const [personal, setPersonal] = useState<PersonalActor[]>([]);
