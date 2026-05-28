@@ -464,6 +464,29 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
           </div>
         </div>
       )}
+      {personal && (
+        <ProposeNewEntryDialog
+          open={!!proposeDialogItem}
+          onOpenChange={(o) => !o && setProposeDialogItem(null)}
+          item={
+            proposeDialogItem
+              ? {
+                  entryName: proposeDialogItem.entryName,
+                  category: proposeDialogItem.category,
+                  evidence: proposeDialogItem.evidence,
+                  confidence: proposeDialogItem.confidence,
+                  sourceUrl: proposeDialogItem.sourceUrl,
+                }
+              : null
+          }
+          dbActorId={dbActorId}
+          personalActorId={personal.id}
+          onDone={() => {
+            setProposeDialogItem(null);
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }
