@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionContext } from "@/contexts/SessionContext";
 
-export type QueueOrigin = "user_suggestion" | "registry_import";
+export type QueueOrigin = "user_suggestion" | "registry_import" | "item_addition";
 
 export interface PendingSuggestion {
   queue_id: string;
