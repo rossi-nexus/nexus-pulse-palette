@@ -4,6 +4,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import OntologyQueuePage from "@/pages/admin/OntologyQueuePage";
 import RegistryImportPage from "@/pages/admin/RegistryImportPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
+import UserManagementPage from "@/pages/admin/UserManagementPage";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
