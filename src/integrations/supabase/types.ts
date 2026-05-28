@@ -1914,6 +1914,14 @@ export type Database = {
         }[]
       }
       fn_cleanup_old_drafts: { Args: never; Returns: number }
+      fn_compute_actor_relevance_score: {
+        Args: {
+          p_actor_id: string
+          p_ontology_entry_ids?: string[]
+          p_role_id?: string
+        }
+        Returns: number
+      }
       fn_create_programme: {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string
