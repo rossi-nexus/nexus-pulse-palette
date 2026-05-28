@@ -2100,6 +2100,12 @@ const ActorProfile = () => {
           </div>
         </ProfileSection>
 
+        {/* Smart Merge: "From your collection" — surfaces user's personal
+            notes, tags, and item-addition proposals against this DB actor. */}
+        {source === "database" && dbActor && (
+          <FromYourCollectionPanel dbActorId={dbActor.id} />
+        )}
+
         {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
         {source === "database" && dbActor && (
           <ProfileSection title="Outcome history" count={actorOutcomes.length}>
