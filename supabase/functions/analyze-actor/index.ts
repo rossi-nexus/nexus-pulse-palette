@@ -29,6 +29,7 @@ Additionally, extract if found:
 - Security classification level (which national systems, what level, evidence source)
 - Standards and certifications (ISO, AQAP, STANAG, etc.)
 - Customer references (who they've worked for, in what domain, when)
+- Headquarters address (extract from About / Contact / Footer / company info sections). Provide as a structured object with street, postal_code, city, region, country (ISO-2 or full name), required evidence, and source_url. Omit entirely if you cannot find it.
 
 Rules:
 - ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, or customer references.
@@ -199,6 +200,20 @@ const ANALYSIS_TOOL_SCHEMA = {
             required: ["url", "title", "type"],
           },
         },
+        headquarters_address: {
+          type: "object",
+          description: "Company headquarters address extracted from About/Contact/Footer/company-info content. Omit if not present in sources.",
+          properties: {
+            street: { type: "string" },
+            postal_code: { type: "string" },
+            city: { type: "string" },
+            region: { type: "string" },
+            country: { type: "string" },
+            evidence: { type: "string" },
+            source_url: { type: "string" },
+          },
+          required: ["evidence"],
+        },
       },
       required: ["capabilities", "competences", "domains", "products", "services", "analysisSources"],
     },
@@ -294,6 +309,23 @@ function normalizeAnalysis(raw: any): any {
   a.products = a.products.filter((p: any) => p?.evidence && p?.productName);
   a.services = a.services.filter((s: any) => s?.evidence && s?.serviceName);
   a.customerHistory = a.customerHistory.filter((c: any) => c?.evidence && c?.customerName);
+
+  // headquarters_address: pass through only if it has at least one address field + evidence
+  if (raw?.headquarters_address && typeof raw.headquarters_address === "object") {
+    const h = raw.headquarters_address;
+    const hasAnyField = h.street || h.postal_code || h.city || h.region || h.country;
+    if (hasAnyField && h.evidence) {
+      a.headquarters_address = {
+        street: h.street || null,
+        postal_code: h.postal_code || null,
+        city: h.city || null,
+        region: h.region || null,
+        country: h.country || null,
+        evidence: h.evidence,
+        source_url: h.source_url || null,
+      };
+    }
+  }
 
   return a;
 }

@@ -22,7 +22,7 @@ interface Body {
   region?: string | null;
   country?: string | null;
   actor_id?: string | null;
-  target_table?: "actors";
+  target_table?: "actors" | "user_personal_actors";
 }
 
 function jsonResponse(body: unknown, status = 200) {

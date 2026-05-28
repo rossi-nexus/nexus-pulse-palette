@@ -1426,12 +1426,17 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          geocoded_at: string | null
+          geocoded_precision: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           match_timestamp: string | null
           matched_main_db_actor_id: string | null
           merged_actor_id: string | null
           notes: string | null
           org_number: string | null
+          postal_code: string | null
           profile_completeness: number | null
           region: string | null
           role_names: string[] | null
@@ -1455,12 +1460,17 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          geocoded_at?: string | null
+          geocoded_precision?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           match_timestamp?: string | null
           matched_main_db_actor_id?: string | null
           merged_actor_id?: string | null
           notes?: string | null
           org_number?: string | null
+          postal_code?: string | null
           profile_completeness?: number | null
           region?: string | null
           role_names?: string[] | null
@@ -1484,12 +1494,17 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          geocoded_at?: string | null
+          geocoded_precision?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           match_timestamp?: string | null
           matched_main_db_actor_id?: string | null
           merged_actor_id?: string | null
           notes?: string | null
           org_number?: string | null
+          postal_code?: string | null
           profile_completeness?: number | null
           region?: string | null
           role_names?: string[] | null
@@ -1756,6 +1771,15 @@ export type Database = {
         Returns: string
       }
       fn_geocode_missing_actors: {
+        Args: never
+        Returns: {
+          failed: number
+          skipped_no_address: number
+          successful: number
+          total_attempted: number
+        }[]
+      }
+      fn_geocode_missing_personal_actors: {
         Args: never
         Returns: {
           failed: number
