@@ -38,6 +38,10 @@ export interface CompletionDecision {
   /** Per-item prose extracted by the LLM (e.g. product / service description).
    *  Persisted by verification RPCs into actor_descriptions on accept actions. */
   description?: string | null;
+  /** Provenance fields forwarded to actor_ontology_tags by the verification RPCs. */
+  evidence?: string | null;
+  confidence?: "high" | "medium" | "low" | null;
+  source_url?: string | null;
 }
 
 export type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
