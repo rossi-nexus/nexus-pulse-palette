@@ -1899,44 +1899,99 @@ const ActorProfile = () => {
         )}
 
         {/* Contacts (DB only) */}
-        {source === "database" && contacts.length > 0 && (
-          <ProfileSection title="Contacts" count={contacts.length}>
-            <div className="space-y-2">
-              {contacts.map((c) => (
-                <div
-                  key={c.id}
-                  className="bg-surface border border-border/60 rounded-md p-3 text-sm"
+        {source === "database" && dbActor && (
+          <ProfileSection
+            title="Contacts"
+            count={contacts.length}
+            headerExtra={
+              dbActor.websites?.[0] ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    const baseUrl = dbActor.websites?.[0];
+                    if (!baseUrl) return;
+                    toast.info("Scanning team page…");
+                    try {
+                      const { data, error } = await supabase.functions.invoke(
+                        "enrich-from-team-page",
+                        { body: { actor_id: dbActor.id, base_url: baseUrl } },
+                      );
+                      if (error) throw new Error(error.message);
+                      const written = (data as { written_count?: number })?.written_count ?? 0;
+                      const src = (data as { source_url?: string | null })?.source_url;
+                      if (written > 0) {
+                        toast.success(`Added ${written} contact${written === 1 ? "" : "s"} from ${src ?? "team page"}.`);
+                        const { data: refreshed } = await supabase
+                          .from("actor_contacts")
+                          .select("*")
+                          .eq("actor_id", dbActor.id);
+                        setContacts(refreshed ?? []);
+                      } else if (src) {
+                        toast.message(`Scanned ${src} — no new contacts found.`);
+                      } else {
+                        toast.message("No team/about page found on this website.");
+                      }
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Scan failed");
+                    }
+                  }}
                 >
-                  <div className="font-medium text-foreground">{c.name}</div>
-                  {c.title && (
-                    <div className="text-xs text-foreground-secondary">{c.title}</div>
-                  )}
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-foreground-secondary">
-                    {c.email && (
-                      <a
-                        href={`mailto:${c.email}`}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        {c.email}
-                      </a>
+                  Scan team page
+                </Button>
+              ) : null
+            }
+          >
+            {contacts.length === 0 ? (
+              <div className="text-xs text-foreground-secondary">
+                No contacts yet. Use "Scan team page" to auto-extract from the website, or add manually.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {contacts.map((c) => (
+                  <div
+                    key={c.id}
+                    className="bg-surface border border-border/60 rounded-md p-3 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-foreground">{c.name}</div>
+                      {c.source === "auto_scrape" && (
+                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30">
+                          Auto-extracted
+                        </span>
+                      )}
+                    </div>
+                    {c.title && (
+                      <div className="text-xs text-foreground-secondary">{c.title}</div>
                     )}
-                    {c.phone && <span>{c.phone}</span>}
-                    {c.linkedin && (
-                      <a
-                        href={c.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-accent-teal hover:underline"
-                      >
-                        LinkedIn
-                      </a>
-                    )}
+                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-foreground-secondary">
+                      {c.email && (
+                        <a
+                          href={`mailto:${c.email}`}
+                          className="hover:text-foreground transition-colors"
+                        >
+                          {c.email}
+                        </a>
+                      )}
+                      {c.phone && <span>{c.phone}</span>}
+                      {c.linkedin && (
+                        <a
+                          href={c.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent-teal hover:underline"
+                        >
+                          LinkedIn
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </ProfileSection>
         )}
+
 
         {/* Notes (personal actors only) */}
         {source === "personal" && personal && (

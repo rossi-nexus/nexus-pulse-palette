@@ -375,6 +375,18 @@ const OnboardingPage = () => {
           .catch(() => { /* non-fatal */ });
       }
 
+      // P8 — Automated contact extraction: fire-and-forget. LLM scrapes
+      // likely team/about pages and writes actor_contacts rows with
+      // source='auto_scrape'. Consultant can verify or remove later.
+      if (firstWebsite && result.actor_id) {
+        void supabase.functions
+          .invoke("enrich-from-team-page", {
+            body: { actor_id: result.actor_id, base_url: firstWebsite },
+          })
+          .catch(() => { /* non-fatal */ });
+      }
+
+
 
       localStorage.removeItem(DRAFT_KEY);
       try {
