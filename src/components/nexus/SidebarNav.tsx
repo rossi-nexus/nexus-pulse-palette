@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   Zap, Database, Settings, ChevronLeft, ChevronRight, Plus,
   FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon,
@@ -18,6 +19,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function formatSessionDate(iso: string): string {
   const d = new Date(iso);
@@ -34,7 +45,7 @@ const SidebarNav = () => {
   const [expanded, setExpanded] = useState(false);
   const {
     sessions, sessionId, setSessionId, isAdmin, createSession, renameSession,
-    assignSessionToProgramme,
+    assignSessionToProgramme, deleteSession,
   } = useSessionContext();
   const { programmes, refresh: refreshProgrammes } = useProgrammeList();
   const { hasAccess: hasConsultantAccess } = useConsultantAccess();
@@ -45,6 +56,7 @@ const SidebarNav = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [newProgOpen, setNewProgOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -178,6 +190,13 @@ const SidebarNav = () => {
                   {s.programme_id === p.id ? "✓ " : ""}{p.name}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmDeleteId(s.id)}
+                className="text-xs text-destructive focus:text-destructive"
+              >
+                Delete session
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -385,6 +404,38 @@ const SidebarNav = () => {
         onOpenChange={setNewProgOpen}
         onCreated={refreshProgrammes}
       />
+
+      <AlertDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All Step 1-5 data for this session will be removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!confirmDeleteId) return;
+                const id = confirmDeleteId;
+                setConfirmDeleteId(null);
+                const ok = await deleteSession(id);
+                if (ok) {
+                  toast.success("Session deleted");
+                  if (id === sessionId) navigate("/pipeline");
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 };

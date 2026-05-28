@@ -32,6 +32,7 @@ interface SessionContextValue {
   createSession: () => Promise<string | null>;
   renameSession: (id: string, name: string) => Promise<void>;
   assignSessionToProgramme: (id: string, programmeId: string | null) => Promise<void>;
+  deleteSession: (id: string) => Promise<boolean>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -198,6 +199,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const deleteSession = useCallback(async (id: string) => {
+    const { error } = await supabase.from("search_sessions").delete().eq("id", id);
+    if (error) {
+      toast.error(`Delete failed: ${error.message}`);
+      return false;
+    }
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    setSessionIdState((curr) => (curr === id ? null : curr));
+    return true;
+  }, []);
+
   return (
     <SessionContext.Provider
       value={{
@@ -212,6 +224,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         createSession,
         renameSession,
         assignSessionToProgramme,
+        deleteSession,
       }}
     >
       {children}
