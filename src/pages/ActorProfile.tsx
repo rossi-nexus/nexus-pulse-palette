@@ -56,6 +56,7 @@ import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPa
 import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
 import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import { FromYourCollectionPanel } from "@/components/actor-profile/FromYourCollectionPanel";
 import {
   readOntologyEntries,
   type DisplayEntry,
