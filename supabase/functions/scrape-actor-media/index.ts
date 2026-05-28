@@ -1,11 +1,11 @@
-// Auto-scrape an actor's website for logo + hero images, upload to the
-// actor-media bucket, and insert actor_media rows. Fire-and-forget from
+// Auto-scrape an actor's website for logo + hero + product images, upload to
+// the actor-media bucket, and insert actor_media rows. Fire-and-forget from
 // onboarding once a verified actor row exists.
 //
 // Auth: JWT-gated. Caller must be admin or the actor's verifier_id.
-// Dedup: skips a slot if any existing row exists for that actor + slot
-// (regardless of source) — we never overwrite consultant uploads, and we
-// never re-scrape a slot we've already auto-filled.
+// Dedup:
+//   - logo/hero: skip the slot if any row already exists for that actor + type.
+//   - product images: skip if a row with same actor_id + original_url already exists.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
@@ -17,10 +17,17 @@ const corsHeaders = {
 };
 
 type Slot = "logo" | "hero";
-const ALL_SLOTS: Slot[] = ["logo", "hero"];
+const SINGLE_SLOTS: Slot[] = ["logo", "hero"];
 const MAX_BYTES = 5 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10_000;
 const UA = "Mozilla/5.0 (compatible; NEXUS-MediaScrape/1.0; +https://nexus.app)";
+
+// Product page heuristics — English + Norwegian.
+const PRODUCT_PATHS = [
+  "/products", "/product", "/solutions", "/portfolio",
+  "/produkter", "/produkt", "/losninger", "/løsninger", "/tjenester",
+];
+const MAX_PRODUCT_IMAGES = 12;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -53,15 +60,10 @@ function matchAll(html: string, re: RegExp): string[] {
 }
 
 function resolveUrl(href: string, base: string): string | null {
-  try {
-    return new URL(href, base).href;
-  } catch {
-    return null;
-  }
+  try { return new URL(href, base).href; } catch { return null; }
 }
 
 function extractLogo(html: string, baseUrl: string): string | null {
-  // 1) apple-touch-icon / icon link tags
   const linkTags = matchAll(html, /<link\b[^>]*>/gi);
   const pickByRel = (relPattern: RegExp): string | null => {
     for (const t of linkTags) {
@@ -77,20 +79,12 @@ function extractLogo(html: string, baseUrl: string): string | null {
     pickByRel(/apple-touch-icon-precomposed/i),
     pickByRel(/apple-touch-icon/i),
   ];
-
-  // 2) og:logo
   const metaTags = matchAll(html, /<meta\b[^>]*>/gi);
   for (const t of metaTags) {
     const prop = (attr(t, "property") ?? attr(t, "name") ?? "").toLowerCase();
-    if (prop === "og:logo") {
-      candidates.push(attr(t, "content"));
-    }
+    if (prop === "og:logo") candidates.push(attr(t, "content"));
   }
-
-  // 3) <link rel="icon">
   candidates.push(pickByRel(/^(shortcut\s+)?icon$/i) ?? pickByRel(/\bicon\b/i));
-
-  // 4) <img class="...logo...">
   const imgTags = matchAll(html, /<img\b[^>]*>/gi);
   for (const t of imgTags) {
     const cls = attr(t, "class") ?? "";
@@ -98,16 +92,10 @@ function extractLogo(html: string, baseUrl: string): string | null {
     const alt = attr(t, "alt") ?? "";
     if (/logo/i.test(cls) || /logo/i.test(id) || /logo/i.test(alt)) {
       const src = attr(t, "src");
-      if (src) {
-        candidates.push(src);
-        break;
-      }
+      if (src) { candidates.push(src); break; }
     }
   }
-
-  // 5) /favicon.ico last resort
   candidates.push("/favicon.ico");
-
   for (const c of candidates) {
     if (!c) continue;
     const resolved = resolveUrl(c, baseUrl);
@@ -128,8 +116,6 @@ function extractHero(html: string, baseUrl: string): string | null {
       }
     }
   }
-
-  // Heuristic: first <img> with explicit width >= 800
   const imgTags = matchAll(html, /<img\b[^>]*>/gi);
   for (const t of imgTags) {
     const widthStr = attr(t, "width");
@@ -145,14 +131,40 @@ function extractHero(html: string, baseUrl: string): string | null {
   return null;
 }
 
+interface ProductCandidate {
+  url: string;
+  alt: string | null;
+}
+
+function extractProductImages(html: string, baseUrl: string): ProductCandidate[] {
+  const out: ProductCandidate[] = [];
+  const seen = new Set<string>();
+  const imgTags = matchAll(html, /<img\b[^>]*>/gi);
+  for (const t of imgTags) {
+    const src = attr(t, "src");
+    if (!src) continue;
+    const resolved = resolveUrl(src, baseUrl);
+    if (!resolved) continue;
+    // Filter likely-not-product: tiny icons, logos, sprites, transparent pixels
+    const cls = (attr(t, "class") ?? "").toLowerCase();
+    const alt = attr(t, "alt");
+    if (/\b(logo|icon|sprite|avatar|favicon)\b/.test(cls)) continue;
+    if (/\.svg(\?|$)/i.test(resolved)) continue;
+    if (/data:image\//i.test(resolved)) continue;
+    if (seen.has(resolved)) continue;
+    seen.add(resolved);
+    out.push({ url: resolved, alt: alt ?? null });
+    if (out.length >= MAX_PRODUCT_IMAGES) break;
+  }
+  return out;
+}
+
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
     return await fetch(url, { ...init, signal: ctrl.signal, redirect: "follow" });
-  } finally {
-    clearTimeout(t);
-  }
+  } finally { clearTimeout(t); }
 }
 
 function extFromContentType(ct: string): string | null {
@@ -177,14 +189,23 @@ async function downloadImage(url: string): Promise<{ bytes: Uint8Array; contentT
     const buf = new Uint8Array(await resp.arrayBuffer());
     if (buf.byteLength > MAX_BYTES) return null;
     return { bytes: buf, contentType: ct };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
+}
+
+async function fetchHtml(url: string): Promise<string | null> {
+  try {
+    const resp = await fetchWithTimeout(url, {
+      headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,*/*" },
+    });
+    if (!resp.ok) return null;
+    const ct = (resp.headers.get("content-type") ?? "").toLowerCase();
+    if (!ct.includes("html") && !ct.includes("text/plain")) return null;
+    return await resp.text();
+  } catch { return null; }
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Missing authorization" }, 401);
@@ -214,7 +235,6 @@ serve(async (req) => {
 
     const supa = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // Authorisation: admin or verifier of this actor
     const { data: actorRow, error: actorErr } = await supa
       .from("actors")
       .select("id, verifier_id")
@@ -228,28 +248,20 @@ serve(async (req) => {
       return json({ error: "Forbidden" }, 403);
     }
 
-    // Dedup: skip slots already populated (any source — never overwrite).
     const { data: existing } = await supa
       .from("actor_media")
-      .select("type, source")
+      .select("type, original_url")
       .eq("actor_id", actor_id);
-    const occupied = new Set<string>((existing ?? []).map((r) => r.type as string));
+    const occupied = new Set<string>((existing ?? []).map((r) => r.type as string).filter((t) => t === "logo" || t === "hero"));
+    const existingProductUrls = new Set<string>(
+      (existing ?? []).filter((r) => r.type === "product" && r.original_url).map((r) => r.original_url as string),
+    );
 
-    const slotsToFill: Slot[] = ALL_SLOTS.filter((s) => !occupied.has(s));
-    if (slotsToFill.length === 0) {
-      return json({ ok: true, scraped: [], skipped: ALL_SLOTS, reason: "all_slots_occupied" });
-    }
+    const slotsToFill: Slot[] = SINGLE_SLOTS.filter((s) => !occupied.has(s));
 
-    // Fetch HTML
-    let html: string;
-    try {
-      const resp = await fetchWithTimeout(baseUrl.href, {
-        headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,*/*" },
-      });
-      if (!resp.ok) return json({ ok: true, scraped: [], skipped: slotsToFill, reason: `http_${resp.status}` });
-      html = await resp.text();
-    } catch (e) {
-      return json({ ok: true, scraped: [], skipped: slotsToFill, reason: `fetch_failed: ${(e as Error).message}` });
+    const html = await fetchHtml(baseUrl.href);
+    if (!html) {
+      return json({ ok: true, scraped: [], skipped: slotsToFill, reason: "homepage_fetch_failed" });
     }
 
     const targets: { slot: Slot; url: string | null }[] = [];
@@ -258,37 +270,39 @@ serve(async (req) => {
       targets.push({ slot, url: u });
     }
 
-    const scraped: { slot: Slot; url: string; source_url: string }[] = [];
-    const skipped: { slot: Slot; reason: string }[] = [];
+    const scraped: { slot: string; url: string; source_url: string }[] = [];
+    const skipped: { slot: string; reason: string }[] = [];
 
-    for (const { slot, url } of targets) {
-      if (!url) { skipped.push({ slot, reason: "no_candidate" }); continue; }
-      const dl = await downloadImage(url);
-      if (!dl) { skipped.push({ slot, reason: "download_failed" }); continue; }
+    async function ingest(slot: string, sourceUrl: string, linkedProductName: string | null = null) {
+      const dl = await downloadImage(sourceUrl);
+      if (!dl) { skipped.push({ slot, reason: "download_failed" }); return; }
       const ext = extFromContentType(dl.contentType) ?? "img";
       const ts = Date.now();
-      const path = `${actor_id}/${slot}/auto-${ts}.${ext}`;
+      const path = `${actor_id}/${slot}/auto-${ts}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await supa.storage
         .from("actor-media")
         .upload(path, dl.bytes, { contentType: dl.contentType, upsert: false });
-      if (upErr) { skipped.push({ slot, reason: `upload_failed: ${upErr.message}` }); continue; }
+      if (upErr) { skipped.push({ slot, reason: `upload_failed: ${upErr.message}` }); return; }
       const publicUrl = supa.storage.from("actor-media").getPublicUrl(path).data.publicUrl;
+      const cropData: Record<string, unknown> | null = linkedProductName
+        ? { linked_product_name: linkedProductName }
+        : null;
       const { data: inserted, error: insErr } = await supa
         .from("actor_media")
         .insert({
           actor_id,
           type: slot,
           url: publicUrl,
-          original_url: publicUrl,
+          original_url: sourceUrl,
           source: "auto_scrape",
-          uploaded_by: user.id,
+          uploaded_by: user!.id,
+          crop_data: cropData,
         })
         .select("id")
         .single();
-      if (insErr) { skipped.push({ slot, reason: `insert_failed: ${insErr.message}` }); continue; }
-      scraped.push({ slot, url: publicUrl, source_url: url });
+      if (insErr) { skipped.push({ slot, reason: `insert_failed: ${insErr.message}` }); return; }
+      scraped.push({ slot, url: publicUrl, source_url: sourceUrl });
 
-      // Audit
       await supa.rpc("fn_audit_log_event", {
         p_event_type: "actor_media_auto_scraped",
         p_target_table: "actor_media",
@@ -297,12 +311,40 @@ serve(async (req) => {
         p_programme_id: null,
         p_changes: {
           slot_type: slot,
-          source_url: url,
+          source_url: sourceUrl,
           scraped_at: new Date().toISOString(),
           website_url: baseUrl.href,
+          linked_product_name: linkedProductName,
         } as never,
         p_reason: "auto-scrape from website during onboarding/enrichment",
       } as never);
+    }
+
+    for (const { slot, url } of targets) {
+      if (!url) { skipped.push({ slot, reason: "no_candidate" }); continue; }
+      await ingest(slot, url);
+    }
+
+    // ---- Product image scraping (additive, never blocks) ----
+    try {
+      let productHtml: string | null = null;
+      let productPageUrl: string | null = null;
+      for (const path of PRODUCT_PATHS) {
+        const cand = resolveUrl(path, baseUrl.href);
+        if (!cand) continue;
+        const h = await fetchHtml(cand);
+        if (h && h.length > 200) { productHtml = h; productPageUrl = cand; break; }
+      }
+      if (productHtml && productPageUrl) {
+        const imgs = extractProductImages(productHtml, productPageUrl);
+        for (const img of imgs) {
+          if (existingProductUrls.has(img.url)) continue;
+          existingProductUrls.add(img.url);
+          await ingest("product", img.url, img.alt && img.alt.length > 0 && img.alt.length < 120 ? img.alt : null);
+        }
+      }
+    } catch (e) {
+      console.warn(`[scrape-actor-media] product-image pass failed`, e);
     }
 
     return json({ ok: true, scraped, skipped });

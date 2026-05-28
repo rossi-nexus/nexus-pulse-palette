@@ -16,17 +16,34 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (compatible; NEXUS-ContactScrape/1.0; +https://nexus.app)";
 const FETCH_TIMEOUT_MS = 10_000;
+// English + Norwegian (no/da/sv close enough) candidate paths.
 const CANDIDATE_PATHS = [
   "/about",
   "/about-us",
   "/team",
+  "/our-team",
   "/leadership",
   "/people",
   "/contact",
   "/contacts",
+  "/contact-us",
   "/staff",
+  "/om-oss",
+  "/om",
+  "/medarbeidere",
+  "/ansatte",
+  "/folk",
+  "/styret",
+  "/ledelse",
+  "/ledelsen",
+  "/kontakt",
+  "/kontakt-oss",
 ];
-const PAGE_HINT_TOKENS = ["team", "leadership", "contact", "people", "staff", "about"];
+// Hint tokens used to recognize that a candidate page is actually a team/about/contact page.
+const PAGE_HINT_TOKENS = [
+  "team", "leadership", "contact", "people", "staff", "about",
+  "om oss", "medarbeidere", "ansatte", "ledelse", "styret", "kontakt", "folk",
+];
 const MAX_CONTACTS = 20;
 const MAX_TEXT_CHARS = 16_000;
 
@@ -77,38 +94,78 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-async function findTeamPage(baseUrl: string): Promise<{ url: string; text: string } | null> {
-  for (const path of CANDIDATE_PATHS) {
-    let candidate: string;
-    try {
-      candidate = new URL(path, baseUrl).href;
-    } catch {
-      continue;
+interface CandidatePage { url: string; text: string; score: number; }
+
+async function tryFetchPage(candidate: string): Promise<CandidatePage | null> {
+  try {
+    const resp = await fetchWithTimeout(candidate);
+    if (!resp.ok) return null;
+    const ct = (resp.headers.get("content-type") ?? "").toLowerCase();
+    if (!ct.includes("html") && !ct.includes("text/plain")) return null;
+    const html = await resp.text();
+    const text = stripHtml(html);
+    if (text.length <= 200) return null;
+    const lower = text.toLowerCase();
+    const score = PAGE_HINT_TOKENS.reduce((n, tok) => n + (lower.includes(tok) ? 1 : 0), 0);
+    const truncated = text.length > MAX_TEXT_CHARS
+      ? text.slice(0, MAX_TEXT_CHARS) + "\n\n[Content truncated]"
+      : text;
+    return { url: candidate, text: truncated, score };
+  } catch {
+    return null;
+  }
+}
+
+// Look at homepage HTML for <a> tags with team/about/contact-ish text and
+// extract additional candidate URLs we may not have hardcoded.
+async function discoverLinkedPages(baseUrl: string): Promise<string[]> {
+  try {
+    const resp = await fetchWithTimeout(baseUrl);
+    if (!resp.ok) return [];
+    const html = await resp.text();
+    const out = new Set<string>();
+    const re = /<a\b[^>]*href\s*=\s*("([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) {
+      const href = (m[2] ?? m[3] ?? "").trim();
+      const inner = m[4].replace(/<[^>]+>/g, "").trim().toLowerCase();
+      if (!href || !inner) continue;
+      const wantsTeam =
+        /\b(team|leadership|people|staff|about|contact|kontakt|om\s*oss|medarbeider|ansatte|ledelse|styret|folk)\b/.test(
+          inner,
+        );
+      if (!wantsTeam) continue;
+      try {
+        const u = new URL(href, baseUrl).href;
+        // Only same-host links
+        if (new URL(u).host === new URL(baseUrl).host) out.add(u);
+      } catch { /* skip */ }
     }
-    try {
-      const resp = await fetchWithTimeout(candidate);
-      if (!resp.ok) continue;
-      const ct = (resp.headers.get("content-type") ?? "").toLowerCase();
-      if (!ct.includes("html") && !ct.includes("text/plain")) continue;
-      const html = await resp.text();
-      const text = stripHtml(html);
-      const lower = text.toLowerCase();
-      const hits = PAGE_HINT_TOKENS.reduce(
-        (n, tok) => n + (lower.includes(tok) ? 1 : 0),
-        0,
-      );
-      if (hits >= 2 && text.length > 200) {
-        const truncated =
-          text.length > MAX_TEXT_CHARS
-            ? text.slice(0, MAX_TEXT_CHARS) + "\n\n[Content truncated]"
-            : text;
-        return { url: candidate, text: truncated };
-      }
-    } catch {
-      /* try next */
+    return Array.from(out).slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+async function findTeamPage(baseUrl: string): Promise<CandidatePage | null> {
+  // 1) Try hardcoded candidates, then 2) scrape homepage links for more.
+  const hardcoded: string[] = [];
+  for (const path of CANDIDATE_PATHS) {
+    try { hardcoded.push(new URL(path, baseUrl).href); } catch { /* skip */ }
+  }
+  const linked = await discoverLinkedPages(baseUrl);
+  const candidates = Array.from(new Set([...hardcoded, ...linked]));
+
+  let best: CandidatePage | null = null;
+  for (const c of candidates) {
+    const page = await tryFetchPage(c);
+    if (!page) continue;
+    if (page.score >= 1 && (best === null || page.score > best.score)) {
+      best = page;
+      if (page.score >= 3) break; // good enough
     }
   }
-  return null;
+  return best;
 }
 
 interface ScrapedContact {
@@ -117,6 +174,26 @@ interface ScrapedContact {
   email?: string | null;
   phone?: string | null;
   linkedin?: string | null;
+}
+
+function tryParseLooseJson(raw: string): unknown {
+  // Strip ``` fences, trailing commas; tolerate model preamble.
+  let s = raw.trim();
+  s = s.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  // Find first { or [
+  const start = Math.min(
+    ...["{", "["].map((c) => {
+      const i = s.indexOf(c);
+      return i < 0 ? Number.POSITIVE_INFINITY : i;
+    }),
+  );
+  if (Number.isFinite(start)) s = s.slice(start);
+  s = s.replace(/,\s*([}\]])/g, "$1");
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
 }
 
 async function llmExtractContacts(
@@ -152,7 +229,7 @@ async function llmExtractContacts(
     },
   };
 
-  const prompt = `You are extracting individual people (employees, founders, leadership team members) from a company website's team / about / contact page.
+  const prompt = `You are extracting individual people (employees, founders, leadership team members, board members) from a company website's team / about / contact / leadership page. The page may be in English or Norwegian.
 
 URL: ${pageUrl}
 
@@ -162,9 +239,10 @@ ${pageText}
 """
 
 Rules:
-- Only return real people with a clear name.
-- Skip generic mailboxes (info@, contact@, sales@) — those are not individuals.
+- Only return real named individuals.
+- Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are not individuals.
 - Skip a contact if the only information is a name with NO title, email, phone, or LinkedIn. (Name alone is too noisy.)
+- Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef" count as titles.
 - Maximum 20 contacts.
 - linkedin must be a full URL (https://...).
 - If nothing qualifies, return an empty array.
@@ -189,20 +267,17 @@ Call submit_contacts with the result.`;
   }
   const data = await resp.json();
   const call = data?.choices?.[0]?.message?.tool_calls?.[0];
-  if (!call?.function?.arguments) return [];
-  try {
-    const parsed = JSON.parse(call.function.arguments);
-    const arr = Array.isArray(parsed?.contacts) ? parsed.contacts : [];
-    return arr.slice(0, MAX_CONTACTS).map((c: Record<string, unknown>) => ({
-      name: String(c.name ?? "").trim(),
-      title: typeof c.title === "string" ? c.title.trim() || null : null,
-      email: typeof c.email === "string" ? c.email.trim() || null : null,
-      phone: typeof c.phone === "string" ? c.phone.trim() || null : null,
-      linkedin: typeof c.linkedin === "string" ? c.linkedin.trim() || null : null,
-    })).filter((c) => c.name.length > 0);
-  } catch {
-    return [];
-  }
+  const argStr: string | undefined = call?.function?.arguments;
+  if (!argStr) return [];
+  const parsed = tryParseLooseJson(argStr) as { contacts?: unknown } | null;
+  const arr = Array.isArray(parsed?.contacts) ? (parsed!.contacts as Record<string, unknown>[]) : [];
+  return arr.slice(0, MAX_CONTACTS).map((c) => ({
+    name: String(c.name ?? "").trim(),
+    title: typeof c.title === "string" ? c.title.trim() || null : null,
+    email: typeof c.email === "string" ? c.email.trim() || null : null,
+    phone: typeof c.phone === "string" ? c.phone.trim() || null : null,
+    linkedin: typeof c.linkedin === "string" ? c.linkedin.trim() || null : null,
+  })).filter((c) => c.name.length > 0);
 }
 
 serve(async (req) => {
@@ -241,7 +316,6 @@ serve(async (req) => {
 
     const supa = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // Authorisation: admin or verifier of this actor.
     const { data: actorRow, error: actorErr } = await supa
       .from("actors")
       .select("id, verifier_id")
@@ -255,6 +329,7 @@ serve(async (req) => {
 
     const found = await findTeamPage(baseUrl.href);
     if (!found) {
+      console.log(`[enrich-from-team-page] no team page found for ${baseUrl.href}`);
       return json({
         ok: true,
         scraped_count: 0,
@@ -264,11 +339,13 @@ serve(async (req) => {
         reason: "no_team_page_found",
       });
     }
+    console.log(`[enrich-from-team-page] candidate ${found.url} score=${found.score}`);
 
     let contacts: ScrapedContact[];
     try {
       contacts = await llmExtractContacts(found.text, found.url, lovableKey);
     } catch (e) {
+      console.error(`[enrich-from-team-page] llm error`, e);
       return json({
         ok: false,
         error: (e as Error).message,
@@ -276,12 +353,11 @@ serve(async (req) => {
       }, 502);
     }
 
-    // Filter: must have name + at least one other identifier.
     const filtered = contacts.filter(
       (c) => c.name && (c.title || c.email || c.phone || c.linkedin),
     );
+    console.log(`[enrich-from-team-page] llm returned ${contacts.length}, kept ${filtered.length}`);
 
-    // Dedup against existing rows for this actor (case-insensitive name match).
     const { data: existing } = await supa
       .from("actor_contacts")
       .select("name")
@@ -305,7 +381,11 @@ serve(async (req) => {
         linkedin: c.linkedin,
         source: "auto_scrape",
       });
-      if (insErr) { skipped++; continue; }
+      if (insErr) {
+        console.error(`[enrich-from-team-page] insert failed`, insErr);
+        skipped++;
+        continue;
+      }
       written++;
     }
 
@@ -333,6 +413,7 @@ serve(async (req) => {
       source_url: found.url,
     });
   } catch (e) {
+    console.error(`[enrich-from-team-page] fatal`, e);
     return json({ error: (e as Error).message }, 500);
   }
 });

@@ -311,24 +311,49 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
 
           {/* Diff items */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <div className="text-[11px] uppercase tracking-wider text-foreground-muted">
                 Items not yet in the verified DB
               </div>
-              {selectedItems.length > 0 && (
-                <Button
-                  size="sm"
-                  disabled={submitting}
-                  onClick={() => proposeItems(selectedItems)}
-                >
-                  {submitting ? (
-                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                  ) : (
-                    <Send className="w-3 h-3 mr-1" />
-                  )}
-                  Suggest {selectedItems.length} selected
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {totalDiff > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={submitting}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Suggest all ${totalDiff} item${totalDiff === 1 ? "" : "s"} for verification on this actor? They'll all flow through the verification queue at once.`,
+                        )
+                      ) {
+                        proposeItems(allDiffItems);
+                      }
+                    }}
+                  >
+                    {submitting ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <Send className="w-3 h-3 mr-1" />
+                    )}
+                    Suggest all ({totalDiff})
+                  </Button>
+                )}
+                {selectedItems.length > 0 && (
+                  <Button
+                    size="sm"
+                    disabled={submitting}
+                    onClick={() => proposeItems(selectedItems)}
+                  >
+                    {submitting ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <Send className="w-3 h-3 mr-1" />
+                    )}
+                    Suggest {selectedItems.length} selected
+                  </Button>
+                )}
+              </div>
             </div>
 
             {totalDiff === 0 ? (
