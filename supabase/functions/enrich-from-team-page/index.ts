@@ -156,19 +156,24 @@ async function findTeamPage(baseUrl: string): Promise<CandidatePage | null> {
     try { hardcoded.push(new URL(path, baseUrl).href); } catch { /* skip */ }
   }
   const linked = await discoverLinkedPages(baseUrl);
+  const linkedSet = new Set(linked);
   const candidates = Array.from(new Set([...linked, ...hardcoded])).slice(0, MAX_CANDIDATES);
   console.log(`[enrich-from-team-page] probing ${candidates.length} candidates (linked=${linked.length}, hardcoded=${hardcoded.length})`);
 
   // 2) Probe in parallel — sequential was hitting Supabase wall-time on slow hosts
   //    (~5s per 404 × 20+ candidates). Promise.all bounds wall-time to ~FETCH_TIMEOUT_MS.
-  const results = await Promise.all(candidates.map((c) => tryFetchPage(c)));
+  const results = await Promise.all(candidates.map(async (c) => ({ url: c, page: await tryFetchPage(c) })));
   let best: CandidatePage | null = null;
-  for (const page of results) {
+  for (const { url, page } of results) {
     if (!page) continue;
-    if (page.score >= 1 && (best === null || page.score > best.score)) {
+    // Linked URLs were already prefiltered by team-ish anchor text/href, so accept
+    // them even when token-score is 0 (sparse SPA HTML on WordPress/Avada/etc.).
+    const minScore = linkedSet.has(url) ? 0 : 1;
+    if (page.score >= minScore && (best === null || page.score > best.score)) {
       best = page;
     }
   }
+  if (best) console.log(`[enrich-from-team-page] best candidate ${best.url} score=${best.score} chars=${best.text.length}`);
   return best;
 }
 
