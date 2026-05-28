@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   Zap, Database, Settings, ChevronLeft, ChevronRight, Plus,
   FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon,
@@ -18,6 +19,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function formatSessionDate(iso: string): string {
   const d = new Date(iso);
