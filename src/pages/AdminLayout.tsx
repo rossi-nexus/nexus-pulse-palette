@@ -34,6 +34,7 @@ const AdminLayout = () => {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboardPage />} />
               <Route path="ontology" element={<OntologyQueuePage />} />
+              <Route path="users" element={<UserManagementPage />} />
               <Route path="registry-import" element={<RegistryImportPage />} />
             </Routes>
           </div>
