@@ -4,6 +4,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import OntologyQueuePage from "@/pages/admin/OntologyQueuePage";
 import RegistryImportPage from "@/pages/admin/RegistryImportPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
+import UserManagementPage from "@/pages/admin/UserManagementPage";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
@@ -33,6 +34,7 @@ const AdminLayout = () => {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboardPage />} />
               <Route path="ontology" element={<OntologyQueuePage />} />
+              <Route path="users" element={<UserManagementPage />} />
               <Route path="registry-import" element={<RegistryImportPage />} />
             </Routes>
           </div>

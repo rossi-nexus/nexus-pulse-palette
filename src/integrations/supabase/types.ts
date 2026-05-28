@@ -1549,6 +1549,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string
+          deactivated_at: string | null
           email: string
           id: string
           name: string
@@ -1558,6 +1559,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deactivated_at?: string | null
           email: string
           id: string
           name: string
@@ -1567,6 +1569,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deactivated_at?: string | null
           email?: string
           id?: string
           name?: string
@@ -1702,6 +1705,23 @@ export type Database = {
           verification_events_7d: number
         }[]
       }
+      fn_admin_deactivate_user: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      fn_admin_list_users: {
+        Args: never
+        Returns: {
+          attributes: Json
+          created_at: string
+          deactivated_at: string
+          email: string
+          id: string
+          name: string
+          programmes: Json
+          role: string
+        }[]
+      }
       fn_admin_ontology_decision: {
         Args: {
           p_action: string
@@ -1713,6 +1733,23 @@ export type Database = {
           p_target_entry_id?: string
         }
         Returns: Json
+      }
+      fn_admin_remove_user_attribute: {
+        Args: { p_key: string; p_user_id: string; p_value: string }
+        Returns: undefined
+      }
+      fn_admin_set_user_attribute: {
+        Args: {
+          p_expires_at?: string
+          p_key: string
+          p_user_id: string
+          p_value: string
+        }
+        Returns: undefined
+      }
+      fn_admin_update_user: {
+        Args: { p_name: string; p_role: string; p_user_id: string }
+        Returns: undefined
       }
       fn_approve_and_verify:
         | {
