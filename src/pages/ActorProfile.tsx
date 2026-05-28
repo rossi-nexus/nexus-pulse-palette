@@ -60,6 +60,8 @@ import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import { FromYourCollectionPanel } from "@/components/actor-profile/FromYourCollectionPanel";
+import { ProductCardGrid } from "@/components/actor-profile/ProductCardGrid";
+import { RefreshCw } from "lucide-react";
 import {
   readOntologyEntries,
   type DisplayEntry,
