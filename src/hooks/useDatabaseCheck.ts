@@ -283,13 +283,21 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
           const card = cardById.get(a.id);
           const match = matchInfoById.get(a.id);
           const sources = (card?.sources || []).map((s) => s.url).filter(Boolean);
+          const analysisSnapshot = analysisById.get(a.id) as any;
+          const hq = (analysisSnapshot && typeof analysisSnapshot === "object")
+            ? analysisSnapshot.headquarters_address ?? null
+            : null;
           rows.push({
             user_id: user.id,
             actor_name: a.name,
             actor_website: a.website || null,
             actor_description: card?.description || null,
             actor_type: a.actor_type || "commercial",
-            country: a.country || card?.country || null,
+            country: hq?.country ?? a.country ?? card?.country ?? null,
+            street_address: hq?.street ?? null,
+            postal_code: hq?.postal_code ?? null,
+            city: hq?.city ?? null,
+            region: hq?.region ?? null,
             source_session_id: sessionId,
             source_step: "analysis",
             profile_completeness: 70,
@@ -302,7 +310,7 @@ export function useDatabaseCheck({ sessionId }: UseDatabaseCheckProps) {
                   standards_found: card.standards_found,
                 }
               : {},
-            analysis_data: analysisById.get(a.id) || {},
+            analysis_data: analysisSnapshot || {},
             role_names: a.role_names,
             source_urls: sources,
             matched_main_db_actor_id: match?.db_actor_id || null,
