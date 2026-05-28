@@ -77,6 +77,8 @@ const ActorsView = () => {
 
   const [tab, setTab] = useState<TabKey>("database");
   const [loading, setLoading] = useState(true);
+  const [collectionView, setCollectionView] = useState<"list" | "map">("list");
+  const collectionMap = useCollectionMap();
 
   const [personal, setPersonal] = useState<PersonalActor[]>([]);
   const [dbActors, setDbActors] = useState<DbActor[]>([]);
