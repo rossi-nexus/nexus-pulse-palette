@@ -122,9 +122,12 @@ interface SearchStepProps {
   step2Locked: boolean;
   onUnlock: () => void;
   downstreamStepNames: string[];
+  sessionId?: string | null;
+  /** P13 — invoked when consultant accepts a coverage-driven role suggestion. */
+  onAddRoleFromCoverage?: (name: string, summaryText: string) => Promise<void> | void;
 }
 
-const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames }: SearchStepProps) => {
+const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames, sessionId = null, onAddRoleFromCoverage }: SearchStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [reviewExpanded, setReviewExpanded] = useState(false);
   const handleUnlockClick = () => {
