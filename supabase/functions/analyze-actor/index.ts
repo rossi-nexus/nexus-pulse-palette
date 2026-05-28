@@ -29,6 +29,7 @@ Additionally, extract if found:
 - Security classification level (which national systems, what level, evidence source)
 - Standards and certifications (ISO, AQAP, STANAG, etc.)
 - Customer references (who they've worked for, in what domain, when)
+- Headquarters address (extract from About / Contact / Footer / company info sections). Provide as a structured object with street, postal_code, city, region, country (ISO-2 or full name), required evidence, and source_url. Omit entirely if you cannot find it.
 
 Rules:
 - ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, or customer references.
