@@ -604,7 +604,7 @@ const OnboardingPage = () => {
             <SharedVerificationBody
               mode="fresh"
               actorContext={{ actor_name: legalName, country: country || null }}
-              seed={emptyCompletionSeed()}
+              seed={stableEmptySeed}
               urlSeed={cleanWebsites()[0] ?? null}
               evidenceSeed={null}
               onChange={handleBodyChange}
