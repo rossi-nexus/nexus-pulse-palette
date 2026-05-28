@@ -32,6 +32,7 @@ interface SessionContextValue {
   createSession: () => Promise<string | null>;
   renameSession: (id: string, name: string) => Promise<void>;
   assignSessionToProgramme: (id: string, programmeId: string | null) => Promise<void>;
+  deleteSession: (id: string) => Promise<boolean>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
