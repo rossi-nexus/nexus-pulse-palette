@@ -15,14 +15,16 @@
  * no verified_at change).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Send } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { readOntologyEntries, type DisplayEntry } from "@/lib/readOntologyEntries";
+import { ProposeNewEntryDialog } from "./ProposeNewEntryDialog";
 
 type CategoryKey = "capabilities" | "competences" | "domains" | "products" | "services";
 
@@ -90,6 +92,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [proposeDialogItem, setProposeDialogItem] = useState<DiffItem | null>(null);
 
   const load = useCallback(async () => {
     if (!user) {
@@ -195,6 +198,16 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
     () => (Object.values(diffByCategory) as DiffItem[][]).flat(),
     [diffByCategory],
   );
+  // Area 1: split mappable vs unmappable so bulk "Suggest all" only counts
+  // items that can actually flow through fn_propose_items_for_actor.
+  const mappableItems = useMemo(
+    () => allDiffItems.filter((i) => !!i.ontologyEntryId),
+    [allDiffItems],
+  );
+  const unmappableItems = useMemo(
+    () => allDiffItems.filter((i) => !i.ontologyEntryId),
+    [allDiffItems],
+  );
 
   const toggle = (key: string) =>
     setSelected((s) => {
@@ -207,9 +220,8 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
     async (items: DiffItem[]) => {
       if (!personal || items.length === 0) return;
       const proposable = items.filter((i) => i.ontologyEntryId);
-      const unresolved = items.length - proposable.length;
       if (proposable.length === 0) {
-        toast.error("None of the selected items map to an existing ontology entry.");
+        toast.error("None of the selected items map to an existing ontology entry. Use 'Propose as new' instead.");
         return;
       }
       setSubmitting(true);
@@ -229,9 +241,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
         });
         if (error) throw error;
         toast.success(
-          unresolved > 0
-            ? `Suggested ${proposable.length} item${proposable.length === 1 ? "" : "s"} (${unresolved} skipped — no matching ontology entry).`
-            : `Suggested ${proposable.length} item${proposable.length === 1 ? "" : "s"} for verification.`,
+          `Suggested ${proposable.length} item${proposable.length === 1 ? "" : "s"} for verification.`,
         );
         setSelected(new Set());
       } catch (e: any) {
@@ -253,7 +263,11 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
   if (!personal) return null;
 
   const totalDiff = allDiffItems.length;
-  const selectedItems = allDiffItems.filter((i) => selected.has(i.key));
+  const mappableCount = mappableItems.length;
+  const unmappableCount = unmappableItems.length;
+  const selectedItems = mappableItems.filter((i) => selected.has(i.key));
+
+
 
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
@@ -316,7 +330,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                 Items not yet in the verified DB
               </div>
               <div className="flex items-center gap-2">
-                {totalDiff > 0 && (
+                {mappableCount > 0 && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -324,10 +338,10 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Suggest all ${totalDiff} item${totalDiff === 1 ? "" : "s"} for verification on this actor? They'll all flow through the verification queue at once.`,
+                          `Suggest all ${mappableCount} mappable item${mappableCount === 1 ? "" : "s"} for verification on this actor? They'll all flow through the verification queue at once.`,
                         )
                       ) {
-                        proposeItems(allDiffItems);
+                        proposeItems(mappableItems);
                       }
                     }}
                   >
@@ -336,7 +350,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                     ) : (
                       <Send className="w-3 h-3 mr-1" />
                     )}
-                    Suggest all ({totalDiff})
+                    Suggest all ({mappableCount})
                   </Button>
                 )}
                 {selectedItems.length > 0 && (
@@ -388,12 +402,22 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                                   {item.entryName}
                                 </span>
                                 {!item.ontologyEntryId && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] bg-warning/10 text-warning border-warning/30"
-                                  >
-                                    No matching entry — can't suggest
-                                  </Badge>
+                                  <TooltipProvider delayDuration={150}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] bg-warning/10 text-warning border-warning/30 cursor-help"
+                                        >
+                                          No matching entry
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs text-xs">
+                                        This item from your collection doesn't match an existing ontology entry.
+                                        Use 'Propose as new' to add it to the ontology AND suggest it for this actor in one step.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                                 {item.confidence && (
                                   <Badge variant="outline" className="text-[10px]">
@@ -407,15 +431,28 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                                 </p>
                               )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={!item.ontologyEntryId || submitting}
-                              onClick={() => proposeItems([item])}
-                              className="text-xs"
-                            >
-                              Suggest
-                            </Button>
+                            {item.ontologyEntryId ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={submitting}
+                                onClick={() => proposeItems([item])}
+                                className="text-xs"
+                              >
+                                Suggest
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={submitting}
+                                onClick={() => setProposeDialogItem(item)}
+                                className="text-xs"
+                              >
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Propose as new
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -426,6 +463,29 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
             )}
           </div>
         </div>
+      )}
+      {personal && (
+        <ProposeNewEntryDialog
+          open={!!proposeDialogItem}
+          onOpenChange={(o) => !o && setProposeDialogItem(null)}
+          item={
+            proposeDialogItem
+              ? {
+                  entryName: proposeDialogItem.entryName,
+                  category: proposeDialogItem.category,
+                  evidence: proposeDialogItem.evidence,
+                  confidence: proposeDialogItem.confidence,
+                  sourceUrl: proposeDialogItem.sourceUrl,
+                }
+              : null
+          }
+          dbActorId={dbActorId}
+          personalActorId={personal.id}
+          onDone={() => {
+            setProposeDialogItem(null);
+            void load();
+          }}
+        />
       )}
     </div>
   );
