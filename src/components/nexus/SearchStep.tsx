@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
+import { SessionMapButton } from "./SessionMapButton";
 import RoleProgressBox from "./RoleProgressBox";
 import ActorCard from "./ActorCard";
 import ReviewToggle from "./ReviewToggle";
