@@ -351,6 +351,15 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
       <div className="flex flex-col" style={{ height: "calc(100vh - 240px)" }}>
         {/* HEADER — always visible */}
         <div className="space-y-4 pb-4 shrink-0">
+          {/* P13 — coverage-driven role suggestions (deterministic, post-search). */}
+          {status === "reviewing" && interpretation && onAddRoleFromCoverage && (
+            <CoverageBanner
+              interpretation={interpretation}
+              roleResults={orderedRoles}
+              sessionId={sessionId}
+              onAddRole={onAddRoleFromCoverage}
+            />
+          )}
           {/* Role progress boxes */}
           <div className="flex gap-2 pb-2 w-full">
             {orderedRoles.map(result => (
