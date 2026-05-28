@@ -319,6 +319,8 @@ serve(async (req) => {
       return json({ error: "Invalid base_url" }, 400);
     }
 
+    console.log(`[enrich-from-team-page] start actor_id=${actor_id} base_url=${baseUrl.href}`);
+
     const supa = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
     const { data: actorRow, error: actorErr } = await supa
