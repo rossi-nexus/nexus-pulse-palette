@@ -129,22 +129,21 @@ async function discoverLinkedPages(baseUrl: string): Promise<string[]> {
     const out = new Set<string>();
     const re = /<a\b[^>]*href\s*=\s*("([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
     let m: RegExpExecArray | null;
+    // Match BOTH link text AND href path. Norwegian inflection (e.g. "Teamet",
+    // "Om equipnor", "/om-equipnor/") routinely fails strict \bword\b tests on text alone.
+    const TEXT_RE = /(team|leadership|people|staff|about|contact|kontakt|\bom[\s-]|medarbeider|ansatte|ledelse|styret|folk)/i;
+    const HREF_RE = /\/(team|teamet|leadership|people|staff|about|contact|contacts|kontakt|kontakt-oss|om|om-oss|om-[a-z]+|medarbeider(?:e|ne)?|ansatte|ledelse(?:n)?|styret|folk)(?:\/|$)/i;
     while ((m = re.exec(html)) !== null) {
       const href = (m[2] ?? m[3] ?? "").trim();
-      const inner = m[4].replace(/<[^>]+>/g, "").trim().toLowerCase();
-      if (!href || !inner) continue;
-      const wantsTeam =
-        /\b(team|leadership|people|staff|about|contact|kontakt|om\s*oss|medarbeider|ansatte|ledelse|styret|folk)\b/.test(
-          inner,
-        );
-      if (!wantsTeam) continue;
+      const inner = m[4].replace(/<[^>]+>/g, "").trim();
+      if (!href) continue;
+      if (!TEXT_RE.test(inner) && !HREF_RE.test(href)) continue;
       try {
         const u = new URL(href, baseUrl).href;
-        // Only same-host links
         if (new URL(u).host === new URL(baseUrl).host) out.add(u);
       } catch { /* skip */ }
     }
-    return Array.from(out).slice(0, 10);
+    return Array.from(out).slice(0, 12);
   } catch {
     return [];
   }
