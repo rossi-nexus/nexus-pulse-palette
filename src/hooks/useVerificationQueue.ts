@@ -86,6 +86,7 @@ interface QueueRow {
   origin_external_id: string | null;
   suggested_by: string;
   created_at: string;
+  proposed_items: unknown;
   user_personal_actors: PersonalActorJoin | null;
   linked_actor: LinkedActorJoin | null;
 }
