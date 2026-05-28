@@ -151,21 +151,23 @@ async function discoverLinkedPages(baseUrl: string): Promise<string[]> {
 }
 
 async function findTeamPage(baseUrl: string): Promise<CandidatePage | null> {
-  // 1) Try hardcoded candidates, then 2) scrape homepage links for more.
+  // 1) Build candidate list: hardcoded paths + homepage-discovered links.
   const hardcoded: string[] = [];
   for (const path of CANDIDATE_PATHS) {
     try { hardcoded.push(new URL(path, baseUrl).href); } catch { /* skip */ }
   }
   const linked = await discoverLinkedPages(baseUrl);
-  const candidates = Array.from(new Set([...hardcoded, ...linked]));
+  const candidates = Array.from(new Set([...linked, ...hardcoded])).slice(0, MAX_CANDIDATES);
+  console.log(`[enrich-from-team-page] probing ${candidates.length} candidates (linked=${linked.length}, hardcoded=${hardcoded.length})`);
 
+  // 2) Probe in parallel — sequential was hitting Supabase wall-time on slow hosts
+  //    (~5s per 404 × 20+ candidates). Promise.all bounds wall-time to ~FETCH_TIMEOUT_MS.
+  const results = await Promise.all(candidates.map((c) => tryFetchPage(c)));
   let best: CandidatePage | null = null;
-  for (const c of candidates) {
-    const page = await tryFetchPage(c);
+  for (const page of results) {
     if (!page) continue;
     if (page.score >= 1 && (best === null || page.score > best.score)) {
       best = page;
-      if (page.score >= 3) break; // good enough
     }
   }
   return best;
