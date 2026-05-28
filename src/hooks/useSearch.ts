@@ -275,19 +275,53 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
             { p_entry_ids: targetEntryIds, p_limit: 20 },
           );
           if (rpcErr) throw rpcErr;
-          dbActors = (data || []).map((row: any) => {
+          const rawRows: any[] = data || [];
+          // P11 — compute composite relevance score per candidate; sort by it descending.
+          const scored = await Promise.all(
+            rawRows.map(async (row: any) => {
+              let relevance: number | null = null;
+              try {
+                const { data: scoreData } = await (supabase.rpc as any)(
+                  "fn_compute_actor_relevance_score",
+                  {
+                    p_actor_id: row.actor_id,
+                    p_role_id: null,
+                    p_ontology_entry_ids: targetEntryIds,
+                  },
+                );
+                const n = typeof scoreData === "number" ? scoreData : parseFloat(scoreData);
+                relevance = Number.isFinite(n) ? n : null;
+              } catch {
+                relevance = null;
+              }
+              return { row, relevance };
+            }),
+          );
+          scored.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0));
+          dbActors = scored.map(({ row, relevance }) => {
             const website: string | undefined = Array.isArray(row.websites) && row.websites.length > 0
               ? row.websites[0]
               : undefined;
             const locationBits = [row.city, row.region, row.country].filter(Boolean);
+            const overlap = Number(row.overlap_count) || 0;
+            // Local breakdown estimate for hover-explain (mirrors RPC tuning constants).
+            const decayEstimate = !row.verified_at
+              ? 0.8
+              : row.decays_at && new Date(row.decays_at) < new Date()
+                ? 0.6
+                : row.decays_at && new Date(row.decays_at).getTime() < Date.now() + 30 * 86400_000
+                  ? 0.85
+                  : new Date(row.verified_at).getTime() > Date.now() - 90 * 86400_000
+                    ? 1.15
+                    : 1.0;
             return {
               id: `db:${row.actor_id}`,
               name: row.legal_name,
               location: locationBits.join(", ") || undefined,
               country: row.country ?? undefined,
               website,
-              description: `Verified actor (${row.overlap_count} matching ontology tag${row.overlap_count === 1 ? "" : "s"}).`,
-              match_strength: row.overlap_count >= 3 ? "strong" : row.overlap_count === 2 ? "moderate" : "weak",
+              description: `Verified actor (weighted overlap ${overlap.toFixed(2)}).`,
+              match_strength: overlap >= 2.5 ? "strong" : overlap >= 1.4 ? "moderate" : "weak",
               actor_type: "commercial" as ActorTypeTag,
               sources: website ? [{ url: website, title: row.legal_name, type: "company_website" as const, credibility: "high" as const }] : [],
               evidence_snippets: [],
@@ -295,9 +329,15 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
               cross_role: false,
               source: "db" as const,
               db_actor_id: row.actor_id,
-              ontology_overlap_count: row.overlap_count,
+              ontology_overlap_count: overlap,
               matched_verified_at: row.verified_at,
               matched_decays_at: row.decays_at,
+              relevance_score: relevance,
+              relevance_breakdown: {
+                overlap: Math.min(1, 0.3 + overlap / Math.max(1, targetEntryIds.length)),
+                outcome: undefined, // computed server-side; unknown locally
+                decay: decayEstimate,
+              },
             } as ActorCardData;
           });
         } catch (err: any) {
