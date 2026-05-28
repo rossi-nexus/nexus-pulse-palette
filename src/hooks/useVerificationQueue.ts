@@ -42,6 +42,8 @@ export interface PendingSuggestion {
   source_session_id: string | null;
   /** B4: raw pipeline analysis JSONB used to pre-seed Complete & verify. Null for registry rows. */
   analysis_data: Record<string, unknown> | null;
+  /** Smart Merge: proposed items payload for item_addition rows. */
+  proposed_items: Array<Record<string, unknown>> | null;
 }
 
 interface PersonalActorJoin {
