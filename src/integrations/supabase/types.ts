@@ -1863,30 +1863,18 @@ export type Database = {
         Args: { p_name: string; p_role: string; p_user_id: string }
         Returns: undefined
       }
-      fn_approve_and_verify:
-        | {
-            Args: {
-              p_confidence: string
-              p_decays_at: string
-              p_evidence: Json
-              p_notes: string
-              p_programme_id?: string
-              p_queue_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_confidence: string
-              p_consultant_decisions?: Json
-              p_decays_at: string
-              p_evidence: Json
-              p_notes: string
-              p_programme_id?: string
-              p_queue_id: string
-            }
-            Returns: Json
-          }
+      fn_approve_and_verify: {
+        Args: {
+          p_confidence: string
+          p_consultant_decisions?: Json
+          p_decays_at: string
+          p_evidence: Json
+          p_notes: string
+          p_programme_id?: string
+          p_queue_id: string
+        }
+        Returns: Json
+      }
       fn_audit_log_event: {
         Args: {
           p_actor_id?: string
@@ -1898,6 +1886,15 @@ export type Database = {
           p_target_table: string
         }
         Returns: string
+      }
+      fn_backfill_actor_descriptions_from_personal: {
+        Args: never
+        Returns: {
+          actor_id: string
+          descriptions_added: number
+          legal_name: string
+          tags_updated: number
+        }[]
       }
       fn_can_write_actor_media: {
         Args: { _actor_id: string }
@@ -2063,30 +2060,18 @@ export type Database = {
         Args: { _programme_id: string; _uid: string }
         Returns: boolean
       }
-      fn_verify_actor:
-        | {
-            Args: {
-              p_actor_id: string
-              p_confidence: string
-              p_decays_at: string
-              p_evidence: Json
-              p_notes: string
-              p_programme_id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_actor_id: string
-              p_confidence: string
-              p_consultant_decisions?: Json
-              p_decays_at: string
-              p_evidence: Json
-              p_notes: string
-              p_programme_id?: string
-            }
-            Returns: string
-          }
+      fn_verify_actor: {
+        Args: {
+          p_actor_id: string
+          p_confidence: string
+          p_consultant_decisions?: Json
+          p_decays_at: string
+          p_evidence: Json
+          p_notes: string
+          p_programme_id?: string
+        }
+        Returns: string
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
