@@ -23,6 +23,7 @@ import {
   emptyCompletionSeed,
   type CompletionDecision,
 } from "@/components/consultant/CompleteAndVerifyBody";
+import { ItemAdditionReviewDialog } from "@/components/consultant/ItemAdditionReviewDialog";
 
 const VerificationWorkspacePage = () => {
   const { items, loading, refresh } = useVerificationQueue();
