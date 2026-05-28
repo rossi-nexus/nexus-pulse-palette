@@ -393,6 +393,38 @@ const SidebarNav = () => {
         onOpenChange={setNewProgOpen}
         onCreated={refreshProgrammes}
       />
+
+      <AlertDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All Step 1-5 data for this session will be removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!confirmDeleteId) return;
+                const id = confirmDeleteId;
+                setConfirmDeleteId(null);
+                const ok = await deleteSession(id);
+                if (ok) {
+                  toast.success("Session deleted");
+                  if (id === sessionId) navigate("/pipeline");
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 };
