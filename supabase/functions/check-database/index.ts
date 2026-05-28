@@ -132,6 +132,18 @@ serve(async (req) => {
         }
       }
 
+      // Alias lookup (P10): match against actor_aliases when name didn't match directly
+      if (!matched && actor.name) {
+        const { data: aliasRow } = await supabase
+          .from("actor_aliases")
+          .select("actor_id, actors:actors!inner(id, legal_name, verification_status, updated_at, data_completeness, country)")
+          .ilike("alias_name", actor.name.trim())
+          .maybeSingle();
+        if (aliasRow && (aliasRow as any).actors) {
+          matched = (aliasRow as any).actors;
+        }
+      }
+
       if (matched) {
         matches.push({
           session_actor_id: actor.id,
