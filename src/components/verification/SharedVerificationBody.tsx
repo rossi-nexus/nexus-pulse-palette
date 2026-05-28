@@ -38,6 +38,10 @@ export interface CompletionDecision {
   /** Per-item prose extracted by the LLM (e.g. product / service description).
    *  Persisted by verification RPCs into actor_descriptions on accept actions. */
   description?: string | null;
+  /** Provenance fields forwarded to actor_ontology_tags by the verification RPCs. */
+  evidence?: string | null;
+  confidence?: "high" | "medium" | "low" | null;
+  source_url?: string | null;
 }
 
 export type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
@@ -404,6 +408,9 @@ export const SharedVerificationBody = ({
           mapped_to_entry_id: p.matched_entry_id,
           mapped_to_entry_name: p.entry_name,
           description: p.description ?? null,
+          evidence: p.evidence ?? null,
+          confidence: p.confidence ?? null,
+          source_url: p.source_url ?? null,
         }));
       return {
         ...prev,
@@ -429,6 +436,9 @@ export const SharedVerificationBody = ({
       mapped_to_entry_id: p.matched_entry_id,
       mapped_to_entry_name: p.entry_name,
       description: p.description ?? null,
+      evidence: p.evidence ?? null,
+      confidence: p.confidence ?? null,
+      source_url: p.source_url ?? null,
     }, p.entry_name);
   };
 
@@ -446,6 +456,9 @@ export const SharedVerificationBody = ({
       mapped_to_entry_id: pick.entry_id,
       mapped_to_entry_name: pick.entry_name,
       description: p.description ?? null,
+      evidence: p.evidence ?? null,
+      confidence: p.confidence ?? null,
+      source_url: p.source_url ?? null,
     }, pick.entry_name);
 
   const handleAcceptAsNew = (key: SectionKey, p: EnrichedProposal, desc: string | null) => {
@@ -460,6 +473,9 @@ export const SharedVerificationBody = ({
       mapped_to_entry_id: null,
       proposed_description: desc,
       description: p.description ?? null,
+      evidence: p.evidence ?? null,
+      confidence: p.confidence ?? null,
+      source_url: p.source_url ?? null,
     }, `${p.entry_name} (proposed)`);
   };
 
@@ -471,6 +487,9 @@ export const SharedVerificationBody = ({
       mapped_to_entry_id: pick.entry_id,
       mapped_to_entry_name: pick.entry_name,
       description: p.description ?? null,
+      evidence: p.evidence ?? null,
+      confidence: p.confidence ?? null,
+      source_url: p.source_url ?? null,
     }, pick.entry_name);
 
   const handleReject = (key: SectionKey, p: EnrichedProposal) =>
