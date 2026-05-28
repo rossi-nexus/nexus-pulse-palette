@@ -23,11 +23,13 @@ import {
   emptyCompletionSeed,
   type CompletionDecision,
 } from "@/components/consultant/CompleteAndVerifyBody";
+import { ItemAdditionReviewDialog } from "@/components/consultant/ItemAdditionReviewDialog";
 
 const VerificationWorkspacePage = () => {
   const { items, loading, refresh } = useVerificationQueue();
   const { hasAccess: isAdmin } = useAdminAccess();
   const [active, setActive] = useState<PendingSuggestion | null>(null);
+  const [itemAddActive, setItemAddActive] = useState<PendingSuggestion | null>(null);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -349,7 +351,9 @@ const VerificationWorkspacePage = () => {
                   className="mt-5 accent-primary"
                 />
                 <button
-                  onClick={() => setActive(it)}
+                  onClick={() =>
+                    it.origin === "item_addition" ? setItemAddActive(it) : setActive(it)
+                  }
                   className="flex-1 text-left bg-surface border border-border rounded-lg p-4 hover:border-border-accent hover:shadow-md transition-all"
                 >
                 <div className="flex items-start justify-between gap-3 mb-2">
@@ -364,12 +368,19 @@ const VerificationWorkspacePage = () => {
                       >
                         {it.origin_registry ?? "Registry"} import
                       </Badge>
+                    ) : it.origin === "item_addition" ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] bg-primary/10 text-primary border-primary/30 uppercase"
+                      >
+                        Item addition · {it.proposed_items?.length ?? 0}
+                      </Badge>
                     ) : (
                       <Badge variant="outline" className="text-[10px]">
                         User suggestion
                       </Badge>
                     )}
-                    {it.matched_main_db_actor_id && it.origin !== "registry_import" && (
+                    {it.matched_main_db_actor_id && it.origin === "user_suggestion" && (
                       <Badge
                         variant="outline"
                         className="text-[10px] bg-info/10 text-info border-info/30"
@@ -512,6 +523,20 @@ const VerificationWorkspacePage = () => {
           total={conflictQueue.length}
           busy={bulkBusy}
           onResolve={resolveConflict}
+        />
+      )}
+      {itemAddActive && (
+        <ItemAdditionReviewDialog
+          open={!!itemAddActive}
+          onOpenChange={(o) => !o && setItemAddActive(null)}
+          queueId={itemAddActive.queue_id}
+          targetActorName={itemAddActive.actor_name}
+          proposerName={itemAddActive.suggested_by_name ?? itemAddActive.suggested_by_email}
+          proposedItems={(itemAddActive.proposed_items as any) ?? []}
+          onDone={() => {
+            refresh();
+            setItemAddActive(null);
+          }}
         />
       )}
     </div>

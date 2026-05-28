@@ -517,6 +517,7 @@ export type Database = {
           origin: string
           origin_external_id: string | null
           origin_registry: string | null
+          proposed_items: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -532,6 +533,7 @@ export type Database = {
           origin?: string
           origin_external_id?: string | null
           origin_registry?: string | null
+          proposed_items?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -547,6 +549,7 @@ export type Database = {
           origin?: string
           origin_external_id?: string | null
           origin_registry?: string | null
+          proposed_items?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -1634,6 +1637,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_accept_item_addition: {
+        Args: { p_accepted_items: Json; p_queue_id: string; p_reason?: string }
+        Returns: string
+      }
       fn_actors_for_map: {
         Args: never
         Returns: {
@@ -1800,6 +1807,15 @@ export type Database = {
           verified_actor_count: number
         }[]
       }
+      fn_propose_items_for_actor: {
+        Args: {
+          p_db_actor_id: string
+          p_items: Json
+          p_personal_actor_id: string
+          p_reason?: string
+        }
+        Returns: string
+      }
       fn_rank_actors_by_ontology_overlap: {
         Args: { p_entry_ids: string[]; p_limit?: number }
         Returns: {
@@ -1825,6 +1841,10 @@ export type Database = {
           p_outcome_type: string
           p_programme_id: string
         }
+        Returns: string
+      }
+      fn_reject_item_addition: {
+        Args: { p_queue_id: string; p_reason?: string }
         Returns: string
       }
       fn_reject_suggestion: {

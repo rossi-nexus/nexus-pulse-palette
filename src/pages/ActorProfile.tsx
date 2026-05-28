@@ -56,6 +56,7 @@ import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPa
 import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
 import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
+import { FromYourCollectionPanel } from "@/components/actor-profile/FromYourCollectionPanel";
 import {
   readOntologyEntries,
   type DisplayEntry,
@@ -607,6 +608,17 @@ const ActorProfile = () => {
         }
 
         if (pa) {
+          // Smart Merge: if this personal actor is matched to a verified DB
+          // record, the DB profile becomes the canonical view. Redirect
+          // (replace) so back-button doesn't loop. Personal row stays put.
+          if (pa.matched_main_db_actor_id) {
+            navigate(
+              `/actors/${pa.matched_main_db_actor_id}?from-collection=${pa.id}${window.location.hash || ""}`,
+              { replace: true },
+            );
+            return;
+          }
+
           setPersonal(pa as unknown as PersonalActor);
           setSource("personal");
 
@@ -2087,6 +2099,12 @@ const ActorProfile = () => {
             )}
           </div>
         </ProfileSection>
+
+        {/* Smart Merge: "From your collection" — surfaces user's personal
+            notes, tags, and item-addition proposals against this DB actor. */}
+        {source === "database" && dbActor && (
+          <FromYourCollectionPanel dbActorId={dbActor.id} />
+        )}
 
         {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
         {source === "database" && dbActor && (
