@@ -1997,6 +1997,20 @@ export type Database = {
         }
         Returns: string
       }
+      fn_propose_new_entry_for_actor: {
+        Args: {
+          p_category_id: string
+          p_confidence?: string
+          p_db_actor_id: string
+          p_description?: string
+          p_entry_name: string
+          p_evidence?: string
+          p_personal_actor_id: string
+          p_reason?: string
+          p_source_url?: string
+        }
+        Returns: string
+      }
       fn_rank_actors_by_ontology_overlap: {
         Args: { p_entry_ids: string[]; p_limit?: number }
         Returns: {
