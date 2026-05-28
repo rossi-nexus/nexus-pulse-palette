@@ -45,7 +45,26 @@ export interface ActorCardData {
    */
   matched_verified_at?: string | null;
   matched_decays_at?: string | null;
+  /** P11 — composite relevance score [0,1] from fn_compute_actor_relevance_score. */
+  relevance_score?: number | null;
+  /** P11 — recorded modifier breakdown for hover-explain on the card. */
+  relevance_breakdown?: {
+    overlap?: number;
+    outcome?: number;
+    decay?: number;
+  };
+  /** P11 — per-role weighted match strength used by cross-role ranking. */
+  cross_role_score?: number;
+  /** P11 — per-role match-strength inputs feeding cross_role_score. */
+  cross_role_strengths?: Array<{ role_id: string; role_name: string; strength: "strong" | "moderate" | "weak" }>;
 }
+
+// P11 — match strength → weight used by both per-role and cross-role scoring.
+const STRENGTH_WEIGHT: Record<ActorCardData["match_strength"], number> = {
+  strong: 1.0,
+  moderate: 0.6,
+  weak: 0.3,
+};
 
 export interface RoleSearchResult {
   role_id: string;
@@ -256,19 +275,53 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
             { p_entry_ids: targetEntryIds, p_limit: 20 },
           );
           if (rpcErr) throw rpcErr;
-          dbActors = (data || []).map((row: any) => {
+          const rawRows: any[] = data || [];
+          // P11 — compute composite relevance score per candidate; sort by it descending.
+          const scored = await Promise.all(
+            rawRows.map(async (row: any) => {
+              let relevance: number | null = null;
+              try {
+                const { data: scoreData } = await (supabase.rpc as any)(
+                  "fn_compute_actor_relevance_score",
+                  {
+                    p_actor_id: row.actor_id,
+                    p_role_id: null,
+                    p_ontology_entry_ids: targetEntryIds,
+                  },
+                );
+                const n = typeof scoreData === "number" ? scoreData : parseFloat(scoreData);
+                relevance = Number.isFinite(n) ? n : null;
+              } catch {
+                relevance = null;
+              }
+              return { row, relevance };
+            }),
+          );
+          scored.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0));
+          dbActors = scored.map(({ row, relevance }) => {
             const website: string | undefined = Array.isArray(row.websites) && row.websites.length > 0
               ? row.websites[0]
               : undefined;
             const locationBits = [row.city, row.region, row.country].filter(Boolean);
+            const overlap = Number(row.overlap_count) || 0;
+            // Local breakdown estimate for hover-explain (mirrors RPC tuning constants).
+            const decayEstimate = !row.verified_at
+              ? 0.8
+              : row.decays_at && new Date(row.decays_at) < new Date()
+                ? 0.6
+                : row.decays_at && new Date(row.decays_at).getTime() < Date.now() + 30 * 86400_000
+                  ? 0.85
+                  : new Date(row.verified_at).getTime() > Date.now() - 90 * 86400_000
+                    ? 1.15
+                    : 1.0;
             return {
               id: `db:${row.actor_id}`,
               name: row.legal_name,
               location: locationBits.join(", ") || undefined,
               country: row.country ?? undefined,
               website,
-              description: `Verified actor (${row.overlap_count} matching ontology tag${row.overlap_count === 1 ? "" : "s"}).`,
-              match_strength: row.overlap_count >= 3 ? "strong" : row.overlap_count === 2 ? "moderate" : "weak",
+              description: `Verified actor (weighted overlap ${overlap.toFixed(2)}).`,
+              match_strength: overlap >= 2.5 ? "strong" : overlap >= 1.4 ? "moderate" : "weak",
               actor_type: "commercial" as ActorTypeTag,
               sources: website ? [{ url: website, title: row.legal_name, type: "company_website" as const, credibility: "high" as const }] : [],
               evidence_snippets: [],
@@ -276,9 +329,15 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
               cross_role: false,
               source: "db" as const,
               db_actor_id: row.actor_id,
-              ontology_overlap_count: row.overlap_count,
+              ontology_overlap_count: overlap,
               matched_verified_at: row.verified_at,
               matched_decays_at: row.decays_at,
+              relevance_score: relevance,
+              relevance_breakdown: {
+                overlap: Math.min(1, 0.3 + overlap / Math.max(1, targetEntryIds.length)),
+                outcome: undefined, // computed server-side; unknown locally
+                decay: decayEstimate,
+              },
             } as ActorCardData;
           });
         } catch (err: any) {
@@ -348,12 +407,45 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
 
       for (const [, group] of nameGroups) {
         if (group.length > 1) {
+          // P11 — weighted cross-role score:
+          //   total = SUM(per-role match strength weight) * (log(1 + role_count) + 1)
+          const roleCount = group.length;
+          const roleCountFactor = Math.log(1 + roleCount) + 1;
+          const sumStrength = group.reduce(
+            (acc, g) => acc + (STRENGTH_WEIGHT[g.actor.match_strength] ?? 0.3),
+            0,
+          );
+          const score = sumStrength * roleCountFactor;
+          const strengths = group.map(g => {
+            const rr = next.get(g.roleId);
+            return {
+              role_id: g.roleId,
+              role_name: rr?.role_name ?? g.roleId,
+              strength: g.actor.match_strength,
+            };
+          });
           const roleIds = group.map(g => g.roleId);
           for (const item of group) {
             item.actor.cross_role = true;
             item.actor.cross_role_ids = roleIds.filter(id => id !== item.roleId);
+            item.actor.cross_role_score = score;
+            item.actor.cross_role_strengths = strengths;
           }
         }
+      }
+
+      // P11 — sort each role's actors so cross-role actors (highest weighted score)
+      // surface above non-cross-role actors. Stable within tier.
+      for (const [roleId, result] of next) {
+        const sorted = [...result.actors].sort((a, b) => {
+          const aCross = a.cross_role_score ?? 0;
+          const bCross = b.cross_role_score ?? 0;
+          if (aCross !== bCross) return bCross - aCross;
+          const aRel = a.relevance_score ?? 0;
+          const bRel = b.relevance_score ?? 0;
+          return bRel - aRel;
+        });
+        next.set(roleId, { ...result, actors: sorted });
       }
 
       return next;

@@ -43,9 +43,39 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
               {strength.label}
             </Badge>
             {actor.cross_role && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-blue/40 text-accent-blue gap-1">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-blue/40 text-accent-blue gap-1"
+                title={
+                  actor.cross_role_strengths
+                    ? `Cross-role score ${actor.cross_role_score?.toFixed(2) ?? "—"}\n` +
+                      actor.cross_role_strengths
+                        .map(s => `• ${s.role_name}: ${s.strength}`)
+                        .join("\n")
+                    : undefined
+                }
+              >
                 <ArrowRightLeft className="w-2.5 h-2.5" />
                 Multi-role
+                {typeof actor.cross_role_score === "number" && (
+                  <span className="font-mono opacity-80">{actor.cross_role_score.toFixed(1)}</span>
+                )}
+              </Badge>
+            )}
+            {typeof actor.relevance_score === "number" && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-teal/30 text-accent-teal font-mono"
+                title={
+                  actor.relevance_breakdown
+                    ? `Relevance ${actor.relevance_score.toFixed(2)}\n` +
+                      `• overlap: ${actor.relevance_breakdown.overlap?.toFixed(2) ?? "—"}\n` +
+                      `• outcome: ${actor.relevance_breakdown.outcome?.toFixed(2) ?? "n/a"}\n` +
+                      `• decay: ${actor.relevance_breakdown.decay?.toFixed(2) ?? "—"}`
+                    : `Relevance ${actor.relevance_score.toFixed(2)}`
+                }
+              >
+                R {actor.relevance_score.toFixed(2)}
               </Badge>
             )}
             {actor.matched_verified_at && (
