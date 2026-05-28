@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, Lock, Unlock, FlaskConical, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StepContainer from "./StepContainer";
+import { SessionMapButton } from "./SessionMapButton";
 import RoleProgressBox from "./RoleProgressBox";
 import ActorCard from "./ActorCard";
 import ReviewToggle from "./ReviewToggle";
@@ -309,6 +310,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
           )}
 
           <div className="flex justify-end items-center gap-1">
+            <SessionMapButton variant="search" />
             <ReviewToggle expanded={reviewExpanded} onToggle={() => setReviewExpanded(!reviewExpanded)} />
             <Button variant="ghost" onClick={handleUnlockClick} className="gap-2 text-foreground-muted hover:text-foreground">
               <Unlock className="w-3.5 h-3.5" />
