@@ -29,6 +29,7 @@ const VerificationWorkspacePage = () => {
   const { items, loading, refresh } = useVerificationQueue();
   const { hasAccess: isAdmin } = useAdminAccess();
   const [active, setActive] = useState<PendingSuggestion | null>(null);
+  const [itemAddActive, setItemAddActive] = useState<PendingSuggestion | null>(null);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
