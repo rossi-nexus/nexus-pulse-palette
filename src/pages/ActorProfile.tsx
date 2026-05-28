@@ -710,14 +710,6 @@ const ActorProfile = () => {
     setMediaPolling(true);
     setMediaPollTimedOut(false);
     const started = Date.now();
-    const tick = async () => {
-      if (cancelled) return;
-      await refreshMedia();
-      if (cancelled) return;
-      // After refresh the effect re-runs (media changed) — but to avoid
-      // dependency churn, do an in-place check by re-reading state via a
-      // fresh query result is unnecessary; we let the next render decide.
-    };
     const interval = window.setInterval(async () => {
       if (cancelled) return;
       const { data } = await supabase
