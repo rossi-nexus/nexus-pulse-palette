@@ -330,7 +330,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                 Items not yet in the verified DB
               </div>
               <div className="flex items-center gap-2">
-                {totalDiff > 0 && (
+                {mappableCount > 0 && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -338,10 +338,10 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Suggest all ${totalDiff} item${totalDiff === 1 ? "" : "s"} for verification on this actor? They'll all flow through the verification queue at once.`,
+                          `Suggest all ${mappableCount} mappable item${mappableCount === 1 ? "" : "s"} for verification on this actor? They'll all flow through the verification queue at once.`,
                         )
                       ) {
-                        proposeItems(allDiffItems);
+                        proposeItems(mappableItems);
                       }
                     }}
                   >
@@ -350,7 +350,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
                     ) : (
                       <Send className="w-3 h-3 mr-1" />
                     )}
-                    Suggest all ({totalDiff})
+                    Suggest all ({mappableCount})
                   </Button>
                 )}
                 {selectedItems.length > 0 && (
