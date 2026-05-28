@@ -15,7 +15,10 @@ const corsHeaders = {
 };
 
 const UA = "Mozilla/5.0 (compatible; NEXUS-ContactScrape/1.0; +https://nexus.app)";
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 6_000;
+// Hard cap on candidates probed so wall-time can't blow up on slow hosts.
+// (Equipnor-style sites return ~5s per 404; sequential 30× would exceed Supabase wall-time.)
+const MAX_CANDIDATES = 16;
 // English + Norwegian (no/da/sv close enough) candidate paths.
 const CANDIDATE_PATHS = [
   "/about",
@@ -126,45 +129,51 @@ async function discoverLinkedPages(baseUrl: string): Promise<string[]> {
     const out = new Set<string>();
     const re = /<a\b[^>]*href\s*=\s*("([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
     let m: RegExpExecArray | null;
+    // Match BOTH link text AND href path. Norwegian inflection (e.g. "Teamet",
+    // "Om equipnor", "/om-equipnor/") routinely fails strict \bword\b tests on text alone.
+    const TEXT_RE = /(team|leadership|people|staff|about|contact|kontakt|\bom[\s-]|medarbeider|ansatte|ledelse|styret|folk)/i;
+    const HREF_RE = /\/(team|teamet|leadership|people|staff|about|contact|contacts|kontakt|kontakt-oss|om|om-oss|om-[a-z]+|medarbeider(?:e|ne)?|ansatte|ledelse(?:n)?|styret|folk)(?:\/|$)/i;
     while ((m = re.exec(html)) !== null) {
       const href = (m[2] ?? m[3] ?? "").trim();
-      const inner = m[4].replace(/<[^>]+>/g, "").trim().toLowerCase();
-      if (!href || !inner) continue;
-      const wantsTeam =
-        /\b(team|leadership|people|staff|about|contact|kontakt|om\s*oss|medarbeider|ansatte|ledelse|styret|folk)\b/.test(
-          inner,
-        );
-      if (!wantsTeam) continue;
+      const inner = m[4].replace(/<[^>]+>/g, "").trim();
+      if (!href) continue;
+      if (!TEXT_RE.test(inner) && !HREF_RE.test(href)) continue;
       try {
         const u = new URL(href, baseUrl).href;
-        // Only same-host links
         if (new URL(u).host === new URL(baseUrl).host) out.add(u);
       } catch { /* skip */ }
     }
-    return Array.from(out).slice(0, 10);
+    return Array.from(out).slice(0, 12);
   } catch {
     return [];
   }
 }
 
 async function findTeamPage(baseUrl: string): Promise<CandidatePage | null> {
-  // 1) Try hardcoded candidates, then 2) scrape homepage links for more.
+  // 1) Build candidate list: hardcoded paths + homepage-discovered links.
   const hardcoded: string[] = [];
   for (const path of CANDIDATE_PATHS) {
     try { hardcoded.push(new URL(path, baseUrl).href); } catch { /* skip */ }
   }
   const linked = await discoverLinkedPages(baseUrl);
-  const candidates = Array.from(new Set([...hardcoded, ...linked]));
+  const linkedSet = new Set(linked);
+  const candidates = Array.from(new Set([...linked, ...hardcoded])).slice(0, MAX_CANDIDATES);
+  console.log(`[enrich-from-team-page] probing ${candidates.length} candidates (linked=${linked.length}, hardcoded=${hardcoded.length})`);
 
+  // 2) Probe in parallel — sequential was hitting Supabase wall-time on slow hosts
+  //    (~5s per 404 × 20+ candidates). Promise.all bounds wall-time to ~FETCH_TIMEOUT_MS.
+  const results = await Promise.all(candidates.map(async (c) => ({ url: c, page: await tryFetchPage(c) })));
   let best: CandidatePage | null = null;
-  for (const c of candidates) {
-    const page = await tryFetchPage(c);
+  for (const { url, page } of results) {
     if (!page) continue;
-    if (page.score >= 1 && (best === null || page.score > best.score)) {
+    // Linked URLs were already prefiltered by team-ish anchor text/href, so accept
+    // them even when token-score is 0 (sparse SPA HTML on WordPress/Avada/etc.).
+    const minScore = linkedSet.has(url) ? 0 : 1;
+    if (page.score >= minScore && (best === null || page.score > best.score)) {
       best = page;
-      if (page.score >= 3) break; // good enough
     }
   }
+  if (best) console.log(`[enrich-from-team-page] best candidate ${best.url} score=${best.score} chars=${best.text.length}`);
   return best;
 }
 
@@ -313,6 +322,8 @@ serve(async (req) => {
     } catch {
       return json({ error: "Invalid base_url" }, 400);
     }
+
+    console.log(`[enrich-from-team-page] start actor_id=${actor_id} base_url=${baseUrl.href}`);
 
     const supa = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
