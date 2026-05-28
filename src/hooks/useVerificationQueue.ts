@@ -194,30 +194,34 @@ export function useVerificationQueue() {
       const result: PendingSuggestion[] = [];
       for (const r of queueRows) {
         const isRegistry = r.origin === "registry_import";
+        const isItemAddition = r.origin === "item_addition";
         const pa = r.user_personal_actors;
         const la = r.linked_actor;
 
         if (isRegistry) {
-          // Registry rows: must have linked_actor (CHECK constraint enforces).
+          if (!la) continue;
+        } else if (isItemAddition) {
+          // item_addition: must have linked DB actor (CHECK enforces) and
+          // a personal actor (the proposer's row).
           if (!la) continue;
         } else {
-          // User-suggestion rows: must have personal actor.
           if (!pa) continue;
         }
 
         const sessionId = pa?.source_session_id ?? null;
         const programmeId = sessionId ? sessionToProgramme.get(sessionId) ?? null : null;
 
-        // Non-admins only see rows from programmes they manage. Registry rows
-        // are unscoped → admin-only.
+        // Non-admins only see user_suggestion rows from programmes they manage.
+        // Registry + item_addition rows are unscoped → admin/consultant only
+        // (RLS guards reads — page just gates the UI).
         if (!isAdmin) {
-          if (isRegistry) continue;
+          if (isRegistry || isItemAddition) continue;
           if (!programmeId || !myManagedProgrammeIds.has(programmeId)) continue;
         }
 
         const suggester = suggesterMap.get(r.suggested_by);
 
-        const display = isRegistry
+        const display = (isRegistry || isItemAddition)
           ? {
               actor_name: la!.legal_name,
               actor_description: null as string | null,
@@ -249,6 +253,10 @@ export function useVerificationQueue() {
               analysis_data: pa!.analysis_data ?? null,
             };
 
+        const proposedItems = Array.isArray(r.proposed_items)
+          ? (r.proposed_items as Array<Record<string, unknown>>)
+          : null;
+
         result.push({
           queue_id: r.id,
           personal_actor_id: pa?.id ?? null,
@@ -257,6 +265,7 @@ export function useVerificationQueue() {
           origin_registry: r.origin_registry,
           origin_external_id: r.origin_external_id,
           ...display,
+          proposed_items: proposedItems,
           suggested_by: r.suggested_by,
           suggested_by_name: suggester?.name ?? null,
           suggested_by_email: suggester?.email ?? null,
