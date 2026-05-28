@@ -1333,6 +1333,33 @@ const ActorProfile = () => {
               </div>
             );
           }
+          if (mediaPolling) {
+            return (
+              <div className="w-full h-[240px] mb-4 rounded-lg border border-border bg-surface animate-pulse flex items-center justify-center">
+                <span className="text-xs uppercase tracking-wider text-foreground-muted">
+                  Fetching logo and hero image…
+                </span>
+              </div>
+            );
+          }
+          if (mediaPollTimedOut) {
+            return (
+              <div className="w-full mb-4 rounded-lg border border-dashed border-border bg-surface px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-foreground-muted">
+                  Couldn't auto-fetch logo or hero image from the website.
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRetryMediaScrape}
+                  disabled={retryingMediaScrape}
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", retryingMediaScrape && "animate-spin")} />
+                  Retry media scrape
+                </Button>
+              </div>
+            );
+          }
           return editingDbIdentity ? (
             <button
               type="button"
