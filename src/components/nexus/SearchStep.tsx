@@ -393,16 +393,34 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
           {expandedResult && expandedResult.actors.length > 0 && (
             <>
               <div className="h-full overflow-y-auto pr-2 space-y-2">
-                {expandedResult.actors.map(actor => (
-                  <ActorCard
-                    key={actor.id}
-                    actor={actor}
-                    roleId={expandedResult.role_id}
-                    onInclude={includeActor}
-                    onSaveForLater={saveForLater}
-                    onUndo={undoTriage}
-                  />
-                ))}
+                {(() => {
+                  const commercial = expandedResult.actors.filter(a => a.actor_type === "commercial");
+                  const reference = expandedResult.actors.filter(a => a.actor_type !== "commercial");
+                  return (
+                    <>
+                      {commercial.length > 0 && (
+                        <>
+                          <div className="text-[10px] uppercase tracking-wider text-foreground-muted px-1 pt-1">
+                            Commercial actors ({commercial.length})
+                          </div>
+                          {commercial.map(actor => (
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                          ))}
+                        </>
+                      )}
+                      {reference.length > 0 && (
+                        <>
+                          <div className="text-[10px] uppercase tracking-wider text-info px-1 pt-3">
+                            Reference actors ({reference.length})
+                          </div>
+                          {reference.map(actor => (
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                          ))}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               {/* Bottom fade indicator */}
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />
