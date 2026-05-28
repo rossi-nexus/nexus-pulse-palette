@@ -15,14 +15,16 @@
  * no verified_at change).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Send } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { readOntologyEntries, type DisplayEntry } from "@/lib/readOntologyEntries";
+import { ProposeNewEntryDialog } from "./ProposeNewEntryDialog";
 
 type CategoryKey = "capabilities" | "competences" | "domains" | "products" | "services";
 
