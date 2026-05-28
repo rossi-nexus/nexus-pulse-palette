@@ -68,7 +68,10 @@ When the user's need mentions any security classification or clearance requireme
 If security is mentioned but the specific level is unclear, set required_level to the most likely match based on context. Do NOT leave it as "any" when the user has specified a clearance requirement.
 
 **Contract Duration:**
-When the user's need mentions a contract period, framework agreement duration, project timeline, or operational period, you MUST populate the contract_duration.duration field. Extract the duration value (e.g., "5 years", "12 months", "3 years") and any description. Do NOT only mention this in summary points — the typed field must be filled.
+When the user's need mentions a contract period, framework agreement duration, project timeline, or operational period, you MUST populate contract_duration with the typed fields:
+- value (number) + unit ("month" | "year")
+- type: "minimum" (e.g. "≥5 years", "at least 3 years"), "maximum" (e.g. "up to 12 months"), "fixed" (e.g. "exactly 24 months", "5-year fixed-term"), or "expected" (default when the user gives a target without explicit bound).
+Examples: "5-year framework agreement" → {value: 5, unit: "year", type: "minimum"}; "12-month pilot" → {value: 12, unit: "month", type: "fixed"}. Also fill the legacy `duration` string with the original phrase. Do NOT only mention this in summary points — the typed fields must be filled.
 
 **Readiness/Mobilization:**
 When the user's need mentions operational deadlines, mobilization timelines, or delivery requirements (e.g., "operational within 12 months"), populate the readiness.max_response_time and readiness.description fields. Do NOT only mention this in summary points.
