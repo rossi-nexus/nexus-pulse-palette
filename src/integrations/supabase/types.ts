@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      actor_aliases: {
+        Row: {
+          actor_id: string
+          alias_name: string
+          alias_type: string | null
+          created_at: string
+          created_by: string | null
+          evidence: string | null
+          id: string
+          source_url: string | null
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          actor_id: string
+          alias_name: string
+          alias_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          evidence?: string | null
+          id?: string
+          source_url?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          actor_id?: string
+          alias_name?: string
+          alias_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          evidence?: string | null
+          id?: string
+          source_url?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actor_aliases_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_aliases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       actor_capacity_attributes: {
         Row: {
           actor_id: string
@@ -444,6 +498,61 @@ export type Database = {
           },
         ]
       }
+      actor_relationships: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          evidence: string | null
+          id: string
+          relationship_type: string
+          source_actor_id: string
+          source_url: string | null
+          target_actor_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          evidence?: string | null
+          id?: string
+          relationship_type: string
+          source_actor_id: string
+          source_url?: string | null
+          target_actor_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          evidence?: string | null
+          id?: string
+          relationship_type?: string
+          source_actor_id?: string
+          source_url?: string | null
+          target_actor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actor_relationships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_relationships_source_actor_id_fkey"
+            columns: ["source_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actor_relationships_target_actor_id_fkey"
+            columns: ["target_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       actor_standards: {
         Row: {
           actor_id: string
@@ -592,6 +701,7 @@ export type Database = {
       }
       actors: {
         Row: {
+          actor_classification: string
           city: string | null
           country: string | null
           created_at: string
@@ -619,6 +729,7 @@ export type Database = {
           websites: string[] | null
         }
         Insert: {
+          actor_classification?: string
           city?: string | null
           country?: string | null
           created_at?: string
@@ -646,6 +757,7 @@ export type Database = {
           websites?: string[] | null
         }
         Update: {
+          actor_classification?: string
           city?: string | null
           country?: string | null
           created_at?: string
