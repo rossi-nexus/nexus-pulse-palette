@@ -742,6 +742,57 @@ const ActorProfile = () => {
     return { capabilities: [], competences: [], domains: [], products: [], services: [] };
   }, [source, personal, personalOntologyEntries, ontologyTags]);
 
+  // DB-side DisplayEntry maps built from actor_ontology_tags rows. Used to
+  // render chip-expand metadata (OntologyEntryList) on DB profiles, matching
+  // the personal-side behaviour.
+  const dbOntologyEntries = useMemo(() => {
+    const empty = {
+      capabilities: [] as DisplayEntry[],
+      competences: [] as DisplayEntry[],
+      domains: [] as DisplayEntry[],
+      products: [] as DisplayEntry[],
+      services: [] as DisplayEntry[],
+    };
+    if (source !== "database") return empty;
+    const typeToKey: Record<string, keyof typeof empty> = {
+      capability: "capabilities",
+      competence: "competences",
+      domain: "domains",
+      product_type: "products",
+      service_type: "services",
+    };
+    const sourceMap: Record<string, EnrichmentAcceptedItem["source"]> = {
+      manual: "manual",
+      search: "pipeline_search",
+      api_connector: "registry",
+    };
+    for (const tag of ontologyTags) {
+      const entry = tag.ontology_entries;
+      const t = entry?.ontology_categories?.type;
+      const key = t ? typeToKey[t] : undefined;
+      if (!key || !entry?.raw_name) continue;
+      const raw = tag as unknown as {
+        source?: string;
+        source_url?: string | null;
+        evidence?: string | null;
+        confidence?: "high" | "medium" | "low" | null;
+        accepted_at?: string | null;
+      };
+      empty[key].push({
+        name: entry.raw_name,
+        meta: {
+          entry_name: entry.raw_name,
+          source: sourceMap[raw.source ?? ""] ?? "pipeline_search",
+          source_url: raw.source_url ?? undefined,
+          evidence: raw.evidence ?? undefined,
+          confidence: raw.confidence ?? undefined,
+          accepted_at: raw.accepted_at ?? undefined,
+        },
+      });
+    }
+    return empty;
+  }, [source, ontologyTags]);
+
   // B4: build CompletionSeed from existing actor_ontology_tags for re-verify path
   const reverifySeed = useMemo<CompletionSeed>(() => {
     if (source !== "database") return emptyCompletionSeed();
