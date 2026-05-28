@@ -92,6 +92,7 @@ export function FromYourCollectionPanel({ dbActorId }: Props) {
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [proposeDialogItem, setProposeDialogItem] = useState<DiffItem | null>(null);
 
   const load = useCallback(async () => {
     if (!user) {
