@@ -1258,6 +1258,16 @@ const ActorProfile = () => {
                 decaysAt={dbActor.decays_at}
               />
             )}
+            {dbActor?.actor_classification === "reference" && (
+              <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30 uppercase tracking-wider">
+                Reference
+              </Badge>
+            )}
+            {dbActor?.actor_classification === "commercial" && (
+              <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                Commercial
+              </Badge>
+            )}
             {personal?.matched_main_db_actor_id && (
               <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30">
                 Matched to DB
