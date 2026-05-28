@@ -2164,6 +2164,20 @@ const ActorProfile = () => {
           <FromYourCollectionPanel dbActorId={dbActor.id} />
         )}
 
+        {/* P10/P1: Related entities (corporate groups, acquisitions, renames) */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Related entities">
+            <RelatedEntitiesSection actorId={dbActor.id} canEdit={isAdmin} />
+          </ProfileSection>
+        )}
+
+        {/* P10: Aliases & former names */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Aliases & former names">
+            <AliasesSection actorId={dbActor.id} canEdit={isAdmin} />
+          </ProfileSection>
+        )}
+
         {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
         {source === "database" && dbActor && (
           <ProfileSection title="Outcome history" count={actorOutcomes.length}>
