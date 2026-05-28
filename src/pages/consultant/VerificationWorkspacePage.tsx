@@ -351,7 +351,9 @@ const VerificationWorkspacePage = () => {
                   className="mt-5 accent-primary"
                 />
                 <button
-                  onClick={() => setActive(it)}
+                  onClick={() =>
+                    it.origin === "item_addition" ? setItemAddActive(it) : setActive(it)
+                  }
                   className="flex-1 text-left bg-surface border border-border rounded-lg p-4 hover:border-border-accent hover:shadow-md transition-all"
                 >
                 <div className="flex items-start justify-between gap-3 mb-2">
@@ -366,12 +368,19 @@ const VerificationWorkspacePage = () => {
                       >
                         {it.origin_registry ?? "Registry"} import
                       </Badge>
+                    ) : it.origin === "item_addition" ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] bg-primary/10 text-primary border-primary/30 uppercase"
+                      >
+                        Item addition · {it.proposed_items?.length ?? 0}
+                      </Badge>
                     ) : (
                       <Badge variant="outline" className="text-[10px]">
                         User suggestion
                       </Badge>
                     )}
-                    {it.matched_main_db_actor_id && it.origin !== "registry_import" && (
+                    {it.matched_main_db_actor_id && it.origin === "user_suggestion" && (
                       <Badge
                         variant="outline"
                         className="text-[10px] bg-info/10 text-info border-info/30"
