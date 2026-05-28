@@ -29,6 +29,8 @@ import type { PersonalActor } from "@/types/personal-actor";
 import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useCollectionMap } from "@/hooks/useCollectionMap";
+import { ActorsMap } from "@/components/map/ActorsMap";
 
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
