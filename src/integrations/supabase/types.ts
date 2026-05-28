@@ -1831,6 +1831,10 @@ export type Database = {
         Args: { p_programme_id?: string; p_queue_id: string; p_reason?: string }
         Returns: string
       }
+      fn_resolve_description_type: {
+        Args: { p_mapped_entry_id: string; p_proposed_category_id: string }
+        Returns: string
+      }
       fn_suggest_actor: {
         Args: { p_personal_actor_id: string }
         Returns: string

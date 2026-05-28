@@ -35,6 +35,9 @@ export interface CompletionDecision {
   mapped_to_entry_id: string | null;
   mapped_to_entry_name?: string | null;
   proposed_description?: string | null;
+  /** Per-item prose extracted by the LLM (e.g. product / service description).
+   *  Persisted by verification RPCs into actor_descriptions on accept actions. */
+  description?: string | null;
 }
 
 export type SectionKey = "capabilities" | "competences" | "domains" | "products" | "services";
@@ -400,6 +403,7 @@ export const SharedVerificationBody = ({
           proposed_category_id: p.proposed_category_id,
           mapped_to_entry_id: p.matched_entry_id,
           mapped_to_entry_name: p.entry_name,
+          description: p.description ?? null,
         }));
       return {
         ...prev,
@@ -424,6 +428,7 @@ export const SharedVerificationBody = ({
       proposed_category_id: p.proposed_category_id,
       mapped_to_entry_id: p.matched_entry_id,
       mapped_to_entry_name: p.entry_name,
+      description: p.description ?? null,
     }, p.entry_name);
   };
 
@@ -440,6 +445,7 @@ export const SharedVerificationBody = ({
       proposed_category_id: p.proposed_category_id,
       mapped_to_entry_id: pick.entry_id,
       mapped_to_entry_name: pick.entry_name,
+      description: p.description ?? null,
     }, pick.entry_name);
 
   const handleAcceptAsNew = (key: SectionKey, p: EnrichedProposal, desc: string | null) => {
@@ -453,6 +459,7 @@ export const SharedVerificationBody = ({
       proposed_category_id: p.proposed_category_id,
       mapped_to_entry_id: null,
       proposed_description: desc,
+      description: p.description ?? null,
     }, `${p.entry_name} (proposed)`);
   };
 
@@ -463,6 +470,7 @@ export const SharedVerificationBody = ({
       proposed_category_id: p.proposed_category_id,
       mapped_to_entry_id: pick.entry_id,
       mapped_to_entry_name: pick.entry_name,
+      description: p.description ?? null,
     }, pick.entry_name);
 
   const handleReject = (key: SectionKey, p: EnrichedProposal) =>
