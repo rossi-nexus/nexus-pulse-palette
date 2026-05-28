@@ -7,6 +7,7 @@ import RoleProgressBox from "./RoleProgressBox";
 import ActorCard from "./ActorCard";
 import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
+import CoverageBanner from "./CoverageBanner";
 import type { useSearch } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
 
