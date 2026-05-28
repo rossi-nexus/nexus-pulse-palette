@@ -308,16 +308,26 @@ const ActorsView = () => {
           <h1 className="text-2xl font-semibold text-foreground">Actors</h1>
           <div className="inline-flex rounded-md border border-border overflow-hidden">
             <button
-              className="px-3 py-1.5 text-xs font-medium bg-surface text-foreground flex items-center gap-1.5"
-              disabled
+              onClick={() => tab === "collection" && setCollectionView("list")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors",
+                (tab !== "collection" || collectionView === "list")
+                  ? "bg-surface text-foreground"
+                  : "text-foreground-secondary hover:bg-surface/60",
+              )}
               title="List view"
             >
               <ListIcon className="w-3.5 h-3.5" />
               List
             </button>
             <button
-              onClick={() => navigate("/actors/map")}
-              className="px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface/60 transition-colors border-l border-border flex items-center gap-1.5"
+              onClick={() => tab === "collection" ? setCollectionView("map") : navigate("/actors/map")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium border-l border-border flex items-center gap-1.5 transition-colors",
+                tab === "collection" && collectionView === "map"
+                  ? "bg-surface text-foreground"
+                  : "text-foreground-secondary hover:bg-surface/60",
+              )}
               title="Map view"
             >
               <MapIcon className="w-3.5 h-3.5" />
@@ -325,6 +335,7 @@ const ActorsView = () => {
             </button>
           </div>
         </div>
+
 
         {/* Tabs */}
         <div className="flex items-center gap-2 mb-6 border-b border-border">
