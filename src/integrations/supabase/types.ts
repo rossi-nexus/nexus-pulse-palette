@@ -165,6 +165,7 @@ export type Database = {
           linkedin: string | null
           name: string
           phone: string | null
+          source: string
           title: string | null
           verified_at: string | null
           verifier_confidence: string | null
@@ -178,6 +179,7 @@ export type Database = {
           linkedin?: string | null
           name: string
           phone?: string | null
+          source?: string
           title?: string | null
           verified_at?: string | null
           verifier_confidence?: string | null
@@ -191,6 +193,7 @@ export type Database = {
           linkedin?: string | null
           name?: string
           phone?: string | null
+          source?: string
           title?: string | null
           verified_at?: string | null
           verifier_confidence?: string | null
