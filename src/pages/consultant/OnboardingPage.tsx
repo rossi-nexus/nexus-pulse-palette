@@ -385,6 +385,9 @@ const OnboardingPage = () => {
     [],
   );
 
+  // Stable empty seed reference — avoids re-render loop in SharedVerificationBody.
+  const stableEmptySeed = useMemo(() => emptyCompletionSeed(), []);
+
   const canContinueStep1 = legalName.trim().length > 0;
   const canSubmit = !!confidence && !submitting;
 
