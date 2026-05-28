@@ -110,7 +110,7 @@ export function useVerificationQueue() {
         .from("actor_validation_queue")
         .select(
           `id, user_personal_actor_id, linked_actor_id, origin, origin_registry, origin_external_id,
-           suggested_by, created_at,
+           suggested_by, created_at, proposed_items,
            user_personal_actors:user_personal_actor_id (
              id, actor_name, actor_description, actor_website, actor_type,
              country, org_number, trade_names, street_address, city, region,
