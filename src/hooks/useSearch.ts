@@ -407,12 +407,45 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
 
       for (const [, group] of nameGroups) {
         if (group.length > 1) {
+          // P11 — weighted cross-role score:
+          //   total = SUM(per-role match strength weight) * (log(1 + role_count) + 1)
+          const roleCount = group.length;
+          const roleCountFactor = Math.log(1 + roleCount) + 1;
+          const sumStrength = group.reduce(
+            (acc, g) => acc + (STRENGTH_WEIGHT[g.actor.match_strength] ?? 0.3),
+            0,
+          );
+          const score = sumStrength * roleCountFactor;
+          const strengths = group.map(g => {
+            const rr = next.get(g.roleId);
+            return {
+              role_id: g.roleId,
+              role_name: rr?.role_name ?? g.roleId,
+              strength: g.actor.match_strength,
+            };
+          });
           const roleIds = group.map(g => g.roleId);
           for (const item of group) {
             item.actor.cross_role = true;
             item.actor.cross_role_ids = roleIds.filter(id => id !== item.roleId);
+            item.actor.cross_role_score = score;
+            item.actor.cross_role_strengths = strengths;
           }
         }
+      }
+
+      // P11 — sort each role's actors so cross-role actors (highest weighted score)
+      // surface above non-cross-role actors. Stable within tier.
+      for (const [roleId, result] of next) {
+        const sorted = [...result.actors].sort((a, b) => {
+          const aCross = a.cross_role_score ?? 0;
+          const bCross = b.cross_role_score ?? 0;
+          if (aCross !== bCross) return bCross - aCross;
+          const aRel = a.relevance_score ?? 0;
+          const bRel = b.relevance_score ?? 0;
+          return bRel - aRel;
+        });
+        next.set(roleId, { ...result, actors: sorted });
       }
 
       return next;
