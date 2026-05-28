@@ -15,7 +15,10 @@ const corsHeaders = {
 };
 
 const UA = "Mozilla/5.0 (compatible; NEXUS-ContactScrape/1.0; +https://nexus.app)";
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 6_000;
+// Hard cap on candidates probed so wall-time can't blow up on slow hosts.
+// (Equipnor-style sites return ~5s per 404; sequential 30× would exceed Supabase wall-time.)
+const MAX_CANDIDATES = 16;
 // English + Norwegian (no/da/sv close enough) candidate paths.
 const CANDIDATE_PATHS = [
   "/about",
