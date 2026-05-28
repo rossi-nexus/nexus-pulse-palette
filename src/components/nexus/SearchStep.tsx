@@ -279,33 +279,46 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
           {/* Expanded review — full read-only actor cards per role */}
           {reviewExpanded && orderedRoles.length > 0 && (
             <div className="space-y-6 pt-2">
-              {orderedRoles.map((role) => (
-                <section key={role.role_id} className="space-y-2">
-                  <h3 className="text-body-sm font-medium text-foreground border-b border-border-subtle pb-1.5">
-                    {role.role_name}
-                    <span className="text-foreground-muted ml-2">
-                      — {role.actors.length} actors found
-                    </span>
-                  </h3>
-                  {role.actors.length === 0 ? (
-                    <p className="text-caption text-foreground-muted pl-1 italic">No actors found.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {role.actors.map((actor) => (
-                        <ActorCard
-                          key={actor.id}
-                          actor={actor}
-                          roleId={role.role_id}
-                          onInclude={noop}
-                          onSaveForLater={noop}
-                          onUndo={noop}
-                          readOnly
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              ))}
+              {orderedRoles.map((role) => {
+                const commercial = role.actors.filter((a) => a.actor_type === "commercial");
+                const reference = role.actors.filter((a) => a.actor_type !== "commercial");
+                return (
+                  <section key={role.role_id} className="space-y-2">
+                    <h3 className="text-body-sm font-medium text-foreground border-b border-border-subtle pb-1.5">
+                      {role.role_name}
+                      <span className="text-foreground-muted ml-2">
+                        — {role.actors.length} actors found
+                      </span>
+                    </h3>
+                    {role.actors.length === 0 ? (
+                      <p className="text-caption text-foreground-muted pl-1 italic">No actors found.</p>
+                    ) : (
+                      <>
+                        {commercial.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                              Commercial actors ({commercial.length})
+                            </div>
+                            {commercial.map((actor) => (
+                              <ActorCard key={actor.id} actor={actor} roleId={role.role_id} onInclude={noop} onSaveForLater={noop} onUndo={noop} readOnly />
+                            ))}
+                          </div>
+                        )}
+                        {reference.length > 0 && (
+                          <div className="space-y-2 mt-3">
+                            <div className="text-[10px] uppercase tracking-wider text-info">
+                              Reference actors ({reference.length})
+                            </div>
+                            {reference.map((actor) => (
+                              <ActorCard key={actor.id} actor={actor} roleId={role.role_id} onInclude={noop} onSaveForLater={noop} onUndo={noop} readOnly />
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </section>
+                );
+              })}
             </div>
           )}
 
@@ -380,16 +393,34 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
           {expandedResult && expandedResult.actors.length > 0 && (
             <>
               <div className="h-full overflow-y-auto pr-2 space-y-2">
-                {expandedResult.actors.map(actor => (
-                  <ActorCard
-                    key={actor.id}
-                    actor={actor}
-                    roleId={expandedResult.role_id}
-                    onInclude={includeActor}
-                    onSaveForLater={saveForLater}
-                    onUndo={undoTriage}
-                  />
-                ))}
+                {(() => {
+                  const commercial = expandedResult.actors.filter(a => a.actor_type === "commercial");
+                  const reference = expandedResult.actors.filter(a => a.actor_type !== "commercial");
+                  return (
+                    <>
+                      {commercial.length > 0 && (
+                        <>
+                          <div className="text-[10px] uppercase tracking-wider text-foreground-muted px-1 pt-1">
+                            Commercial actors ({commercial.length})
+                          </div>
+                          {commercial.map(actor => (
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                          ))}
+                        </>
+                      )}
+                      {reference.length > 0 && (
+                        <>
+                          <div className="text-[10px] uppercase tracking-wider text-info px-1 pt-3">
+                            Reference actors ({reference.length})
+                          </div>
+                          {reference.map(actor => (
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                          ))}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               {/* Bottom fade indicator */}
               <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent" />

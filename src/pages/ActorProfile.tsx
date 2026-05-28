@@ -54,6 +54,9 @@ import { UrlEnrichmentPanel } from "@/components/nexus/UrlEnrichmentPanel";
 import { RegistryEnrichmentPanel } from "@/components/nexus/RegistryEnrichmentPanel";
 import { DocumentEnrichmentPanel } from "@/components/nexus/DocumentEnrichmentPanel";
 import { WebSearchEnrichmentPanel } from "@/components/nexus/WebSearchEnrichmentPanel";
+import RelatedEntitiesSection from "@/components/actor-profile/RelatedEntitiesSection";
+import AliasesSection from "@/components/actor-profile/AliasesSection";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import { FromYourCollectionPanel } from "@/components/actor-profile/FromYourCollectionPanel";
@@ -1255,6 +1258,16 @@ const ActorProfile = () => {
                 decaysAt={dbActor.decays_at}
               />
             )}
+            {dbActor?.actor_classification === "reference" && (
+              <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30 uppercase tracking-wider">
+                Reference
+              </Badge>
+            )}
+            {dbActor?.actor_classification === "commercial" && (
+              <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                Commercial
+              </Badge>
+            )}
             {personal?.matched_main_db_actor_id && (
               <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30">
                 Matched to DB
@@ -2159,6 +2172,20 @@ const ActorProfile = () => {
             notes, tags, and item-addition proposals against this DB actor. */}
         {source === "database" && dbActor && (
           <FromYourCollectionPanel dbActorId={dbActor.id} />
+        )}
+
+        {/* P10/P1: Related entities (corporate groups, acquisitions, renames) */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Related entities">
+            <RelatedEntitiesSection actorId={dbActor.id} canEdit={isAdmin} />
+          </ProfileSection>
+        )}
+
+        {/* P10: Aliases & former names */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Aliases & former names">
+            <AliasesSection actorId={dbActor.id} canEdit={isAdmin} />
+          </ProfileSection>
         )}
 
         {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
