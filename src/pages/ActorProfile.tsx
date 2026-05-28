@@ -1903,7 +1903,6 @@ const ActorProfile = () => {
           <ProfileSection
             title="Contacts"
             count={contacts.length}
-            actions={undefined}
             headerExtra={
               dbActor.websites?.[0] ? (
                 <Button
