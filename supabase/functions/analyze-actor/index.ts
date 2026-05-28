@@ -310,6 +310,23 @@ function normalizeAnalysis(raw: any): any {
   a.services = a.services.filter((s: any) => s?.evidence && s?.serviceName);
   a.customerHistory = a.customerHistory.filter((c: any) => c?.evidence && c?.customerName);
 
+  // headquarters_address: pass through only if it has at least one address field + evidence
+  if (raw?.headquarters_address && typeof raw.headquarters_address === "object") {
+    const h = raw.headquarters_address;
+    const hasAnyField = h.street || h.postal_code || h.city || h.region || h.country;
+    if (hasAnyField && h.evidence) {
+      a.headquarters_address = {
+        street: h.street || null,
+        postal_code: h.postal_code || null,
+        city: h.city || null,
+        region: h.region || null,
+        country: h.country || null,
+        evidence: h.evidence,
+        source_url: h.source_url || null,
+      };
+    }
+  }
+
   return a;
 }
 
