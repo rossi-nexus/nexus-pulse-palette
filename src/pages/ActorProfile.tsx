@@ -696,6 +696,97 @@ const ActorProfile = () => {
     };
   }, [id, user]);
 
+  // Continuation Area 3: poll actor_media for ~60s when an actor was created
+  // in the last 5 minutes and has no media yet. Auto-scrape runs server-side
+  // on actor creation; this surfaces the result without a page reload.
+  useEffect(() => {
+    if (!id || source !== "database" || !dbActor) return;
+    const created = dbActor.created_at ? new Date(dbActor.created_at).getTime() : 0;
+    const ageMs = Date.now() - created;
+    const isFresh = created > 0 && ageMs < 5 * 60 * 1000;
+    const hasLogoOrHero = media.some((m) => m.type === "logo" || m.type === "hero");
+    if (!isFresh || hasLogoOrHero) return;
+    let cancelled = false;
+    setMediaPolling(true);
+    setMediaPollTimedOut(false);
+    const started = Date.now();
+    const tick = async () => {
+      if (cancelled) return;
+      await refreshMedia();
+      if (cancelled) return;
+      // After refresh the effect re-runs (media changed) — but to avoid
+      // dependency churn, do an in-place check by re-reading state via a
+      // fresh query result is unnecessary; we let the next render decide.
+    };
+    const interval = window.setInterval(async () => {
+      if (cancelled) return;
+      const { data } = await supabase
+        .from("actor_media")
+        .select("id, type, url, original_url, crop_data")
+        .eq("actor_id", id);
+      if (cancelled) return;
+      if (data) setMedia(data as any);
+      const found = (data ?? []).some((m: any) => m.type === "logo" || m.type === "hero");
+      if (found) {
+        window.clearInterval(interval);
+        setMediaPolling(false);
+        setMediaPollTimedOut(false);
+        return;
+      }
+      if (Date.now() - started > 60_000) {
+        window.clearInterval(interval);
+        setMediaPolling(false);
+        setMediaPollTimedOut(true);
+      }
+    }, 5_000);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      setMediaPolling(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, source, dbActor?.id]);
+
+  const handleRetryMediaScrape = async () => {
+    if (!id) return;
+    setRetryingMediaScrape(true);
+    setMediaPollTimedOut(false);
+    try {
+      const { error } = await supabase.functions.invoke("scrape-actor-media", {
+        body: { actor_id: id },
+      });
+      if (error) throw error;
+      toast.success("Re-scanning website for logo and hero image…");
+      // Kick off a fresh poll
+      setMediaPolling(true);
+      const started = Date.now();
+      const interval = window.setInterval(async () => {
+        const { data } = await supabase
+          .from("actor_media")
+          .select("id, type, url, original_url, crop_data")
+          .eq("actor_id", id);
+        if (data) setMedia(data as any);
+        const found = (data ?? []).some((m: any) => m.type === "logo" || m.type === "hero");
+        if (found) {
+          window.clearInterval(interval);
+          setMediaPolling(false);
+          return;
+        }
+        if (Date.now() - started > 60_000) {
+          window.clearInterval(interval);
+          setMediaPolling(false);
+          setMediaPollTimedOut(true);
+        }
+      }, 5_000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to retry media scrape");
+    } finally {
+      setRetryingMediaScrape(false);
+    }
+  };
+
+
   // Derive ontology lists per source.
   // For personal actors we keep both: a flat string[] (for count + dedup)
   // and a DisplayEntry[] (for click-to-expand metadata rendering).
