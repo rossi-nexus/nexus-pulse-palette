@@ -60,6 +60,8 @@ import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { OntologyEntryList } from "@/components/nexus/OntologyEntryList";
 import { appendManualOntologyItems } from "@/lib/actorEnrichment";
 import { FromYourCollectionPanel } from "@/components/actor-profile/FromYourCollectionPanel";
+import { ProductCardGrid } from "@/components/actor-profile/ProductCardGrid";
+import { RefreshCw } from "lucide-react";
 import {
   readOntologyEntries,
   type DisplayEntry,
@@ -71,7 +73,7 @@ import type { DbActor } from "@/types/db-actor";
 import { toast } from "sonner";
 import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
-import { ActorLogo, ActorHeroBanner, ProductGallery } from "@/components/actor-profile/ActorMedia";
+import { ActorLogo, ActorHeroBanner } from "@/components/actor-profile/ActorMedia";
 import { MediaSlotEditor, type MediaSlotType, type ActorMediaRecord } from "@/components/actor-media/MediaSlotEditor";
 import { ImagePlus, Trash2 as MediaTrash2 } from "lucide-react";
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
@@ -485,11 +487,15 @@ const ActorProfile = () => {
   // P3: media slot editor state
   const [mediaEditor, setMediaEditor] = useState<{ slot: MediaSlotType } | null>(null);
   const openMediaEditor = (slot: MediaSlotType) => setMediaEditor({ slot });
+  // Continuation Area 3: media polling for freshly onboarded actors.
+  const [mediaPolling, setMediaPolling] = useState(false);
+  const [mediaPollTimedOut, setMediaPollTimedOut] = useState(false);
+  const [retryingMediaScrape, setRetryingMediaScrape] = useState(false);
   const refreshMedia = async () => {
     if (!id) return;
     const { data } = await supabase
       .from("actor_media")
-      .select("id, type, url")
+      .select("id, type, url, original_url, crop_data")
       .eq("actor_id", id);
     if (data) setMedia(data as any);
   };
@@ -666,7 +672,7 @@ const ActorProfile = () => {
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
-            supabase.from("actor_media").select("id, type, url, original_url").eq("actor_id", id),
+            supabase.from("actor_media").select("id, type, url, original_url, crop_data").eq("actor_id", id),
             supabase.from("actor_capacity_attributes").select("id, attribute_type, value_text, value_min, value_max, unit, evidence").eq("actor_id", id),
           ]);
 
@@ -689,6 +695,89 @@ const ActorProfile = () => {
       cancelled = true;
     };
   }, [id, user]);
+
+  // Continuation Area 3: poll actor_media for ~60s when an actor was created
+  // in the last 5 minutes and has no media yet. Auto-scrape runs server-side
+  // on actor creation; this surfaces the result without a page reload.
+  useEffect(() => {
+    if (!id || source !== "database" || !dbActor) return;
+    const created = dbActor.created_at ? new Date(dbActor.created_at).getTime() : 0;
+    const ageMs = Date.now() - created;
+    const isFresh = created > 0 && ageMs < 5 * 60 * 1000;
+    const hasLogoOrHero = media.some((m) => m.type === "logo" || m.type === "hero");
+    if (!isFresh || hasLogoOrHero) return;
+    let cancelled = false;
+    setMediaPolling(true);
+    setMediaPollTimedOut(false);
+    const started = Date.now();
+    const interval = window.setInterval(async () => {
+      if (cancelled) return;
+      const { data } = await supabase
+        .from("actor_media")
+        .select("id, type, url, original_url, crop_data")
+        .eq("actor_id", id);
+      if (cancelled) return;
+      if (data) setMedia(data as any);
+      const found = (data ?? []).some((m: any) => m.type === "logo" || m.type === "hero");
+      if (found) {
+        window.clearInterval(interval);
+        setMediaPolling(false);
+        setMediaPollTimedOut(false);
+        return;
+      }
+      if (Date.now() - started > 60_000) {
+        window.clearInterval(interval);
+        setMediaPolling(false);
+        setMediaPollTimedOut(true);
+      }
+    }, 5_000);
+    void refreshMedia();
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      setMediaPolling(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, source, dbActor?.id]);
+
+  const handleRetryMediaScrape = async () => {
+    if (!id) return;
+    setRetryingMediaScrape(true);
+    setMediaPollTimedOut(false);
+    try {
+      const { error } = await supabase.functions.invoke("scrape-actor-media", {
+        body: { actor_id: id },
+      });
+      if (error) throw error;
+      toast.success("Re-scanning website for logo and hero image…");
+      // Kick off a fresh poll
+      setMediaPolling(true);
+      const started = Date.now();
+      const interval = window.setInterval(async () => {
+        const { data } = await supabase
+          .from("actor_media")
+          .select("id, type, url, original_url, crop_data")
+          .eq("actor_id", id);
+        if (data) setMedia(data as any);
+        const found = (data ?? []).some((m: any) => m.type === "logo" || m.type === "hero");
+        if (found) {
+          window.clearInterval(interval);
+          setMediaPolling(false);
+          return;
+        }
+        if (Date.now() - started > 60_000) {
+          window.clearInterval(interval);
+          setMediaPolling(false);
+          setMediaPollTimedOut(true);
+        }
+      }, 5_000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to retry media scrape");
+    } finally {
+      setRetryingMediaScrape(false);
+    }
+  };
+
 
   // Derive ontology lists per source.
   // For personal actors we keep both: a flat string[] (for count + dedup)
@@ -739,6 +828,57 @@ const ActorProfile = () => {
     }
     return { capabilities: [], competences: [], domains: [], products: [], services: [] };
   }, [source, personal, personalOntologyEntries, ontologyTags]);
+
+  // DB-side DisplayEntry maps built from actor_ontology_tags rows. Used to
+  // render chip-expand metadata (OntologyEntryList) on DB profiles, matching
+  // the personal-side behaviour.
+  const dbOntologyEntries = useMemo(() => {
+    const empty = {
+      capabilities: [] as DisplayEntry[],
+      competences: [] as DisplayEntry[],
+      domains: [] as DisplayEntry[],
+      products: [] as DisplayEntry[],
+      services: [] as DisplayEntry[],
+    };
+    if (source !== "database") return empty;
+    const typeToKey: Record<string, keyof typeof empty> = {
+      capability: "capabilities",
+      competence: "competences",
+      domain: "domains",
+      product_type: "products",
+      service_type: "services",
+    };
+    const sourceMap: Record<string, EnrichmentAcceptedItem["source"]> = {
+      manual: "manual",
+      search: "pipeline_search",
+      api_connector: "registry",
+    };
+    for (const tag of ontologyTags) {
+      const entry = tag.ontology_entries;
+      const t = entry?.ontology_categories?.type;
+      const key = t ? typeToKey[t] : undefined;
+      if (!key || !entry?.raw_name) continue;
+      const raw = tag as unknown as {
+        source?: string;
+        source_url?: string | null;
+        evidence?: string | null;
+        confidence?: "high" | "medium" | "low" | null;
+        accepted_at?: string | null;
+      };
+      empty[key].push({
+        name: entry.raw_name,
+        meta: {
+          entry_name: entry.raw_name,
+          source: sourceMap[raw.source ?? ""] ?? "pipeline_search",
+          source_url: raw.source_url ?? undefined,
+          evidence: raw.evidence ?? undefined,
+          confidence: raw.confidence ?? undefined,
+          accepted_at: raw.accepted_at ?? undefined,
+        },
+      });
+    }
+    return empty;
+  }, [source, ontologyTags]);
 
   // B4: build CompletionSeed from existing actor_ontology_tags for re-verify path
   const reverifySeed = useMemo<CompletionSeed>(() => {
@@ -1185,6 +1325,33 @@ const ActorProfile = () => {
               </div>
             );
           }
+          if (mediaPolling) {
+            return (
+              <div className="w-full h-[240px] mb-4 rounded-lg border border-border bg-surface animate-pulse flex items-center justify-center">
+                <span className="text-xs uppercase tracking-wider text-foreground-muted">
+                  Fetching logo and hero image…
+                </span>
+              </div>
+            );
+          }
+          if (mediaPollTimedOut) {
+            return (
+              <div className="w-full mb-4 rounded-lg border border-dashed border-border bg-surface px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-foreground-muted">
+                  Couldn't auto-fetch logo or hero image from the website.
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRetryMediaScrape}
+                  disabled={retryingMediaScrape}
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", retryingMediaScrape && "animate-spin")} />
+                  Retry media scrape
+                </Button>
+              </div>
+            );
+          }
           return editingDbIdentity ? (
             <button
               type="button"
@@ -1203,6 +1370,15 @@ const ActorProfile = () => {
             <div className="flex items-start gap-4 min-w-0">
               {source === "database" && (() => {
                 const logo = media.find((m) => m.type === "logo") as any;
+                if (!logo && mediaPolling) {
+                  return (
+                    <div
+                      style={{ width: 72, height: 72 }}
+                      className="rounded-md bg-elevated border border-border animate-pulse shrink-0"
+                      aria-label="Fetching logo…"
+                    />
+                  );
+                }
                 const inner = <ActorLogo name={name} url={logo?.url ?? null} />;
                 if (!editingDbIdentity) return inner;
                 return (
@@ -1660,39 +1836,54 @@ const ActorProfile = () => {
                   </div>
                 ) : null;
               })()}
-              {source === "database" && key === "products" && (
-                <div>
-                  <ProductGallery
-                    images={media.filter((m) => m.type === "product")}
-                    actorName={name}
-                  />
-                  {editingDbIdentity && (
-                    <div className="mb-3 space-y-2">
-                      {media
-                        .filter((m) => m.type === "product")
-                        .map((pm: any) => (
-                          <div key={pm.id} className="flex items-center gap-2 text-xs">
-                            <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
-                              <MediaTrash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openMediaEditor("product")}
-                      >
-                        <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
-                        Add product image
-                      </Button>
-                    </div>
-                  )}
+              {source === "database" && key === "products" && editingDbIdentity && (
+                <div className="mb-3 space-y-2">
+                  {media
+                    .filter((m) => m.type === "product")
+                    .map((pm: any) => (
+                      <div key={pm.id} className="flex items-center gap-2 text-xs">
+                        <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
+                          <MediaTrash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openMediaEditor("product")}
+                  >
+                    <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                    Add product image
+                  </Button>
                 </div>
               )}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
+                ) : source === "database" && key === "products" ? (
+                  <ProductCardGrid
+                    products={dbOntologyEntries.products.map((e) => ({
+                      entry_name: e.name,
+                      evidence: e.meta?.evidence ?? null,
+                      confidence: e.meta?.confidence ?? null,
+                      source_url: e.meta?.source_url ?? null,
+                    }))}
+                    descriptions={descriptions
+                      .filter((d: any) => d?.type === "product")
+                      .map((d: any) => ({ type: d.type, content: d.content }))}
+                    media={media
+                      .filter((m: any) => m.type === "product")
+                      .map((m: any) => ({
+                        id: m.id,
+                        type: m.type,
+                        url: m.url,
+                        crop_data: m.crop_data ?? null,
+                      }))}
+                    actorName={name}
+                  />
+                ) : source === "database" ? (
+                  <OntologyEntryList entries={dbOntologyEntries[key]} />
                 ) : (
                   <TagList items={items} />
                 )
