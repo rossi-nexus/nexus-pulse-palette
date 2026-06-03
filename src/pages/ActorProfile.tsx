@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ChevronDown,
@@ -85,6 +85,12 @@ import { ProvenanceBadge, computeProvenanceState } from "@/components/actor-prof
 import { ViewerRoleBadge } from "@/components/actor-profile/ViewerRoleBadge";
 import { useViewerActorRole } from "@/hooks/useViewerActorRole";
 import { ContactList, type ContactRow } from "@/components/actor-profile/ContactList";
+import CompleteCardWizard, {
+  type SectionStatus,
+  type WizardSectionKey,
+} from "@/components/actor-profile/CompleteCardWizard";
+import AddressDiscoveryDialog from "@/components/actor-profile/AddressDiscoveryDialog";
+import { ListChecks, MapPin } from "lucide-react";
 import {
   CollectionConflictBanner,
   computeIdentityConflicts,
@@ -1305,6 +1311,48 @@ const ActorProfile = () => {
     );
   }, [dbActor, classifications, standards, customers, capacityRows, contacts]);
 
+  // V3 Batch B.2 — section skips + wizard + address discovery state.
+  const [sectionSkips, setSectionSkips] = useState<
+    Array<{ section_key: string; reason: string | null; skipped_by: string | null; skipped_at: string }>
+  >([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!dbActor?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("actor_section_skips")
+        .select("section_key, reason, skipped_by, skipped_at")
+        .eq("actor_id", dbActor.id);
+      if (!cancelled) setSectionSkips((data ?? []) as any);
+    })();
+    return () => { cancelled = true; };
+  }, [dbActor?.id]);
+
+  const refreshSectionSkips = async () => {
+    if (!dbActor?.id) return;
+    const { data } = await supabase
+      .from("actor_section_skips")
+      .select("section_key, reason, skipped_by, skipped_at")
+      .eq("actor_id", dbActor.id);
+    setSectionSkips((data ?? []) as any);
+  };
+
+  // Auto-launch the wizard if the URL says so (hybrid Add Actor → ?wizard=1).
+  useEffect(() => {
+    if (source !== "database" || !dbActor?.id) return;
+    if (searchParams.get("wizard") === "1") {
+      setWizardOpen(true);
+      // Strip the param so a manual refresh doesn't keep re-opening it.
+      const next = new URLSearchParams(searchParams);
+      next.delete("wizard");
+      setSearchParams(next, { replace: true });
+    }
+  }, [source, dbActor?.id, searchParams, setSearchParams]);
+
   // ---------- Loading state ----------
 
   if (loading) {
@@ -1464,6 +1512,74 @@ const ActorProfile = () => {
     toast.success("Added to your collection");
     navigate(`/actors/${created.id}`);
   };
+
+  // V3 Batch B.2 — wizard section list. Each entry represents one missing/partial
+  // thing the wizard can walk the editor through. Skipped sections are still
+  // included so the wizard can render an un-skip toggle.
+  const skippedKeys = new Set(sectionSkips.map((s) => s.section_key));
+  const wizardSections: SectionStatus[] = useMemo(() => {
+    if (!dbActor) return [];
+    const out: SectionStatus[] = [];
+    const push = (
+      key: WizardSectionKey,
+      label: string,
+      cardLabel: string,
+      missing: boolean,
+      partial: boolean,
+      helpText: string,
+    ) => {
+      if (missing) out.push({ key, label, cardLabel, presence: "missing", helpText });
+      else if (partial) out.push({ key, label, cardLabel, presence: "partial", helpText });
+    };
+    // Identity / address
+    push("address", "Address", "Identity & Registry", !addressComposed, false,
+      "Street, postal code, city.");
+    // Media
+    const hasLogo = media.some((m) => m.type === "logo");
+    const hasHero = media.some((m) => m.type === "hero");
+    push("logo", "Logo", "Identity & Registry", !hasLogo, false,
+      "Used wherever the actor is referenced.");
+    push("hero", "Hero image", "Identity & Registry", !hasHero, false,
+      "Banner at the top of the profile.");
+    // Description
+    const hasSummary = descriptions.some((d) => d.type === "summary");
+    push("description", "Summary description", "Identity & Registry", !hasSummary, false,
+      "A short paragraph describing what the actor does.");
+    // Ontology
+    (["capabilities", "competences", "domains", "products", "services"] as const).forEach((k) => {
+      const count = ontology[k]?.length ?? 0;
+      push(k as WizardSectionKey, k.charAt(0).toUpperCase() + k.slice(1), "What They Do",
+        count === 0, false,
+        `Add at least one ${k.replace(/s$/, "")} tag.`);
+    });
+    // Contacts
+    push("contacts", "Contacts", "People & Relationships", contacts.length === 0, false,
+      "At least one named contact with email/phone/LinkedIn.");
+    // Aliases
+    push("aliases", "Aliases", "People & Relationships", false, true,
+      "Former names, trade names, brand names, abbreviations.");
+    // Relationships
+    push("relationships", "Related entities", "People & Relationships", false, true,
+      "Parent/subsidiary/acquired/merged relationships.");
+    // Credentials
+    const credMissing = !(credCounts.cap > 0 && (credCounts.cls + credCounts.std > 0));
+    push("credentials", "Credentials & references", "Credentials",
+      credCounts.cap + credCounts.cls + credCounts.std + credCounts.cust === 0, credMissing,
+      "Capacity attributes, classifications, standards, customer references.");
+    return out;
+  }, [dbActor, addressComposed, media, descriptions, ontology, contacts, credCounts]);
+
+  const wizardActiveSections = wizardSections.filter((s) => !skippedKeys.has(s.key));
+  const canEditDb = source === "database" && (
+    isAdmin || dbActor?.verifier_id === user?.id
+  );
+  const canShowWizard = canEditDb && wizardActiveSections.length > 0;
+
+  // Skipped sections that belong to the Identity card (used to render the
+  // "marked not applicable" subtext per Batch B.2 §4).
+  const identitySkips = sectionSkips.filter((s) =>
+    ["address", "logo", "hero", "description"].includes(s.section_key),
+  );
 
   // ---------- Render ----------
   return (
@@ -1717,8 +1833,19 @@ const ActorProfile = () => {
             </p>
           )}
           {/* Phase 6.5.5b/6.5.6: Re-verify + Record outcome action row */}
-          {source === "database" && dbActor && (isAdmin || canRecordOutcome) && (
+          {source === "database" && dbActor && (isAdmin || canRecordOutcome || canShowWizard) && (
             <div className="mt-3 flex items-center gap-2 flex-wrap">
+              {canShowWizard && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setWizardOpen(true)}
+                  className="bg-accent-teal hover:bg-accent-teal/90 text-background"
+                >
+                  <ListChecks className="w-3.5 h-3.5 mr-1.5" />
+                  Complete this card ({wizardActiveSections.length})
+                </Button>
+              )}
               {isAdmin && (
                 <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
                   <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
@@ -1827,7 +1954,18 @@ const ActorProfile = () => {
                   )}
                   <IdentityRow label="Org number" value={orgNumber} />
                   <IdentityRow label="Country" value={country} />
-                  <IdentityRow label="Address" value={addressComposed} />
+                  <div>
+                    <IdentityRow label="Address" value={addressComposed} />
+                    {!addressComposed && canEditDb && (
+                      <button
+                        type="button"
+                        onClick={() => setAddressDialogOpen(true)}
+                        className="text-xs text-accent-teal hover:underline inline-flex items-center gap-1 mt-1"
+                      >
+                        <MapPin className="w-3 h-3" /> Add address
+                      </button>
+                    )}
+                  </div>
                   {actorType && (
                     <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
                   )}
@@ -3114,6 +3252,44 @@ const ActorProfile = () => {
           onSave={() => {
             setMediaEditor(null);
             void handleMediaSaved();
+          }}
+        />
+      )}
+
+      {/* V3 Batch B.2 — Complete-this-card wizard */}
+      {dbActor && user?.id && (
+        <CompleteCardWizard
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          actorId={dbActor.id}
+          actorName={name}
+          orgNumber={orgNumber ?? null}
+          website={website ?? null}
+          country={country ?? null}
+          sections={wizardSections}
+          skipped={sectionSkips}
+          viewerId={user.id}
+          onChanged={() => {
+            void refreshSectionSkips();
+            void refreshMedia();
+            void refreshDescriptions();
+          }}
+        />
+      )}
+
+      {/* V3 Batch B.2 — Address Discovery Dialog (standalone trigger from Identity card) */}
+      {dbActor && (
+        <AddressDiscoveryDialog
+          open={addressDialogOpen}
+          onClose={() => setAddressDialogOpen(false)}
+          actorId={dbActor.id}
+          actorName={name}
+          orgNumber={orgNumber ?? null}
+          website={website ?? null}
+          country={country ?? null}
+          onSaved={() => {
+            // Trigger a refetch by toggling the source effect dependency. Reload the page state.
+            window.location.reload();
           }}
         />
       )}
