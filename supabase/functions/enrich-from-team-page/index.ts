@@ -302,6 +302,7 @@ function tryParseLooseJson(raw: string): unknown {
 async function llmExtractContacts(
   pageText: string,
   pageUrl: string,
+  candidateDetails: ContactDetailCandidate[],
   lovableKey: string,
 ): Promise<ScrapedContact[]> {
   const TOOL = {
@@ -332,6 +333,12 @@ async function llmExtractContacts(
     },
   };
 
+  const detailsBlock = candidateDetails.length === 0
+    ? "(none extracted from raw HTML)"
+    : candidateDetails
+        .map((d, i) => `${i + 1}. [${d.type}] ${d.value}\n   nearby: ${d.nearby_text}`)
+        .join("\n");
+
   const prompt = `You are extracting individual people (employees, founders, leadership team members, board members) from a company website's team / about / contact / leadership page. The page may be in English or Norwegian.
 
 LANGUAGE: All output text MUST be in English. Person names are proper nouns — keep them exactly as written. Translate roles/titles to English equivalents (e.g. "Daglig leder"→"CEO", "Operasjonssjef"→"Operations Manager", "Salgssjef"→"Sales Manager", "Styreleder"→"Chairman", "Markedssjef"→"Marketing Manager", "Prosjektleder"→"Project Manager"). Never output a Norwegian role/title in the final result.
@@ -343,11 +350,16 @@ Page text:
 ${pageText}
 """
 
+Contact details extracted directly from the raw HTML (mailto: / tel: / linkedin.com/in/ links). Each detail belongs to at most ONE person. Match each detail to the person it sits closest to (the "nearby" text shows ~120 chars of surrounding context). If you can't confidently match a detail to a specific person, LEAVE IT OUT — do not guess.
+
+Candidate contact details:
+${detailsBlock}
+
 Rules:
 - Return ALL named people you find on the page, even if some fields are missing.
 - A name + role is sufficient — do NOT require email or phone to include a person.
 - Look for structured team cards (heading with name, sub-heading with title, bio in prose, contact icons for email/phone/LinkedIn). WordPress/Avada and similar themes commonly use this layout.
-- Capture: full name (not initials), title/role if present, email (from mailto: links or visible text), phone (from tel: links or visible text), linkedin URL if present.
+- Use the candidate contact details list above as your PRIMARY source for email / phone / linkedin. Only fall back to values inferred from page text if the raw-HTML list is empty.
 - Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are NOT individuals.
 - Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef", "Head of …", "CEO", "CTO" all count as titles.
 - Maximum 20 contacts.
