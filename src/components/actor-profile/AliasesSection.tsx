@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Trash2 } from "lucide-react";
+import ProvenanceBadge from "@/components/actor-profile/ProvenanceBadge";
 import { toast } from "sonner";
 
 type AliasType = "former_name" | "trade_name" | "brand" | "abbreviation";
