@@ -513,6 +513,21 @@ const ActorProfile = () => {
       .eq("actor_id", id);
     if (data) setMedia(data as any);
   };
+  // V3 batch #4 — refresh descriptions after per-product enrichment.
+  const refreshDescriptions = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("actor_descriptions")
+      .select("*")
+      .eq("actor_id", id);
+    if (data) setDescriptions(data as any);
+  };
+  const handleProductEnriched = async () => {
+    await Promise.all([refreshMedia(), refreshDescriptions()]);
+  };
+  // V3 batch #4 — bulk "Enrich all products" runner.
+  const [enrichAllRunning, setEnrichAllRunning] = useState(false);
+  const [enrichAllProgress, setEnrichAllProgress] = useState({ done: 0, total: 0, failed: 0 });
   const handleMediaSaved = async () => {
     await refreshMedia();
   };
