@@ -556,8 +556,9 @@ const SectionEditor = (props: EditorProps) => {
 };
 
 // ---- Address ----
-// Uses the existing dialog but does NOT auto-advance — the user can re-open
-// the dialog, edit, and only moves on when they click "Done — next step".
+// Shows the currently-saved address as an inline editable form, plus an
+// optional "Find via web/registry" dialog. The user is NOT auto-pushed into
+// discovery — they can simply edit what's there and save.
 const AddressEditor = ({
   actorId,
   actorName,
@@ -567,14 +568,16 @@ const AddressEditor = ({
   onDone,
   onChanged,
 }: EditorProps) => {
-  const [dialogOpen, setDialogOpen] = useState(true);
-  const [current, setCurrent] = useState<{
-    street_address: string | null;
-    city: string | null;
-    region: string | null;
-    postal_code: string | null;
-    country: string | null;
-  } | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState({
+    street_address: "",
+    postal_code: "",
+    city: "",
+    region: "",
+    country: "",
+  });
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const loadCurrent = async () => {
     const { data } = await supabase
@@ -582,40 +585,97 @@ const AddressEditor = ({
       .select("street_address, city, region, postal_code, country")
       .eq("id", actorId)
       .maybeSingle();
-    setCurrent(data ?? null);
+    setForm({
+      street_address: data?.street_address ?? "",
+      postal_code: data?.postal_code ?? "",
+      city: data?.city ?? "",
+      region: data?.region ?? "",
+      country: data?.country ?? "",
+    });
+    setLoaded(true);
   };
   useEffect(() => {
     void loadCurrent();
   }, [actorId]);
 
-  const hasAddress =
-    !!current?.street_address || !!current?.city || !!current?.postal_code;
+  const saveInline = async () => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("actors")
+      .update({
+        street_address: form.street_address.trim() || null,
+        postal_code: form.postal_code.trim() || null,
+        city: form.city.trim() || null,
+        region: form.region.trim() || null,
+        country: form.country.trim() || null,
+      })
+      .eq("id", actorId);
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Address saved");
+    onChanged();
+  };
 
   return (
     <div className="space-y-3">
-      {/* Current saved address */}
-      <div className="rounded-md border border-border bg-surface px-3 py-2">
-        <div className="text-xs text-foreground-muted mb-1">Currently saved</div>
-        {hasAddress ? (
-          <div className="text-sm text-foreground">
-            {current?.street_address && <div>{current.street_address}</div>}
-            <div>
-              {[current?.postal_code, current?.city].filter(Boolean).join(" ")}
-              {current?.region ? `, ${current.region}` : ""}
-            </div>
-            {current?.country && (
-              <div className="text-xs text-foreground-muted">{current.country}</div>
-            )}
+      <div className="space-y-2">
+        <Label className="text-xs text-foreground-muted">Street address</Label>
+        <Input
+          value={form.street_address}
+          onChange={(e) => setForm({ ...form, street_address: e.target.value })}
+          placeholder="e.g. Storgata 1"
+          disabled={!loaded}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs text-foreground-muted">Postal code</Label>
+            <Input
+              value={form.postal_code}
+              onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
+              disabled={!loaded}
+            />
           </div>
-        ) : (
-          <div className="text-sm text-foreground-muted italic">No address saved yet.</div>
-        )}
+          <div>
+            <Label className="text-xs text-foreground-muted">City</Label>
+            <Input
+              value={form.city}
+              onChange={(e) => setForm({ ...form, city: e.target.value })}
+              disabled={!loaded}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs text-foreground-muted">Region</Label>
+            <Input
+              value={form.region}
+              onChange={(e) => setForm({ ...form, region: e.target.value })}
+              disabled={!loaded}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-foreground-muted">Country</Label>
+            <Input
+              value={form.country}
+              onChange={(e) => setForm({ ...form, country: e.target.value })}
+              disabled={!loaded}
+            />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={saveInline} disabled={busy || !loaded} size="sm">
+            {busy && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+            Save address
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+            <Search className="w-3 h-3 mr-1" />
+            Find via web / registry
+          </Button>
+        </div>
       </div>
-
-      <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-        <Search className="w-3 h-3 mr-1" />
-        {hasAddress ? "Change address" : "Find or enter address"}
-      </Button>
 
       <AddressDiscoveryDialog
         open={dialogOpen}
