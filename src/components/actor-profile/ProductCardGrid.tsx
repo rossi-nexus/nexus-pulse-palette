@@ -109,6 +109,7 @@ export function ProductCardGrid({
   onReplaceImage,
   onEnriched,
 }: Props) {
+  const navigate = useNavigate();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [enrichingName, setEnrichingName] = useState<string | null>(null);
   const [manualUrlFor, setManualUrlFor] = useState<string | null>(null);
