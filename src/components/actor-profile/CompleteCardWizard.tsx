@@ -440,6 +440,49 @@ const AddressEditor = ({
 const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generatedSource, setGeneratedSource] = useState<string | null>(null);
+
+  const generate = async () => {
+    setGenerating(true);
+    try {
+      const { data: actorRow, error: aErr } = await supabase
+        .from("actors")
+        .select("websites, legal_name")
+        .eq("id", actorId)
+        .maybeSingle();
+      if (aErr) throw new Error(aErr.message);
+      const website_url = actorRow?.websites?.[0] ?? null;
+      if (!website_url) {
+        toast.error("No website on file for this actor. Add one first.");
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke(
+        "generate-actor-summary",
+        {
+          body: {
+            actor_id: actorId,
+            website_url,
+            actor_name: actorRow?.legal_name,
+          },
+        },
+      );
+      if (error) {
+        const detail = (data as any)?.error ?? error.message;
+        throw new Error(detail);
+      }
+      const summary = (data as any)?.summary;
+      if (!summary) throw new Error("No summary returned");
+      setText(summary);
+      setGeneratedSource(website_url);
+      toast.success("Draft generated — review and save");
+    } catch (e: any) {
+      toast.error(`Generate failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const save = async () => {
     if (text.trim().length < 10) {
       toast.error("Description must be at least 10 characters.");
@@ -450,7 +493,8 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
       actor_id: actorId,
       type: "summary",
       content: text.trim(),
-      source: "manual",
+      source: generatedSource ? "web_search" : "manual",
+      source_url: generatedSource,
       verifier_id: viewerId,
       verified_at: new Date().toISOString(),
     });
@@ -465,14 +509,38 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
   };
   return (
     <div className="space-y-3">
-      <Label className="text-xs text-foreground-muted">Summary</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-foreground-muted">Summary</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={generate}
+          disabled={generating || busy}
+        >
+          {generating ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Sparkles className="w-3 h-3 mr-1" />
+          )}
+          Generate from website
+        </Button>
+      </div>
       <Textarea
         rows={6}
         value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="What does this actor do?"
+        onChange={(e) => {
+          setText(e.target.value);
+          if (generatedSource) setGeneratedSource(null);
+        }}
+        placeholder="What does this actor do? Or click 'Generate from website'."
       />
-      <Button onClick={save} disabled={busy}>
+      {generatedSource && (
+        <p className="text-[11px] text-foreground-muted">
+          Draft generated from {generatedSource}. Edit before saving.
+        </p>
+      )}
+      <Button onClick={save} disabled={busy || generating}>
         {busy && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
         Save description
       </Button>
