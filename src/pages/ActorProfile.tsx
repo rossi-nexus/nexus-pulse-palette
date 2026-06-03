@@ -82,6 +82,13 @@ import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog"
 import { RegistryRefreshDialog } from "@/components/actor-profile/RegistryRefreshDialog";
 import { MacroCard, type PresenceState, type TrustBand } from "@/components/actor-profile/MacroCard";
 import { ProvenanceBadge, computeProvenanceState } from "@/components/actor-profile/ProvenanceBadge";
+import { ViewerRoleBadge } from "@/components/actor-profile/ViewerRoleBadge";
+import { useViewerActorRole } from "@/hooks/useViewerActorRole";
+import { ContactList, type ContactRow } from "@/components/actor-profile/ContactList";
+import {
+  CollectionConflictBanner,
+  computeIdentityConflicts,
+} from "@/components/actor-profile/CollectionConflictBanner";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -1385,25 +1392,42 @@ const ActorProfile = () => {
   const presenceCollection: PresenceState = hasPersonalContent ? "complete" : "missing";
   const trustCollection: TrustBand = "user";
 
-  // Linked personal actor (DB-side Card 6 CTA).
+  // Linked personal actor (DB-side Card 6 CTA + conflict banner data).
   const [linkedPersonalId, setLinkedPersonalId] = useState<string | null>(null);
+  const [linkedPersonal, setLinkedPersonal] = useState<PersonalActor | null>(null);
   useEffect(() => {
     if (source !== "database" || !dbActor?.id || !user?.id) {
       setLinkedPersonalId(null);
+      setLinkedPersonal(null);
       return;
     }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("user_personal_actors")
-        .select("id")
+        .select("*")
         .eq("user_id", user.id)
         .eq("matched_main_db_actor_id", dbActor.id)
         .maybeSingle();
-      if (!cancelled) setLinkedPersonalId(data?.id ?? null);
+      if (!cancelled) {
+        setLinkedPersonalId(data?.id ?? null);
+        setLinkedPersonal((data as PersonalActor | null) ?? null);
+      }
     })();
     return () => { cancelled = true; };
   }, [source, dbActor?.id, user?.id]);
+
+  // V3 Batch B item 2 — viewer role for the header pill.
+  const { role: viewerRole } = useViewerActorRole({
+    isPersonalSource: source === "personal",
+    actorVerifierId: dbActor?.verifier_id ?? null,
+  });
+
+  // V3 Batch B item 3 — conflict detection for Card 6.
+  const collectionConflicts = useMemo(
+    () => computeIdentityConflicts(linkedPersonal, dbActor),
+    [linkedPersonal, dbActor],
+  );
 
   const handleAddToCollection = async () => {
     if (!user?.id || !dbActor) return;
@@ -1609,6 +1633,8 @@ const ActorProfile = () => {
                 decaysAt={dbActor.decays_at}
               />
             )}
+            {/* V3 Batch B item 2 — viewer role badge */}
+            <ViewerRoleBadge role={viewerRole} />
             {dbActor?.actor_classification === "reference" && (
               <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30 uppercase tracking-wider">
                 Reference
@@ -2343,11 +2369,11 @@ const ActorProfile = () => {
           presence={presencePeople}
           trust={trustPeople}
         >
-        {/* Contacts (DB only) */}
+        {/* Contacts (DB only) — V3 Batch B item 5: curated ContactList */}
         {source === "database" && dbActor && (
           <ProfileSection
             title="Contacts"
-            count={contacts.length}
+            count={contacts.filter((c) => !c.is_hidden).length}
             headerExtra={
               dbActor.websites?.[0] ? (
                 <Button
@@ -2387,55 +2413,13 @@ const ActorProfile = () => {
               ) : null
             }
           >
-            {contacts.length === 0 ? (
-              <div className="text-xs text-foreground-secondary">
-                No contacts yet. Use "Scan team page" to auto-extract from the website, or add manually.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {contacts.map((c) => (
-                  <div
-                    key={c.id}
-                    className="bg-surface border border-border/60 rounded-md p-3 text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium text-foreground">{c.name}</div>
-                      <ProvenanceBadge
-                        source={c.source}
-                        verified_at={c.verified_at}
-                        verifier_id={c.verifier_id}
-                        decays_at={c.decays_at}
-                        confidence={c.verifier_confidence}
-                      />
-                    </div>
-                    {c.title && (
-                      <div className="text-xs text-foreground-secondary">{c.title}</div>
-                    )}
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-foreground-secondary">
-                      {c.email && (
-                        <a
-                          href={`mailto:${c.email}`}
-                          className="hover:text-foreground transition-colors"
-                        >
-                          {c.email}
-                        </a>
-                      )}
-                      {c.phone && <span>{c.phone}</span>}
-                      {c.linkedin && (
-                        <a
-                          href={c.linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-accent-teal hover:underline"
-                        >
-                          LinkedIn
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <ContactList
+              actorId={dbActor.id}
+              contacts={contacts as ContactRow[]}
+              canEdit={isAdmin || dbActor.verifier_id === user?.id}
+              isAdmin={isAdmin}
+              onChange={(next) => setContacts(next)}
+            />
           </ProfileSection>
         )}
 
@@ -2640,14 +2624,80 @@ const ActorProfile = () => {
           trust={trustCollection} variant="collection"
         >
           {source === "database" && dbActor && user && (
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <p className="text-sm text-foreground-secondary flex-1 min-w-[200px]">
-                Your personal collection on this actor. Add notes, evidence, and personal tags in your collection view.
-              </p>
-              <Button size="sm" variant="outline" onClick={handleAddToCollection}>
-                {linkedPersonalId ? "Edit in my collection" : "Add to my collection"}
-              </Button>
-            </div>
+            <>
+              {/* V3 Batch B item 3 — conflict banner */}
+              {linkedPersonalId && collectionConflicts.length > 0 && (
+                <CollectionConflictBanner
+                  conflicts={collectionConflicts}
+                  personalId={linkedPersonalId}
+                  onSuggest={() => navigate(`/actors/${linkedPersonalId}`)}
+                />
+              )}
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <p className="text-sm text-foreground-secondary flex-1 min-w-[200px]">
+                  Your personal collection on this actor. Add notes, evidence, and personal tags in your collection view.
+                </p>
+                <Button size="sm" variant="outline" onClick={handleAddToCollection}>
+                  {linkedPersonalId ? "Edit in my collection" : "Add to my collection"}
+                </Button>
+              </div>
+              {/* V3 Batch B item 3 — read-only personal content rendered on the canonical view */}
+              {linkedPersonal && (
+                <div className="space-y-3 mb-4">
+                  {linkedPersonal.tags && linkedPersonal.tags.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                        Your tags
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {linkedPersonal.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-surface border border-border/60 text-foreground"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {linkedPersonal.notes && linkedPersonal.notes.trim().length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                        Your notes
+                      </div>
+                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-surface border border-border/60 rounded-md p-3">
+                        {linkedPersonal.notes}
+                      </p>
+                    </div>
+                  )}
+                  {linkedPersonal.source_urls && linkedPersonal.source_urls.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                        Your evidence
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {linkedPersonal.source_urls.map((u, i) => (
+                          <a
+                            key={i}
+                            href={u}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-accent-teal hover:underline truncate inline-flex items-center gap-1"
+                          >
+                            {u}
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-[11px] text-foreground-muted">
+                    Added to your collection {formatDate(linkedPersonal.created_at)}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
         {/* Tags (personal actors only) */}

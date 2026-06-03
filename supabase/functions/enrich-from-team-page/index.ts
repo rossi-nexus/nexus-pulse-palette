@@ -133,7 +133,59 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-interface CandidatePage { url: string; text: string; score: number; }
+interface ContactDetailCandidate {
+  type: "email" | "phone" | "linkedin";
+  value: string;
+  nearby_text: string;
+}
+
+interface CandidatePage {
+  url: string;
+  text: string;
+  score: number;
+  details: ContactDetailCandidate[];
+}
+
+// V3 Batch B item 4 — pull mailto:, tel:, and linkedin.com/in/... out of raw
+// HTML, with a small window of surrounding text so the LLM can correlate the
+// detail to the nearest person.
+function extractContactDetails(html: string): ContactDetailCandidate[] {
+  const out: ContactDetailCandidate[] = [];
+  const PATTERNS: Array<{ type: ContactDetailCandidate["type"]; re: RegExp; extract: (m: RegExpExecArray) => string }> = [
+    { type: "email", re: /(?:mailto:)([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,})/gi, extract: (m) => m[1] },
+    // Standalone email (not inside mailto) — guard against template noise.
+    { type: "email", re: /(?<![a-zA-Z0-9._\-])([A-Z0-9._%+\-]{2,}@[A-Z0-9.\-]+\.[A-Z]{2,})/gi, extract: (m) => m[1] },
+    { type: "phone", re: /(?:tel:)([+0-9()\-.\s]{6,})/gi, extract: (m) => m[1].trim() },
+    { type: "linkedin", re: /https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub)\/[A-Za-z0-9\-_%/.]+/gi, extract: (m) => m[0].replace(/[)>"',]+$/, "") },
+  ];
+  const skipMailbox = /^(?:info|contact|sales|support|hello|hei|post|kontakt|firmapost|enquiries|admin|office|press|hr|recruitment|jobb|career|careers)@/i;
+  const seen = new Set<string>();
+
+  for (const { type, re, extract } of PATTERNS) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    let safety = 0;
+    while ((m = re.exec(html)) !== null && safety++ < 500) {
+      const raw = extract(m).trim();
+      if (!raw) continue;
+      if (type === "email" && skipMailbox.test(raw)) continue;
+      const key = `${type}:${raw.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // Pull a ~120-char window around the match for nearby text.
+      const idx = m.index;
+      const start = Math.max(0, idx - 200);
+      const end = Math.min(html.length, idx + raw.length + 200);
+      const slice = html.slice(start, end);
+      const nearby = stripHtml(slice).replace(/\s+/g, " ").trim().slice(0, 240);
+
+      out.push({ type, value: raw, nearby_text: nearby });
+      if (out.length >= 60) return out;
+    }
+  }
+  return out;
+}
 
 async function tryFetchPage(candidate: string): Promise<CandidatePage | null> {
   try {
@@ -149,7 +201,8 @@ async function tryFetchPage(candidate: string): Promise<CandidatePage | null> {
     const truncated = text.length > MAX_TEXT_CHARS
       ? text.slice(0, MAX_TEXT_CHARS) + "\n\n[Content truncated]"
       : text;
-    return { url: candidate, text: truncated, score };
+    const details = extractContactDetails(html);
+    return { url: candidate, text: truncated, score, details };
   } catch {
     return null;
   }
@@ -249,6 +302,7 @@ function tryParseLooseJson(raw: string): unknown {
 async function llmExtractContacts(
   pageText: string,
   pageUrl: string,
+  candidateDetails: ContactDetailCandidate[],
   lovableKey: string,
 ): Promise<ScrapedContact[]> {
   const TOOL = {
@@ -279,6 +333,12 @@ async function llmExtractContacts(
     },
   };
 
+  const detailsBlock = candidateDetails.length === 0
+    ? "(none extracted from raw HTML)"
+    : candidateDetails
+        .map((d, i) => `${i + 1}. [${d.type}] ${d.value}\n   nearby: ${d.nearby_text}`)
+        .join("\n");
+
   const prompt = `You are extracting individual people (employees, founders, leadership team members, board members) from a company website's team / about / contact / leadership page. The page may be in English or Norwegian.
 
 LANGUAGE: All output text MUST be in English. Person names are proper nouns — keep them exactly as written. Translate roles/titles to English equivalents (e.g. "Daglig leder"→"CEO", "Operasjonssjef"→"Operations Manager", "Salgssjef"→"Sales Manager", "Styreleder"→"Chairman", "Markedssjef"→"Marketing Manager", "Prosjektleder"→"Project Manager"). Never output a Norwegian role/title in the final result.
@@ -290,11 +350,16 @@ Page text:
 ${pageText}
 """
 
+Contact details extracted directly from the raw HTML (mailto: / tel: / linkedin.com/in/ links). Each detail belongs to at most ONE person. Match each detail to the person it sits closest to (the "nearby" text shows ~120 chars of surrounding context). If you can't confidently match a detail to a specific person, LEAVE IT OUT — do not guess.
+
+Candidate contact details:
+${detailsBlock}
+
 Rules:
 - Return ALL named people you find on the page, even if some fields are missing.
 - A name + role is sufficient — do NOT require email or phone to include a person.
 - Look for structured team cards (heading with name, sub-heading with title, bio in prose, contact icons for email/phone/LinkedIn). WordPress/Avada and similar themes commonly use this layout.
-- Capture: full name (not initials), title/role if present, email (from mailto: links or visible text), phone (from tel: links or visible text), linkedin URL if present.
+- Use the candidate contact details list above as your PRIMARY source for email / phone / linkedin. Only fall back to values inferred from page text if the raw-HTML list is empty.
 - Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are NOT individuals.
 - Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef", "Head of …", "CEO", "CTO" all count as titles.
 - Maximum 20 contacts.
@@ -416,7 +481,7 @@ serve(async (req) => {
       console.log(`[enrich-from-team-page] attempt ${tried.length} → ${candidate.url}`);
       let contacts: ScrapedContact[] = [];
       try {
-        contacts = await llmExtractContacts(candidate.text, candidate.url, lovableKey);
+        contacts = await llmExtractContacts(candidate.text, candidate.url, candidate.details, lovableKey);
       } catch (e) {
         lastError = (e as Error).message;
         console.error(`[enrich-from-team-page] llm error on ${candidate.url}`, e);
@@ -454,6 +519,9 @@ serve(async (req) => {
       const key = c.name.trim().toLowerCase();
       if (seen.has(key)) { skipped++; continue; }
       seen.add(key);
+      // V3 Batch B item 4 — write LinkedIn into the canonical linkedin_url
+      // column. Keep legacy `linkedin` column populated too for backwards-compat
+      // until Card 4 is fully migrated.
       const { error: insErr } = await supa.from("actor_contacts").insert({
         actor_id,
         name: c.name,
@@ -461,6 +529,7 @@ serve(async (req) => {
         email: c.email,
         phone: c.phone,
         linkedin: c.linkedin,
+        linkedin_url: c.linkedin,
         source: "auto_scrape",
       });
       if (insErr) {
