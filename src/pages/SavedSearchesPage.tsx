@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSavedSearches } from "@/hooks/useSavedSearches";
 import { Button } from "@/components/ui/button";
-import { Trash2, Play, Bell } from "lucide-react";
+import { Trash2, Play, Bell, Bookmark, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { resolveAxisWeights, useUserPreferences } from "@/hooks/useUserPreferences";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SAMPLE_SAVED_SEARCHES } from "@/lib/sampleSavedSearches";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "never";
@@ -20,10 +22,11 @@ function timeAgo(iso: string | null): string {
 }
 
 const SavedSearchesPage = () => {
-  const { rows, loading, remove } = useSavedSearches();
+  const { rows, loading, remove, create } = useSavedSearches();
   const { user } = useAuth();
   const { weights: userDefaults } = useUserPreferences();
   const [running, setRunning] = useState<string | null>(null);
+  const [adopting, setAdopting] = useState<string | null>(null);
   const [runResults, setRunResults] = useState<Record<string, any[]>>({});
 
   const runNow = async (id: string, payload: any, override: any | null) => {
@@ -72,6 +75,23 @@ const SavedSearchesPage = () => {
     }
   };
 
+  const adopt = async (sample: typeof SAMPLE_SAVED_SEARCHES[number]) => {
+    setAdopting(sample.id);
+    try {
+      await create({
+        name: sample.name,
+        need_payload: sample.need_payload,
+        threshold: sample.threshold,
+        programme_id: null,
+      });
+      toast.success(`Adopted "${sample.name}". Edit it any time.`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Adopt failed");
+    } finally {
+      setAdopting(null);
+    }
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
       <header className="flex items-center justify-between border-b border-border-subtle pb-3">
@@ -79,14 +99,50 @@ const SavedSearchesPage = () => {
         <span className="text-caption text-foreground-muted">{rows.length} total</span>
       </header>
 
-      {loading && <p className="text-caption text-foreground-muted">Loading…</p>}
+      {loading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+        </div>
+      )}
+
       {!loading && rows.length === 0 && (
-        <p className="text-body-sm text-foreground-muted italic">No saved searches yet. Save one from a pipeline session via "Save this search".</p>
+        <div className="space-y-5">
+          <div className="text-center py-8 space-y-2 border border-dashed border-border-subtle rounded-card bg-surface">
+            <Bookmark className="w-8 h-8 text-foreground-muted mx-auto" />
+            <h2 className="text-body font-medium text-foreground">No saved searches yet</h2>
+            <p className="text-body-sm text-foreground-muted max-w-md mx-auto">
+              Save a search from any pipeline session via "Save this search", or adopt one of these starter templates below.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-caption text-foreground-muted uppercase tracking-wider">Sample searches</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {SAMPLE_SAVED_SEARCHES.map((s) => (
+                <div key={s.id} className="border border-border-subtle rounded-card bg-surface p-3 space-y-2 flex flex-col">
+                  <h3 className="text-body-sm font-medium text-foreground">{s.name}</h3>
+                  <p className="text-caption text-foreground-muted flex-1">{s.description}</p>
+                  <p className="text-caption text-foreground-muted">Threshold <span className="font-mono">{s.threshold.toFixed(2)}</span></p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => adopt(s)}
+                    disabled={adopting !== null}
+                    className="gap-1.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    {adopting === s.id ? "Adopting…" : "Adopt"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       <ul className="space-y-3">
         {rows.map((r) => (
-          <li key={r.id} className="border border-border rounded-card bg-surface p-4 space-y-2">
+          <li key={r.id} className="border border-border rounded-card bg-surface p-4 space-y-2 animate-fade-in">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-body font-medium text-foreground">{r.name}</h3>
@@ -104,7 +160,7 @@ const SavedSearchesPage = () => {
               </div>
             </div>
             {runResults[r.id] && (
-              <div className="border-t border-border-subtle pt-2 space-y-1">
+              <div className="border-t border-border-subtle pt-2 space-y-1 animate-fade-in">
                 <div className="text-caption text-foreground-muted">Top results</div>
                 {runResults[r.id].slice(0, 5).map((a: any) => (
                   <div key={a.actor_id} className="flex items-center justify-between text-body-sm">
