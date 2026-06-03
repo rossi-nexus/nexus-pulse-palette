@@ -477,18 +477,31 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
     });
 
     setStatus("reviewing");
-  }, [sessionId, roleSearchModes]);
+  }, [sessionId, roleSearchModes, resolvedWeights, user?.id]);
 
   // Triage actions
   const includeActor = useCallback((roleId: string, actorId: string) => {
-    let dbActorIncluded: { db_actor_id: string; role_name: string } | null = null;
+    let dbActorIncluded: { db_actor_id: string; role_name: string; meta: Record<string, unknown> } | null = null;
+    let trackedActorId: string | null = null;
+    let trackedMeta: Record<string, unknown> = {};
     setRoleResults(prev => {
       const next = new Map(prev);
       const result = next.get(roleId);
       if (!result) return prev;
       const target = result.actors.find(a => a.id === actorId);
-      if (target?.source === "db" && target.db_actor_id) {
-        dbActorIncluded = { db_actor_id: target.db_actor_id, role_name: result.role_name };
+      if (target) {
+        const rank = result.actors.findIndex(a => a.id === actorId);
+        trackedMeta = {
+          role_id: roleId,
+          role_name: result.role_name,
+          result_rank: rank,
+          total_score: target.relevance_score ?? null,
+          source: target.source ?? null,
+        };
+        trackedActorId = target.db_actor_id || actorId;
+        if (target.source === "db" && target.db_actor_id) {
+          dbActorIncluded = { db_actor_id: target.db_actor_id, role_name: result.role_name, meta: trackedMeta };
+        }
       }
       next.set(roleId, {
         ...result,
@@ -498,8 +511,9 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       });
       return next;
     });
-    // B3 — audit moat: log every DB-actor selection so we can show which verified
-    // actors flowed back into pipeline runs. Fire-and-forget; failures don't block UX.
+    // AX4 — implicit interaction
+    if (trackedActorId) track(trackedActorId, "included", trackedMeta);
+    // B3 — audit moat
     if (dbActorIncluded) {
       const { db_actor_id, role_name } = dbActorIncluded;
       (supabase.rpc as any)("fn_audit_log_event", {
@@ -514,14 +528,20 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
         if (error) console.warn("audit log (db_actor_included_in_pipeline) failed:", error.message);
       });
     }
-  }, [sessionId]);
-
+  }, [sessionId, track]);
 
   const saveForLater = useCallback((roleId: string, actorId: string) => {
+    let trackedActorId: string | null = null;
+    let trackedMeta: Record<string, unknown> = {};
     setRoleResults(prev => {
       const next = new Map(prev);
       const result = next.get(roleId);
       if (!result) return prev;
+      const target = result.actors.find(a => a.id === actorId);
+      if (target) {
+        trackedActorId = target.db_actor_id || actorId;
+        trackedMeta = { role_id: roleId, role_name: result.role_name, total_score: target.relevance_score ?? null };
+      }
       next.set(roleId, {
         ...result,
         actors: result.actors.map(a =>
@@ -530,13 +550,21 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       });
       return next;
     });
-  }, []);
+    if (trackedActorId) track(trackedActorId, "saved_for_later", trackedMeta);
+  }, [track]);
 
   const undoTriage = useCallback((roleId: string, actorId: string) => {
+    let trackedActorId: string | null = null;
+    let priorDecision: "included" | "saved_for_later" | undefined;
     setRoleResults(prev => {
       const next = new Map(prev);
       const result = next.get(roleId);
       if (!result) return prev;
+      const target = result.actors.find(a => a.id === actorId);
+      if (target) {
+        trackedActorId = target.db_actor_id || actorId;
+        priorDecision = target.triage_decision;
+      }
       next.set(roleId, {
         ...result,
         actors: result.actors.map(a =>
@@ -545,7 +573,59 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       });
       return next;
     });
-  }, []);
+    if (trackedActorId && priorDecision === "included") {
+      track(trackedActorId, "unincluded", { role_id: roleId });
+    }
+  }, [track]);
+
+  /**
+   * AX4 — Re-score a single actor after an outcome was recorded and update its
+   * breakdown in the current result list. Uses the resolved weight set.
+   */
+  const rescoreActor = useCallback(async (cardId: string) => {
+    let dbActorId: string | null = null;
+    let foundRoleId: string | null = null;
+    for (const [rid, r] of roleResults) {
+      const a = r.actors.find(x => x.id === cardId);
+      if (a) {
+        dbActorId = a.db_actor_id ?? null;
+        foundRoleId = rid;
+        break;
+      }
+    }
+    if (!dbActorId || !foundRoleId) return;
+    try {
+      const { data, error } = await (supabase.rpc as any)(
+        "fn_compute_actor_relevance_score_v2",
+        {
+          p_actor_ids: [dbActorId],
+          p_constraints: {},
+          p_weights: resolvedWeights,
+          p_user_id: user?.id ?? null,
+        },
+      );
+      if (error) throw error;
+      const row = (data || [])[0];
+      if (!row) return;
+      setRoleResults(prev => {
+        const next = new Map(prev);
+        const r = next.get(foundRoleId!);
+        if (!r) return prev;
+        next.set(foundRoleId!, {
+          ...r,
+          actors: r.actors.map(a =>
+            a.id === cardId
+              ? { ...a, relevance_score: Number(row.total_score), relevance_breakdown: row.breakdown }
+              : a,
+          ),
+        });
+        return next;
+      });
+    } catch (e: any) {
+      console.warn("rescoreActor failed:", e?.message ?? String(e));
+    }
+  }, [roleResults, resolvedWeights, user?.id]);
+
 
   const lock = useCallback(async () => {
     if (sessionId) {
