@@ -36,6 +36,7 @@ const AppLayout = () => {
               <Route path="/actors/map" element={<ActorsMapPage />} />
               <Route path="/actors/:actorId/products/:productSlug" element={<ProductDetailPage />} />
               <Route path="/actors/:id" element={<ActorProfile />} />
+              <Route path="/saved-searches" element={<SavedSearchesPage />} />
               {/* A4 Area 2: redirect legacy any-auth programme URLs to canonical consultant path. */}
               <Route path="/programmes/:id" element={<LegacyProgrammeRedirect />} />
               {/* A4 Area 1: /admin is gated by AdminLayout (mounted in Index). */}
