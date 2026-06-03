@@ -37,6 +37,7 @@ const AdminLayout = () => {
               <Route path="ontology" element={<OntologyQueuePage />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="registry-import" element={<RegistryImportPage />} />
+              <Route path="orphan-media" element={<OrphanMediaPage />} />
             </Routes>
           </div>
         </div>
