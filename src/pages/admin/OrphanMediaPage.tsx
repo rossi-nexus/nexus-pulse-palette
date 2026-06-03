@@ -174,33 +174,65 @@ const OrphanMediaPage = () => {
   const bulkDelete = async () => {
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} orphan media row(s)?`)) return;
-    const { error } = await supabase
-      .from("actor_media")
-      .delete()
-      .in("id", Array.from(selected));
-    if (error) toast.error(`Bulk delete failed: ${error.message}`);
-    else {
-      toast.success(`Deleted ${selected.size}`);
-      setSelected(new Set());
-      void load();
+    const ids = Array.from(selected);
+    const total = ids.length;
+    let ok = 0;
+    for (const id of ids) {
+      const { error } = await supabase.from("actor_media").delete().eq("id", id);
+      if (!error) ok++;
+      toast.message(`Processed ${ok} of ${total} rows…`, { id: "bulk-progress" });
     }
+    toast.success(`Deleted ${ok} of ${total}`, { id: "bulk-progress" });
+    setSelected(new Set());
+    void load();
   };
 
   const bulkMarkNotProduct = async () => {
     if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const total = ids.length;
     let ok = 0;
-    for (const id of selected) {
+    for (const id of ids) {
       try {
         await patchCropData(id, { review_status: "not_product" });
         ok++;
+        toast.message(`Processed ${ok} of ${total} rows…`, { id: "bulk-progress" });
       } catch {
         /* continue */
       }
     }
-    toast.success(`Marked ${ok} as not-product`);
+    toast.success(`Marked ${ok} of ${total} as not-product`, { id: "bulk-progress" });
     setSelected(new Set());
     void load();
   };
+
+  const bulkLinkToProduct = async (productName: string) => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const total = ids.length;
+    let ok = 0;
+    for (const id of ids) {
+      try {
+        await patchCropData(id, { linked_product_name: productName });
+        ok++;
+        toast.message(`Processed ${ok} of ${total} rows…`, { id: "bulk-progress" });
+      } catch {
+        /* continue */
+      }
+    }
+    toast.success(`Linked ${ok} of ${total} to "${productName}"`, { id: "bulk-progress" });
+    setSelected(new Set());
+    void load();
+  };
+
+  // Intersection of products available across all selected rows' actors.
+  // Disabled if rows span multiple actors.
+  const selectedRows = rows.filter((r) => selected.has(r.id));
+  const selectedActorIds = Array.from(new Set(selectedRows.map((r) => r.actor_id)));
+  const bulkLinkDisabled = selectedActorIds.length > 1;
+  const bulkLinkProducts = bulkLinkDisabled || selectedActorIds.length === 0
+    ? []
+    : (productOptions.get(selectedActorIds[0]) ?? []);
 
   const headerCount = useMemo(() => `${rows.length} orphan row${rows.length === 1 ? "" : "s"}`, [rows.length]);
 
