@@ -7,6 +7,7 @@ import ActorProfile from "@/pages/ActorProfile";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 import AddActorPage from "@/pages/AddActorPage";
 import ActorsMapPage from "@/pages/ActorsMapPage";
+import SavedSearchesPage from "@/pages/SavedSearchesPage";
 import { SessionProvider } from "@/contexts/SessionContext";
 
 /**
