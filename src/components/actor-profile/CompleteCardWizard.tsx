@@ -198,7 +198,7 @@ export interface SectionStatus {
   key: WizardSectionKey;
   label: string;
   helpText: string;
-  presence: "missing" | "partial";
+  presence: "missing" | "partial" | "present";
   cardLabel: string;
 }
 
@@ -265,40 +265,8 @@ const CompleteCardWizard = ({
     [sections, showSkipped, skipped],
   );
 
-  const keptList = visibleSections.filter((s) => keep[s.key]);
-  const currentStep = keptList[stepIdx] ?? null;
-
-  // ---------- Plan → Walk ----------
-  const beginWalk = async () => {
-    setBusy(true);
-    // Persist skip rows for any visible section the editor unchecked.
-    const toSkip = visibleSections.filter(
-      (s) => !keep[s.key] && !skippedKeys.has(s.key),
-    );
-    if (toSkip.length > 0) {
-      const rows = toSkip.map((s) => ({
-        actor_id: actorId,
-        section_key: s.key,
-        reason: skipReason[s.key]?.trim() || null,
-        skipped_by: viewerId,
-      }));
-      const { error } = await supabase.from("actor_section_skips").insert(rows);
-      if (error) {
-        toast.error(`Could not persist skips: ${error.message}`);
-        setBusy(false);
-        return;
-      }
-      setStats((s) => ({ ...s, skipped: s.skipped + rows.length }));
-    }
-    setBusy(false);
-    if (keptList.length === 0) {
-      setPhase("confirm");
-      onChanged();
-      return;
-    }
-    setPhase("walk");
-    setStepIdx(0);
-  };
+  // Free-jump model: stepIdx now indexes directly into visibleSections.
+  const currentStep = visibleSections[stepIdx] ?? null;
 
   // ---------- Un-skip ----------
   const unskip = async (key: string) => {
@@ -315,15 +283,19 @@ const CompleteCardWizard = ({
     onChanged();
   };
 
-  const advance = (added: boolean) => {
-    if (added) setStats((s) => ({ ...s, added: s.added + 1 }));
-    if (stepIdx + 1 >= keptList.length) {
-      setPhase("confirm");
-      onChanged();
-    } else {
-      setStepIdx((i) => i + 1);
-    }
+  // From an editor's "Done" button: return to the overview so the user can
+  // pick another section. They are never forced into a linear sequence.
+  const returnToPlan = () => {
+    setPhase("plan");
+    onChanged();
   };
+
+  const goToNeighbor = (delta: number) => {
+    const next = stepIdx + delta;
+    if (next < 0 || next >= visibleSections.length) return;
+    setStepIdx(next);
+  };
+
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -337,9 +309,9 @@ const CompleteCardWizard = ({
           </SheetTitle>
           <SheetDescription>
             {phase === "plan" &&
-              "Review what's missing. Uncheck anything you want to mark not applicable."}
+              "Pick any section to edit. Green = has content, amber = partial, grey = empty."}
             {phase === "walk" &&
-              `Step ${stepIdx + 1} of ${keptList.length} — ${currentStep?.cardLabel ?? ""}`}
+              `Editing — ${currentStep?.cardLabel ?? ""}`}
             {phase === "confirm" && "Done."}
           </SheetDescription>
         </SheetHeader>
@@ -363,92 +335,107 @@ const CompleteCardWizard = ({
                 Nothing to complete on this actor. 🎉
               </div>
             ) : (
-              <ul className="space-y-2">
-                {visibleSections.map((s) => {
-                  const isSkipped = skippedKeys.has(s.key);
-                  return (
-                    <li
-                      key={s.key}
-                      className={cn(
-                        "rounded-md border border-border bg-surface px-3 py-2",
-                        isSkipped && "opacity-60",
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={!!keep[s.key] && !isSkipped}
-                          disabled={isSkipped}
-                          onCheckedChange={(v) =>
-                            setKeep({ ...keep, [s.key]: !!v })
-                          }
-                          className="mt-1"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "text-sm font-medium text-foreground",
-                                isSkipped && "line-through",
-                              )}
-                            >
-                              {s.label}
-                            </span>
-                            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
-                              {s.cardLabel} · {s.presence}
-                            </span>
-                          </div>
-                          <p className="text-xs text-foreground-muted mt-0.5">
-                            {s.helpText}
-                          </p>
-                          {isSkipped ? (
-                            <div className="flex items-center justify-between mt-2 text-xs">
-                              <span className="text-foreground-muted italic">
-                                Skipped: {
-                                  skipped.find((sk) => sk.section_key === s.key)?.reason ?? "no reason"
-                                }
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-xs"
-                                onClick={() => unskip(s.key)}
-                              >
-                                Un-skip
-                              </Button>
-                            </div>
-                          ) : !keep[s.key] ? (
-                            <Input
-                              placeholder="Why skip? (optional)"
-                              value={skipReason[s.key] ?? ""}
-                              onChange={(e) =>
-                                setSkipReason({
-                                  ...skipReason,
-                                  [s.key]: e.target.value,
-                                })
-                              }
-                              className="mt-2 h-7 text-xs"
-                            />
-                          ) : null}
+              (() => {
+                // Group sections by cardLabel so the user sees them as the same
+                // logical clusters that exist on the profile page.
+                const groups = new Map<string, SectionStatus[]>();
+                visibleSections.forEach((s) => {
+                  const arr = groups.get(s.cardLabel) ?? [];
+                  arr.push(s);
+                  groups.set(s.cardLabel, arr);
+                });
+                return (
+                  <div className="space-y-4">
+                    {Array.from(groups.entries()).map(([card, items]) => (
+                      <div key={card}>
+                        <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                          {card}
                         </div>
+                        <ul className="space-y-1.5">
+                          {items.map((s) => {
+                            const isSkipped = skippedKeys.has(s.key);
+                            const dot =
+                              isSkipped
+                                ? "bg-foreground-muted"
+                                : s.presence === "present"
+                                  ? "bg-success"
+                                  : s.presence === "partial"
+                                    ? "bg-warning"
+                                    : "bg-foreground-muted/40";
+                            const presenceLabel = isSkipped
+                              ? "skipped"
+                              : s.presence === "present"
+                                ? "has content"
+                                : s.presence === "partial"
+                                  ? "partial"
+                                  : "empty";
+                            return (
+                              <li key={s.key}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const idx = visibleSections.findIndex((v) => v.key === s.key);
+                                    setStepIdx(Math.max(0, idx));
+                                    setPhase("walk");
+                                  }}
+                                  className={cn(
+                                    "w-full text-left rounded-md border border-border bg-surface hover:bg-elevated transition px-3 py-2 group",
+                                    isSkipped && "opacity-60",
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className={cn("w-2 h-2 rounded-full shrink-0", dot)} />
+                                    <span className={cn(
+                                      "text-sm font-medium text-foreground flex-1 min-w-0 truncate",
+                                      isSkipped && "line-through",
+                                    )}>
+                                      {s.label}
+                                    </span>
+                                    <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                                      {presenceLabel}
+                                    </span>
+                                    <ChevronRight className="w-3 h-3 text-foreground-muted opacity-0 group-hover:opacity-100 transition" />
+                                  </div>
+                                  <p className="text-xs text-foreground-muted mt-0.5 pl-[18px]">
+                                    {s.helpText}
+                                  </p>
+                                  {isSkipped && (
+                                    <div className="flex items-center justify-between mt-1 pl-[18px] text-xs">
+                                      <span className="text-foreground-muted italic">
+                                        Reason: {
+                                          skipped.find((sk) => sk.section_key === s.key)?.reason ?? "—"
+                                        }
+                                      </span>
+                                      <span
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(e) => { e.stopPropagation(); void unskip(s.key); }}
+                                        className="text-foreground-secondary underline underline-offset-2 hover:text-foreground"
+                                      >
+                                        Un-skip
+                                      </span>
+                                    </div>
+                                  )}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                    ))}
+                  </div>
+                );
+              })()
             )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={beginWalk} disabled={busy}>
-                {busy && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                Start
-                <ChevronRight className="w-3 h-3 ml-1" />
+                Close
               </Button>
             </div>
           </div>
         )}
+
 
         {phase === "walk" && currentStep && (
           <div className="mt-4 space-y-4">
@@ -469,7 +456,7 @@ const CompleteCardWizard = ({
               website={website}
               country={country}
               viewerId={viewerId}
-              onDone={() => advance(true)}
+              onDone={returnToPlan}
               onChanged={onChanged}
             />
 
@@ -477,17 +464,26 @@ const CompleteCardWizard = ({
               <Button
                 size="sm"
                 variant="ghost"
-                disabled={stepIdx === 0}
-                onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
+                onClick={() => setPhase("plan")}
               >
-                <ChevronLeft className="w-3 h-3 mr-1" /> Back
+                <ChevronLeft className="w-3 h-3 mr-1" /> All sections
               </Button>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => advance(false)}>
-                  Skip this step
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={stepIdx === 0}
+                  onClick={() => goToNeighbor(-1)}
+                >
+                  Previous
                 </Button>
-                <Button size="sm" variant="ghost" onClick={onClose}>
-                  <X className="w-3 h-3 mr-1" /> Cancel wizard
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={stepIdx >= visibleSections.length - 1}
+                  onClick={() => goToNeighbor(1)}
+                >
+                  Next <ChevronRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>
             </div>
@@ -694,7 +690,7 @@ const AddressEditor = ({
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -862,7 +858,7 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1143,7 +1139,7 @@ const MediaEditor = ({
       {/* Explicit advance */}
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm" variant="default">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1298,7 +1294,7 @@ const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChang
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1547,7 +1543,7 @@ const OntologyEditor = ({
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1638,7 +1634,7 @@ const AliasEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
