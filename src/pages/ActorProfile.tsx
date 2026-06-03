@@ -1587,7 +1587,7 @@ const ActorProfile = () => {
                     />
                   );
                 }
-                const inner = <ActorLogo name={name} url={logo?.url ?? null} />;
+                const inner = <ActorLogo name={name} url={logo?.url ?? null} provenance={logo ? { source: logo.source ?? null } : null} />;
                 if (!editingDbIdentity) return inner;
                 return (
                   <div className="relative group">
