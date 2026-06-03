@@ -52,10 +52,12 @@ const SavedSearchesPage = () => {
         toast("No matches");
         return;
       }
+      const resolved = resolveAxisWeights(override, userDefaults);
       const { data: scoreRows, error: scoreErr } = await (supabase.rpc as any)("fn_compute_actor_relevance_score_v2", {
         p_actor_ids: actorIds,
         p_constraints: { ontology_entry_ids: uniq, ...(payload?.constraints ?? {}) },
-        p_weights: null,
+        p_weights: resolved,
+        p_user_id: user?.id ?? null,
       });
       if (scoreErr) throw scoreErr;
       const byId = new Map<string, any>((scoreRows ?? []).map((s: any) => [s.actor_id as string, s]));
