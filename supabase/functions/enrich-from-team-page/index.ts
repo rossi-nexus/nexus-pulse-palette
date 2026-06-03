@@ -185,32 +185,37 @@ async function discoverLinkedPages(baseUrl: string): Promise<string[]> {
   }
 }
 
-async function findTeamPage(baseUrl: string): Promise<CandidatePage | null> {
+async function findTeamPages(baseUrl: string): Promise<CandidatePage[]> {
   // 1) Build candidate list: hardcoded paths + homepage-discovered links.
   const hardcoded: string[] = [];
   for (const path of CANDIDATE_PATHS) {
     try { hardcoded.push(new URL(path, baseUrl).href); } catch { /* skip */ }
   }
   const linked = await discoverLinkedPages(baseUrl);
-  const linkedSet = new Set(linked);
+  // Put linked first — nav anchors are intrinsically more likely.
   const candidates = Array.from(new Set([...linked, ...hardcoded])).slice(0, MAX_CANDIDATES);
   console.log(`[enrich-from-team-page] probing ${candidates.length} candidates (linked=${linked.length}, hardcoded=${hardcoded.length})`);
+  console.log(`[enrich-from-team-page] linked URLs: ${JSON.stringify(linked)}`);
 
-  // 2) Probe in parallel — sequential was hitting Supabase wall-time on slow hosts
-  //    (~5s per 404 × 20+ candidates). Promise.all bounds wall-time to ~FETCH_TIMEOUT_MS.
+  // 2) Probe in parallel.
   const results = await Promise.all(candidates.map(async (c) => ({ url: c, page: await tryFetchPage(c) })));
-  let best: CandidatePage | null = null;
+  const scored: Array<CandidatePage & { pathScore: number; combined: number }> = [];
   for (const { url, page } of results) {
     if (!page) continue;
-    // Linked URLs were already prefiltered by team-ish anchor text/href, so accept
-    // them even when token-score is 0 (sparse SPA HTML on WordPress/Avada/etc.).
-    const minScore = linkedSet.has(url) ? 0 : 1;
-    if (page.score >= minScore && (best === null || page.score > best.score)) {
-      best = page;
-    }
+    const pathScore = scorePath(url);
+    // Combined: pathScore dominates (×100) so token score only breaks ties
+    // among URLs with the same path classification.
+    const combined = pathScore * 100 + page.score;
+    scored.push({ ...page, pathScore, combined });
+    console.log(`[enrich-from-team-page] candidate ${url} pathScore=${pathScore} tokenScore=${page.score} combined=${combined}`);
   }
-  if (best) console.log(`[enrich-from-team-page] best candidate ${best.url} score=${best.score} chars=${best.text.length}`);
-  return best;
+  // Sort descending; keep only candidates with any signal (path OR token).
+  scored.sort((a, b) => b.combined - a.combined);
+  const ranked = scored.filter((c) => c.pathScore > 0 || c.score > 0);
+  if (ranked.length > 0) {
+    console.log(`[enrich-from-team-page] ranked top: ${ranked.slice(0, 3).map((c) => `${c.url}(${c.combined})`).join(", ")}`);
+  }
+  return ranked;
 }
 
 interface ScrapedContact {
