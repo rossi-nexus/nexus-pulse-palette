@@ -322,7 +322,8 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
               {
                 p_actor_ids: actorIds,
                 p_constraints: constraintsPayload,
-                p_weights: null,
+                p_weights: resolvedWeights, // AX4
+                p_user_id: user?.id ?? null, // AX4 — engagement subscore
               },
             );
             if (scoreErr) throw scoreErr;
