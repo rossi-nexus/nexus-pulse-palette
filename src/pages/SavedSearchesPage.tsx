@@ -21,10 +21,12 @@ function timeAgo(iso: string | null): string {
 
 const SavedSearchesPage = () => {
   const { rows, loading, remove } = useSavedSearches();
+  const { user } = useAuth();
+  const { weights: userDefaults } = useUserPreferences();
   const [running, setRunning] = useState<string | null>(null);
   const [runResults, setRunResults] = useState<Record<string, any[]>>({});
 
-  const runNow = async (id: string, payload: any) => {
+  const runNow = async (id: string, payload: any, override: any | null) => {
     setRunning(id);
     try {
       const entryIds: string[] = [];
