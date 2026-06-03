@@ -1951,10 +1951,11 @@ export type Database = {
       fn_geocode_missing_personal_actors: {
         Args: never
         Returns: {
-          failed: number
-          skipped_no_address: number
-          successful: number
-          total_attempted: number
+          processed_actor_id: string
+          processed_actor_name: string
+          processed_count: number
+          remaining_count: number
+          total_count: number
         }[]
       }
       fn_import_actor_from_registry: {
