@@ -518,7 +518,7 @@ const ActorProfile = () => {
     if (!id) return;
     const { data } = await supabase
       .from("actor_media")
-      .select("id, type, url, original_url, crop_data")
+      .select("id, type, url, original_url, crop_data, source")
       .eq("actor_id", id);
     if (data) setMedia(data as any);
   };
