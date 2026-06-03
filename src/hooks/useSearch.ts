@@ -2,6 +2,9 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Interpretation, Constraints } from "@/types/interpretation";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserPreferences, resolveAxisWeights, type AxisWeights } from "@/hooks/useUserPreferences";
+import { useTrackInteraction } from "@/hooks/useTrackInteraction";
 
 export type SearchStatus = "not_started" | "searching" | "reviewing" | "locked";
 type RoleStatus = "waiting" | "searching" | "complete" | "error";
