@@ -2369,11 +2369,11 @@ const ActorProfile = () => {
           presence={presencePeople}
           trust={trustPeople}
         >
-        {/* Contacts (DB only) */}
+        {/* Contacts (DB only) — V3 Batch B item 5: curated ContactList */}
         {source === "database" && dbActor && (
           <ProfileSection
             title="Contacts"
-            count={contacts.length}
+            count={contacts.filter((c) => !c.is_hidden).length}
             headerExtra={
               dbActor.websites?.[0] ? (
                 <Button
@@ -2413,55 +2413,13 @@ const ActorProfile = () => {
               ) : null
             }
           >
-            {contacts.length === 0 ? (
-              <div className="text-xs text-foreground-secondary">
-                No contacts yet. Use "Scan team page" to auto-extract from the website, or add manually.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {contacts.map((c) => (
-                  <div
-                    key={c.id}
-                    className="bg-surface border border-border/60 rounded-md p-3 text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium text-foreground">{c.name}</div>
-                      <ProvenanceBadge
-                        source={c.source}
-                        verified_at={c.verified_at}
-                        verifier_id={c.verifier_id}
-                        decays_at={c.decays_at}
-                        confidence={c.verifier_confidence}
-                      />
-                    </div>
-                    {c.title && (
-                      <div className="text-xs text-foreground-secondary">{c.title}</div>
-                    )}
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-foreground-secondary">
-                      {c.email && (
-                        <a
-                          href={`mailto:${c.email}`}
-                          className="hover:text-foreground transition-colors"
-                        >
-                          {c.email}
-                        </a>
-                      )}
-                      {c.phone && <span>{c.phone}</span>}
-                      {c.linkedin && (
-                        <a
-                          href={c.linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-accent-teal hover:underline"
-                        >
-                          LinkedIn
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <ContactList
+              actorId={dbActor.id}
+              contacts={contacts as ContactRow[]}
+              canEdit={isAdmin || dbActor.verifier_id === user?.id}
+              isAdmin={isAdmin}
+              onChange={(next) => setContacts(next)}
+            />
           </ProfileSection>
         )}
 
