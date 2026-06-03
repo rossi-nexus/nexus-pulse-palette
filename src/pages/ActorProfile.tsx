@@ -2400,11 +2400,13 @@ const ActorProfile = () => {
                   >
                     <div className="flex items-center gap-2">
                       <div className="font-medium text-foreground">{c.name}</div>
-                      {c.source === "auto_scrape" && (
-                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30">
-                          Auto-extracted
-                        </span>
-                      )}
+                      <ProvenanceBadge
+                        source={c.source}
+                        verified_at={c.verified_at}
+                        verifier_id={c.verifier_id}
+                        decays_at={c.decays_at}
+                        confidence={c.verifier_confidence}
+                      />
                     </div>
                     {c.title && (
                       <div className="text-xs text-foreground-secondary">{c.title}</div>
