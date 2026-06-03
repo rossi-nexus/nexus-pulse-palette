@@ -5,6 +5,7 @@ import OntologyQueuePage from "@/pages/admin/OntologyQueuePage";
 import RegistryImportPage from "@/pages/admin/RegistryImportPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import UserManagementPage from "@/pages/admin/UserManagementPage";
+import OrphanMediaPage from "@/pages/admin/OrphanMediaPage";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
@@ -36,6 +37,7 @@ const AdminLayout = () => {
               <Route path="ontology" element={<OntologyQueuePage />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="registry-import" element={<RegistryImportPage />} />
+              <Route path="orphan-media" element={<OrphanMediaPage />} />
             </Routes>
           </div>
         </div>

@@ -4,6 +4,8 @@ import SidebarNav from "./SidebarNav";
 import PipelineView from "./PipelineView";
 import ActorsView from "./ActorsView";
 import ActorProfile from "@/pages/ActorProfile";
+import ProductDetailPage from "@/pages/ProductDetailPage";
+import AddActorPage from "@/pages/AddActorPage";
 import ActorsMapPage from "@/pages/ActorsMapPage";
 import { SessionProvider } from "@/contexts/SessionContext";
 
@@ -29,7 +31,9 @@ const AppLayout = () => {
               <Route path="/" element={<Navigate to="/pipeline" replace />} />
               <Route path="/pipeline" element={<PipelineView />} />
               <Route path="/actors" element={<ActorsView />} />
+              <Route path="/actors/new" element={<AddActorPage />} />
               <Route path="/actors/map" element={<ActorsMapPage />} />
+              <Route path="/actors/:actorId/products/:productSlug" element={<ProductDetailPage />} />
               <Route path="/actors/:id" element={<ActorProfile />} />
               {/* A4 Area 2: redirect legacy any-auth programme URLs to canonical consultant path. */}
               <Route path="/programmes/:id" element={<LegacyProgrammeRedirect />} />

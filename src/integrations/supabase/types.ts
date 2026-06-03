@@ -1975,6 +1975,15 @@ export type Database = {
         }
         Returns: number
       }
+      fn_create_actor_hybrid: {
+        Args: {
+          p_country: string
+          p_data: Json
+          p_org_number: string
+          p_source: string
+        }
+        Returns: Json
+      }
       fn_create_programme: {
         Args: { p_client_org?: string; p_description?: string; p_name: string }
         Returns: string

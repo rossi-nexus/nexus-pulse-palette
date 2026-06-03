@@ -11,6 +11,7 @@
  *   as a manual fallback when auto-enrichment can't find an image.
  */
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ExternalLink, Info, ImagePlus, Replace, Sparkles, Loader2, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { productSlug } from "@/lib/productSlug";
 
 export interface ProductTag {
   entry_name: string;
@@ -107,6 +109,7 @@ export function ProductCardGrid({
   onReplaceImage,
   onEnriched,
 }: Props) {
+  const navigate = useNavigate();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [enrichingName, setEnrichingName] = useState<string | null>(null);
   const [manualUrlFor, setManualUrlFor] = useState<string | null>(null);
@@ -172,6 +175,13 @@ export function ProductCardGrid({
   };
 
   const openDetail = (i: number) => {
+    const name = cards[i]?.tag.entry_name;
+    // V3 Batch C §1 — navigate to the dedicated sub-route. Fall back to the
+    // legacy modal only if we don't have an actorId (defensive).
+    if (actorId && name) {
+      navigate(`/actors/${actorId}/products/${productSlug(name)}`);
+      return;
+    }
     setOpenIdx(i);
     setCarouselIdx(0);
   };
