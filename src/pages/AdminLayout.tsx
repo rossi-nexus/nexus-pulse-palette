@@ -5,6 +5,7 @@ import OntologyQueuePage from "@/pages/admin/OntologyQueuePage";
 import RegistryImportPage from "@/pages/admin/RegistryImportPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import UserManagementPage from "@/pages/admin/UserManagementPage";
+import OrphanMediaPage from "@/pages/admin/OrphanMediaPage";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
