@@ -227,14 +227,26 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const actor_id = typeof body?.actor_id === "string" ? body.actor_id : null;
     const website_url = typeof body?.website_url === "string" ? body.website_url : null;
-    if (!actor_id || !website_url) return json({ error: "Missing actor_id or website_url" }, 400);
+    const mode: "auto" | "candidates" | "ingest" =
+      body?.mode === "candidates" || body?.mode === "ingest" ? body.mode : "auto";
+    const ingest_slot: Slot | null =
+      body?.slot === "logo" || body?.slot === "hero" ? body.slot : null;
+    const ingest_url_in: string | null =
+      typeof body?.url === "string" ? body.url : null;
 
-    let baseUrl: URL;
-    try {
-      baseUrl = new URL(website_url);
-      if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("bad proto");
-    } catch {
-      return json({ error: "Invalid website_url" }, 400);
+    if (!actor_id) return json({ error: "Missing actor_id" }, 400);
+    if (mode !== "ingest" && !website_url) return json({ error: "Missing website_url" }, 400);
+    if (mode === "ingest" && (!ingest_slot || !ingest_url_in))
+      return json({ error: "Missing slot or url for ingest" }, 400);
+
+    let baseUrl: URL | null = null;
+    if (website_url) {
+      try {
+        baseUrl = new URL(website_url);
+        if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("bad proto");
+      } catch {
+        return json({ error: "Invalid website_url" }, 400);
+      }
     }
 
     const supa = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
