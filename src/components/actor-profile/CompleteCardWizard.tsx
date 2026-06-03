@@ -29,11 +29,155 @@ import {
   CheckCircle2,
   X,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AddressDiscoveryDialog from "./AddressDiscoveryDialog";
+
+// ---- Shared helper: ensure the actor has a website on file ----
+// Tries auto-discovery via Serper first, falls back to user input. Persists
+// the chosen URL onto actors.websites and returns it.
+const useWebsiteResolver = (actorId: string, actorName: string, initial: string | null) => {
+  const [website, setWebsite] = useState<string | null>(initial);
+  const [input, setInput] = useState("");
+  const [finding, setFinding] = useState(false);
+  const [candidates, setCandidates] = useState<Array<{ url: string; host: string; title: string }>>([]);
+
+  const refresh = async () => {
+    const { data } = await supabase
+      .from("actors")
+      .select("websites, country")
+      .eq("id", actorId)
+      .maybeSingle();
+    const w = (data?.websites as string[] | null)?.[0] ?? null;
+    setWebsite(w);
+    return { website: w, country: (data?.country as string | null) ?? null };
+  };
+
+  const persist = async (raw: string): Promise<string | null> => {
+    let url = raw.trim();
+    if (!url) return null;
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    const { error } = await supabase
+      .from("actors")
+      .update({ websites: [url] })
+      .eq("id", actorId);
+    if (error) {
+      toast.error(`Could not save website: ${error.message}`);
+      return null;
+    }
+    setWebsite(url);
+    return url;
+  };
+
+  const findAutomatically = async () => {
+    setFinding(true);
+    try {
+      const { country } = await refresh();
+      const { data, error } = await supabase.functions.invoke("find-actor-website", {
+        body: { actor_name: actorName, country },
+      });
+      if (error) {
+        const detail = (data as any)?.error ?? error.message;
+        throw new Error(detail);
+      }
+      const list = (data as any)?.candidates ?? [];
+      if (list.length === 0) {
+        toast.error("No website found via web search. Paste one below.");
+        return null;
+      }
+      setCandidates(list);
+      const top = (data as any)?.website as string | null;
+      if (top) {
+        const saved = await persist(top);
+        if (saved) toast.success(`Website set to ${new URL(saved).hostname}`);
+        return saved;
+      }
+      return null;
+    } catch (e: any) {
+      toast.error(`Find website failed: ${e?.message ?? "unknown"}`);
+      return null;
+    } finally {
+      setFinding(false);
+    }
+  };
+
+  return {
+    website,
+    setWebsite,
+    input,
+    setInput,
+    finding,
+    candidates,
+    persist,
+    findAutomatically,
+    refresh,
+  };
+};
+
+// Inline UI shown above an editor when no website is on file.
+const WebsiteResolverPanel = ({
+  resolver,
+}: {
+  resolver: ReturnType<typeof useWebsiteResolver>;
+}) => {
+  if (resolver.website) return null;
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-surface px-3 py-2">
+      <div className="text-xs text-foreground-muted">
+        No website on file. Add one to enable auto-enrichment.
+      </div>
+      <div className="flex gap-2">
+        <Input
+          placeholder="e.g. equipnor.no"
+          value={resolver.input}
+          onChange={(e) => resolver.setInput(e.target.value)}
+          className="h-8 text-sm"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!resolver.input.trim()}
+          onClick={() => resolver.persist(resolver.input)}
+        >
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={resolver.findAutomatically}
+          disabled={resolver.finding}
+        >
+          {resolver.finding ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Search className="w-3 h-3 mr-1" />
+          )}
+          Find automatically
+        </Button>
+      </div>
+      {resolver.candidates.length > 1 && (
+        <div className="space-y-1 pt-1">
+          <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
+            Other matches
+          </div>
+          {resolver.candidates.slice(1).map((c) => (
+            <button
+              key={c.url}
+              type="button"
+              onClick={() => resolver.persist(c.url)}
+              className="block w-full text-left text-xs text-foreground-secondary hover:text-foreground hover:underline"
+            >
+              {c.host} — {c.title}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export type WizardSectionKey =
   | "address"
@@ -437,7 +581,8 @@ const AddressEditor = ({
 };
 
 // ---- Description ----
-const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
+const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onChanged }: EditorProps) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -446,15 +591,13 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
   const generate = async () => {
     setGenerating(true);
     try {
-      const { data: actorRow, error: aErr } = await supabase
-        .from("actors")
-        .select("websites, legal_name")
-        .eq("id", actorId)
-        .maybeSingle();
-      if (aErr) throw new Error(aErr.message);
-      const website_url = actorRow?.websites?.[0] ?? null;
+      let website_url = resolver.website;
       if (!website_url) {
-        toast.error("No website on file for this actor. Add one first.");
+        const refreshed = await resolver.refresh();
+        website_url = refreshed.website;
+      }
+      if (!website_url) {
+        toast.error("Add a website above first.");
         return;
       }
       const { data, error } = await supabase.functions.invoke(
@@ -463,7 +606,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
           body: {
             actor_id: actorId,
             website_url,
-            actor_name: actorRow?.legal_name,
+            actor_name: actorName,
           },
         },
       );
@@ -509,6 +652,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
   };
   return (
     <div className="space-y-3">
+      <WebsiteResolverPanel resolver={resolver} />
       <div className="flex items-center justify-between">
         <Label className="text-xs text-foreground-muted">Summary</Label>
         <Button
@@ -516,7 +660,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
           variant="outline"
           size="sm"
           onClick={generate}
-          disabled={generating || busy}
+          disabled={generating || busy || !resolver.website}
         >
           {generating ? (
             <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -551,11 +695,14 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
 // ---- Media (logo / hero) ----
 const MediaEditor = ({
   actorId,
+  actorName,
+  website,
   type,
   viewerId,
   onDone,
   onChanged,
 }: EditorProps & { type: "logo" | "hero" }) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [scraping, setScraping] = useState(false);
@@ -563,15 +710,13 @@ const MediaEditor = ({
   const scrape = async () => {
     setScraping(true);
     try {
-      const { data: actorRow, error: aErr } = await supabase
-        .from("actors")
-        .select("websites")
-        .eq("id", actorId)
-        .maybeSingle();
-      if (aErr) throw new Error(aErr.message);
-      const website_url = actorRow?.websites?.[0] ?? null;
+      let website_url = resolver.website;
       if (!website_url) {
-        toast.error("No website on file. Paste a URL below instead.");
+        const refreshed = await resolver.refresh();
+        website_url = refreshed.website;
+      }
+      if (!website_url) {
+        toast.error("Add a website above first.");
         return;
       }
       const { data, error } = await supabase.functions.invoke("scrape-actor-media", {
@@ -624,7 +769,8 @@ const MediaEditor = ({
 
   return (
     <div className="space-y-3">
-      <Button onClick={scrape} disabled={scraping} variant="outline">
+      <WebsiteResolverPanel resolver={resolver} />
+      <Button onClick={scrape} disabled={scraping || !resolver.website} variant="outline">
         {scraping ? (
           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
         ) : (
