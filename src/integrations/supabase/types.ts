@@ -1821,16 +1821,19 @@ export type Database = {
       user_preferences: {
         Row: {
           default_axis_weights: Json | null
+          onboarding_seen: Json
           updated_at: string
           user_id: string
         }
         Insert: {
           default_axis_weights?: Json | null
+          onboarding_seen?: Json
           updated_at?: string
           user_id: string
         }
         Update: {
           default_axis_weights?: Json | null
+          onboarding_seen?: Json
           updated_at?: string
           user_id?: string
         }
@@ -2115,14 +2118,6 @@ export type Database = {
         Returns: boolean
       }
       fn_cleanup_old_drafts: { Args: never; Returns: number }
-      fn_compute_actor_relevance_score: {
-        Args: {
-          p_actor_id: string
-          p_ontology_entry_ids?: string[]
-          p_role_id?: string
-        }
-        Returns: number
-      }
       fn_compute_actor_relevance_score_v2: {
         Args: {
           p_actor_ids: string[]

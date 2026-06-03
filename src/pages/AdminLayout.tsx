@@ -6,6 +6,7 @@ import RegistryImportPage from "@/pages/admin/RegistryImportPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import UserManagementPage from "@/pages/admin/UserManagementPage";
 import OrphanMediaPage from "@/pages/admin/OrphanMediaPage";
+import InteractionsAnalyticsPage from "@/pages/admin/InteractionsAnalyticsPage";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { SessionProvider } from "@/contexts/SessionContext";
 
@@ -38,6 +39,7 @@ const AdminLayout = () => {
               <Route path="users" element={<UserManagementPage />} />
               <Route path="registry-import" element={<RegistryImportPage />} />
               <Route path="orphan-media" element={<OrphanMediaPage />} />
+              <Route path="interactions" element={<InteractionsAnalyticsPage />} />
             </Routes>
           </div>
         </div>

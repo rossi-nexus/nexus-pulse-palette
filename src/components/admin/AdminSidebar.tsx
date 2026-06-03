@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { Tags, ArrowLeft, Download, LayoutDashboard, Users, ImageOff } from "lucide-react";
+import { Tags, ArrowLeft, Download, LayoutDashboard, Users, ImageOff, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { to: "/admin/ontology", icon: Tags, label: "Ontology" },
   { to: "/admin/registry-import", icon: Download, label: "Registry import" },
   { to: "/admin/orphan-media", icon: ImageOff, label: "Orphan media" },
+  { to: "/admin/interactions", icon: Activity, label: "Interactions" },
 ];
 
 const AdminSidebar = () => {

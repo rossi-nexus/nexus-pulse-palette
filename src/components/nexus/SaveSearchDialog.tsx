@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useSavedSearches } from "@/hooks/useSavedSearches";
 import {
@@ -14,6 +17,8 @@ import {
   useUserPreferences,
   type AxisWeights,
 } from "@/hooks/useUserPreferences";
+import { AXIS_WEIGHT_PRESETS, getPreset, matchingPreset } from "@/lib/axisWeightPresets";
+import HelpHint from "@/components/ui/HelpHint";
 
 interface Props {
   open: boolean;
@@ -43,14 +48,24 @@ const SaveSearchDialog = ({ open, onOpenChange, needPayload, programmeId }: Prop
     }
   }, [inheritDefaults, effectiveDefaults]);
 
+  const slidersToWeights = (): AxisWeights =>
+    AXIS_KEYS.reduce((acc, k) => { acc[k] = sliders[k] / 100; return acc; }, {} as any);
+
+  const activePreset = matchingPreset(slidersToWeights());
+
+  const applyPreset = (id: string) => {
+    const p = getPreset(id);
+    if (!p) return;
+    setSliders(AXIS_KEYS.reduce((acc, k) => { acc[k] = Math.round(p.weights[k] * 100); return acc; }, {} as any));
+  };
+
   const save = async () => {
     if (!name.trim()) { toast.error("Name required"); return; }
     setBusy(true);
     try {
       const row = await create({ name: name.trim(), need_payload: needPayload, threshold, programme_id: programmeId ?? null });
       if (!inheritDefaults) {
-        const axis_weights = AXIS_KEYS.reduce((acc, k) => { acc[k] = sliders[k] / 100; return acc; }, {} as any);
-        await update(row.id, { axis_weights } as any);
+        await update(row.id, { axis_weights: slidersToWeights() } as any);
       }
       toast.success("Search saved. You'll be notified when a new actor matches.");
       onOpenChange(false);
@@ -76,7 +91,10 @@ const SaveSearchDialog = ({ open, onOpenChange, needPayload, programmeId }: Prop
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Nordic UAV providers" />
           </div>
           <div className="space-y-1.5">
-            <Label>Notify when score ≥ <span className="font-mono">{threshold.toFixed(2)}</span></Label>
+            <div className="flex items-center gap-1.5">
+              <Label>Notify when score ≥ <span className="font-mono">{threshold.toFixed(2)}</span></Label>
+              <HelpHint>Higher thresholds mean fewer but more relevant notifications. 0.80+ = very strong matches only. 0.50–0.70 = broader.</HelpHint>
+            </div>
             <Slider value={[threshold]} onValueChange={(v) => setThreshold(v[0])} min={0.5} max={0.95} step={0.05} />
           </div>
 
@@ -85,6 +103,23 @@ const SaveSearchDialog = ({ open, onOpenChange, needPayload, programmeId }: Prop
               <Checkbox checked={inheritDefaults} onCheckedChange={(v) => setInheritDefaults(!!v)} />
               <span className="text-body-sm text-foreground">Inherit my default axis weights</span>
             </label>
+            {!inheritDefaults && (
+              <div className="space-y-1.5">
+                <Label className="text-body-sm">Preset</Label>
+                <Select value={activePreset ?? ""} onValueChange={applyPreset}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={activePreset ? undefined : "Custom"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AXIS_WEIGHT_PRESETS.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.label}{activePreset === p.id && " · current"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className={inheritDefaults ? "opacity-50 pointer-events-none space-y-3" : "space-y-3"}>
               {AXIS_KEYS.map((k) => (
                 <div key={k} className="space-y-1">
