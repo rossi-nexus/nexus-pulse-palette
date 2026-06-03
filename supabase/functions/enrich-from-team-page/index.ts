@@ -481,7 +481,7 @@ serve(async (req) => {
       console.log(`[enrich-from-team-page] attempt ${tried.length} → ${candidate.url}`);
       let contacts: ScrapedContact[] = [];
       try {
-        contacts = await llmExtractContacts(candidate.text, candidate.url, lovableKey);
+        contacts = await llmExtractContacts(candidate.text, candidate.url, candidate.details, lovableKey);
       } catch (e) {
         lastError = (e as Error).message;
         console.error(`[enrich-from-team-page] llm error on ${candidate.url}`, e);
