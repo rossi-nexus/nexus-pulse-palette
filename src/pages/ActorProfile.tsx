@@ -1833,8 +1833,19 @@ const ActorProfile = () => {
             </p>
           )}
           {/* Phase 6.5.5b/6.5.6: Re-verify + Record outcome action row */}
-          {source === "database" && dbActor && (isAdmin || canRecordOutcome) && (
+          {source === "database" && dbActor && (isAdmin || canRecordOutcome || canShowWizard) && (
             <div className="mt-3 flex items-center gap-2 flex-wrap">
+              {canShowWizard && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setWizardOpen(true)}
+                  className="bg-accent-teal hover:bg-accent-teal/90 text-background"
+                >
+                  <ListChecks className="w-3.5 h-3.5 mr-1.5" />
+                  Complete this card ({wizardActiveSections.length})
+                </Button>
+              )}
               {isAdmin && (
                 <Button size="sm" variant="outline" onClick={() => setReverifyOpen(true)}>
                   <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
