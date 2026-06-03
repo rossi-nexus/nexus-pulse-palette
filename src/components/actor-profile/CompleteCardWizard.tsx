@@ -763,7 +763,7 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
       actor_id: actorId,
       type: "summary",
       content: text.trim(),
-      source: generatedSource ? "web_search" : "manual",
+      source: generatedSource ? "ai" : "manual",
       source_url: generatedSource,
       verifier_id: viewerId,
       verified_at: new Date().toISOString(),
