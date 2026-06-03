@@ -581,7 +581,8 @@ const AddressEditor = ({
 };
 
 // ---- Description ----
-const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
+const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onChanged }: EditorProps) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -590,15 +591,13 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
   const generate = async () => {
     setGenerating(true);
     try {
-      const { data: actorRow, error: aErr } = await supabase
-        .from("actors")
-        .select("websites, legal_name")
-        .eq("id", actorId)
-        .maybeSingle();
-      if (aErr) throw new Error(aErr.message);
-      const website_url = actorRow?.websites?.[0] ?? null;
+      let website_url = resolver.website;
       if (!website_url) {
-        toast.error("No website on file for this actor. Add one first.");
+        const refreshed = await resolver.refresh();
+        website_url = refreshed.website;
+      }
+      if (!website_url) {
+        toast.error("Add a website above first.");
         return;
       }
       const { data, error } = await supabase.functions.invoke(
@@ -607,7 +606,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
           body: {
             actor_id: actorId,
             website_url,
-            actor_name: actorRow?.legal_name,
+            actor_name: actorName,
           },
         },
       );
@@ -653,6 +652,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
   };
   return (
     <div className="space-y-3">
+      <WebsiteResolverPanel resolver={resolver} />
       <div className="flex items-center justify-between">
         <Label className="text-xs text-foreground-muted">Summary</Label>
         <Button
@@ -660,7 +660,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
           variant="outline"
           size="sm"
           onClick={generate}
-          disabled={generating || busy}
+          disabled={generating || busy || !resolver.website}
         >
           {generating ? (
             <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -695,11 +695,14 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
 // ---- Media (logo / hero) ----
 const MediaEditor = ({
   actorId,
+  actorName,
+  website,
   type,
   viewerId,
   onDone,
   onChanged,
 }: EditorProps & { type: "logo" | "hero" }) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [scraping, setScraping] = useState(false);
@@ -707,15 +710,13 @@ const MediaEditor = ({
   const scrape = async () => {
     setScraping(true);
     try {
-      const { data: actorRow, error: aErr } = await supabase
-        .from("actors")
-        .select("websites")
-        .eq("id", actorId)
-        .maybeSingle();
-      if (aErr) throw new Error(aErr.message);
-      const website_url = actorRow?.websites?.[0] ?? null;
+      let website_url = resolver.website;
       if (!website_url) {
-        toast.error("No website on file. Paste a URL below instead.");
+        const refreshed = await resolver.refresh();
+        website_url = refreshed.website;
+      }
+      if (!website_url) {
+        toast.error("Add a website above first.");
         return;
       }
       const { data, error } = await supabase.functions.invoke("scrape-actor-media", {
@@ -768,7 +769,8 @@ const MediaEditor = ({
 
   return (
     <div className="space-y-3">
-      <Button onClick={scrape} disabled={scraping} variant="outline">
+      <WebsiteResolverPanel resolver={resolver} />
+      <Button onClick={scrape} disabled={scraping || !resolver.website} variant="outline">
         {scraping ? (
           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
         ) : (
