@@ -191,14 +191,12 @@ export function ProductCardGrid({
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {cards.map((c, i) => {
-          const isRich = Boolean(c.description || c.primaryImage || c.tag.source_url);
           const isEnriching = enrichingName === c.tag.entry_name;
           return (
             <div
               key={`${c.tag.entry_name}-${i}`}
               className={cn(
                 "group relative text-left flex flex-col rounded-md border bg-surface border-border/60 hover:border-border-accent transition-colors overflow-hidden cursor-pointer",
-                !isRich && "bg-surface/60",
               )}
               role="button"
               tabIndex={0}
@@ -260,13 +258,18 @@ export function ProductCardGrid({
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                 </div>
-              ) : isRich ? (
-                <div className="aspect-video bg-gradient-to-br from-accent-blue/10 via-accent-teal/10 to-accent-green/10 flex items-center justify-center">
+              ) : (
+                <div className="aspect-video bg-gradient-to-br from-accent-blue/10 via-accent-teal/10 to-accent-green/10 flex flex-col items-center justify-center gap-1">
                   <span className="text-2xl font-semibold text-foreground-muted">
                     {c.tag.entry_name.trim()[0]?.toUpperCase() ?? "?"}
                   </span>
+                  {!c.description && (
+                    <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                      {editable ? "Click Enrich to fetch details" : "Awaiting enrichment"}
+                    </span>
+                  )}
                 </div>
-              ) : null}
+              )}
               <div className="p-3 flex-1 flex flex-col gap-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-sm font-medium text-foreground leading-snug">
