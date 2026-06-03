@@ -198,7 +198,7 @@ export interface SectionStatus {
   key: WizardSectionKey;
   label: string;
   helpText: string;
-  presence: "missing" | "partial";
+  presence: "missing" | "partial" | "present";
   cardLabel: string;
 }
 
