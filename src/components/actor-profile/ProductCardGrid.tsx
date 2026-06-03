@@ -99,15 +99,38 @@ export function ProductCardGrid({ products, descriptions, media, actorName, edit
         {cards.map((c, i) => {
           const isRich = Boolean(c.description || c.image || c.tag.source_url);
           return (
-            <button
-              type="button"
+            <div
               key={`${c.tag.entry_name}-${i}`}
-              onClick={() => setOpenIdx(i)}
               className={cn(
-                "group text-left flex flex-col rounded-md border bg-surface border-border/60 hover:border-border-accent transition-colors overflow-hidden",
+                "group relative text-left flex flex-col rounded-md border bg-surface border-border/60 hover:border-border-accent transition-colors overflow-hidden cursor-pointer",
                 !isRich && "bg-surface/60",
               )}
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpenIdx(i)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpenIdx(i);
+                }
+              }}
             >
+              {editable && (onAddImage || onReplaceImage) && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute top-2 right-2 z-10 h-7 px-2 text-[10px] uppercase tracking-wider shadow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (c.image && onReplaceImage) onReplaceImage(c.tag.entry_name, c.image.id);
+                    else if (onAddImage) onAddImage(c.tag.entry_name);
+                  }}
+                  title={c.image ? "Replace image" : "Add image"}
+                >
+                  {c.image ? <Replace className="w-3 h-3 mr-1" /> : <ImagePlus className="w-3 h-3 mr-1" />}
+                  {c.image ? "Replace" : "Add image"}
+                </Button>
+              )}
               {c.image ? (
                 <div className="aspect-video bg-elevated overflow-hidden">
                   <img
@@ -158,7 +181,7 @@ export function ProductCardGrid({ products, descriptions, media, actorName, edit
                   </span>
                 )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
