@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   UserPlus,
   XCircle,
+  Bookmark,
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationEntry } from "@/hooks/useNotifications";
@@ -17,7 +18,8 @@ type EventKey =
   | "verify"
   | "reject_suggestion"
   | "onboard_verified_actor"
-  | "record_outcome";
+  | "record_outcome"
+  | "saved_search_hit";
 
 const EVENT_META: Record<EventKey, { icon: LucideIcon; title: (name: string) => string }> = {
   approve_and_verify: { icon: CheckCircle, title: (n) => `Actor ${n} approved` },
@@ -25,6 +27,7 @@ const EVENT_META: Record<EventKey, { icon: LucideIcon; title: (name: string) => 
   reject_suggestion: { icon: XCircle, title: (n) => `Suggestion rejected: ${n}` },
   onboard_verified_actor: { icon: UserPlus, title: (n) => `Onboarded ${n}` },
   record_outcome: { icon: Award, title: (n) => `Outcome recorded for ${n}` },
+  saved_search_hit: { icon: Bookmark, title: (n) => `New match: ${n}` },
 };
 
 function timeAgo(iso: string): string {
