@@ -1392,25 +1392,42 @@ const ActorProfile = () => {
   const presenceCollection: PresenceState = hasPersonalContent ? "complete" : "missing";
   const trustCollection: TrustBand = "user";
 
-  // Linked personal actor (DB-side Card 6 CTA).
+  // Linked personal actor (DB-side Card 6 CTA + conflict banner data).
   const [linkedPersonalId, setLinkedPersonalId] = useState<string | null>(null);
+  const [linkedPersonal, setLinkedPersonal] = useState<PersonalActor | null>(null);
   useEffect(() => {
     if (source !== "database" || !dbActor?.id || !user?.id) {
       setLinkedPersonalId(null);
+      setLinkedPersonal(null);
       return;
     }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("user_personal_actors")
-        .select("id")
+        .select("*")
         .eq("user_id", user.id)
         .eq("matched_main_db_actor_id", dbActor.id)
         .maybeSingle();
-      if (!cancelled) setLinkedPersonalId(data?.id ?? null);
+      if (!cancelled) {
+        setLinkedPersonalId(data?.id ?? null);
+        setLinkedPersonal((data as PersonalActor | null) ?? null);
+      }
     })();
     return () => { cancelled = true; };
   }, [source, dbActor?.id, user?.id]);
+
+  // V3 Batch B item 2 — viewer role for the header pill.
+  const { role: viewerRole } = useViewerActorRole({
+    isPersonalSource: source === "personal",
+    actorVerifierId: dbActor?.verifier_id ?? null,
+  });
+
+  // V3 Batch B item 3 — conflict detection for Card 6.
+  const collectionConflicts = useMemo(
+    () => computeIdentityConflicts(linkedPersonal, dbActor),
+    [linkedPersonal, dbActor],
+  );
 
   const handleAddToCollection = async () => {
     if (!user?.id || !dbActor) return;
