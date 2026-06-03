@@ -378,7 +378,7 @@ serve(async (req) => {
           slot_type: slot,
           source_url: sourceUrl,
           scraped_at: new Date().toISOString(),
-          website_url: baseUrl.href,
+          website_url: baseUrl!.href,
           linked_product_name: linkedProductName,
         } as never,
         p_reason: "auto-scrape from website during onboarding/enrichment",
@@ -395,7 +395,7 @@ serve(async (req) => {
       let productHtml: string | null = null;
       let productPageUrl: string | null = null;
       for (const path of PRODUCT_PATHS) {
-        const cand = resolveUrl(path, baseUrl.href);
+        const cand = resolveUrl(path, baseUrl!.href);
         if (!cand) continue;
         const h = await fetchHtml(cand);
         if (h && h.length > 200) { productHtml = h; productPageUrl = cand; break; }
