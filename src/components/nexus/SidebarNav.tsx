@@ -42,7 +42,7 @@ function formatSessionDate(iso: string): string {
 }
 
 const SidebarNav = () => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const {
     sessions, sessionId, setSessionId, isAdmin, createSession, renameSession,
     assignSessionToProgramme, deleteSession,
