@@ -1353,41 +1353,6 @@ const ActorProfile = () => {
     }
   }, [source, dbActor?.id, searchParams, setSearchParams]);
 
-  // ---------- Loading state ----------
-
-  if (loading) {
-    return (
-      <div className="h-full overflow-auto">
-        <div className="max-w-4xl mx-auto p-8 space-y-6">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  // ---------- Not found ----------
-  if (!personal && !dbActor) {
-    return (
-      <div className="h-full flex items-center justify-center bg-background">
-        <div className="text-center max-w-md">
-          <AlertCircle className="w-10 h-10 mx-auto mb-4 text-foreground-muted" />
-          <h2 className="text-lg font-medium mb-2 text-foreground">Actor not found</h2>
-          <p className="text-foreground-secondary text-sm mb-6">
-            This actor may have been deleted or you don't have access to view it.
-          </p>
-          <Button variant="secondary" size="sm" asChild>
-            <Link to="/actors">
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Actors
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // ---------- Header values ----------
   const name = personal?.actor_name ?? dbActor?.legal_name ?? "Untitled actor";
   const description =
