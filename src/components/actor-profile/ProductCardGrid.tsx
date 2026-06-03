@@ -175,6 +175,13 @@ export function ProductCardGrid({
   };
 
   const openDetail = (i: number) => {
+    const name = cards[i]?.tag.entry_name;
+    // V3 Batch C §1 — navigate to the dedicated sub-route. Fall back to the
+    // legacy modal only if we don't have an actorId (defensive).
+    if (actorId && name) {
+      navigate(`/actors/${actorId}/products/${productSlug(name)}`);
+      return;
+    }
     setOpenIdx(i);
     setCarouselIdx(0);
   };
