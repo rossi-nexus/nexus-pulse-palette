@@ -696,6 +696,8 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
 };
 
 // ---- Media (logo / hero) ----
+// User-controlled: shows multiple candidates from the website, lets the user
+// upload a file or paste a URL, and only advances when the user clicks Done.
 const MediaEditor = ({
   actorId,
   actorName,
@@ -706,11 +708,37 @@ const MediaEditor = ({
   onChanged,
 }: EditorProps & { type: "logo" | "hero" }) => {
   const resolver = useWebsiteResolver(actorId, actorName, website);
-  const [url, setUrl] = useState("");
+  const [manualUrl, setManualUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [scraping, setScraping] = useState(false);
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [savedUrls, setSavedUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
-  const scrape = async () => {
+  // Load any already-saved media of this type so the user sees current state.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("actor_media")
+        .select("url")
+        .eq("actor_id", actorId)
+        .eq("type", type);
+      if (active) setSavedUrls((data ?? []).map((r) => r.url as string));
+    })();
+    return () => { active = false; };
+  }, [actorId, type]);
+
+  const refreshSaved = async () => {
+    const { data } = await supabase
+      .from("actor_media")
+      .select("url")
+      .eq("actor_id", actorId)
+      .eq("type", type);
+    setSavedUrls((data ?? []).map((r) => r.url as string));
+  };
+
+  const findCandidates = async () => {
     setScraping(true);
     try {
       let website_url = resolver.website;
@@ -723,32 +751,42 @@ const MediaEditor = ({
         return;
       }
       const { data, error } = await supabase.functions.invoke("scrape-actor-media", {
-        body: { actor_id: actorId, website_url },
+        body: { actor_id: actorId, website_url, mode: "candidates" },
       });
-      if (error) {
-        const detail = (data as any)?.error ?? error.message;
-        throw new Error(detail);
+      if (error) throw new Error((data as any)?.error ?? error.message);
+      const list: string[] = (data as any)?.candidates?.[type] ?? [];
+      if (list.length === 0) {
+        toast.error(`No ${type} candidates found on the website.`);
       }
-
-      const scrapedList = (data as any)?.scraped ?? [];
-      const found = scrapedList.some((s: any) => s.slot === type);
-      if (found) {
-        toast.success(`${type} found and saved`);
-        onChanged();
-        onDone();
-      } else {
-        toast.error(`No ${type} found on the website. Add manually below.`);
-      }
+      setCandidates(list);
     } catch (e: any) {
-      toast.error(`Scrape failed: ${e?.message ?? "unknown"}`);
+      toast.error(`Find failed: ${e?.message ?? "unknown"}`);
     } finally {
       setScraping(false);
     }
   };
 
+  const pickCandidate = async (url: string) => {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-actor-media", {
+        body: { actor_id: actorId, website_url: resolver.website, mode: "ingest", slot: type, url },
+      });
+      if (error || (data as any)?.ok === false) {
+        throw new Error((data as any)?.error ?? error?.message ?? "ingest failed");
+      }
+      toast.success(`${type} saved`);
+      await refreshSaved();
+      onChanged();
+    } catch (e: any) {
+      toast.error(`Save failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  const saveManual = async () => {
-    if (!url) {
+  const saveManualUrl = async () => {
+    if (!manualUrl) {
       toast.error("Paste an image URL first.");
       return;
     }
@@ -756,7 +794,7 @@ const MediaEditor = ({
     const { error } = await supabase.from("actor_media").insert({
       actor_id: actorId,
       type,
-      url,
+      url: manualUrl,
       source: "manual",
       uploaded_by: viewerId,
     });
@@ -766,33 +804,178 @@ const MediaEditor = ({
       return;
     }
     toast.success(`${type} saved`);
+    setManualUrl("");
+    await refreshSaved();
     onChanged();
-    onDone();
+  };
+
+  const uploadFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "img";
+      const path = `${actorId}/${type}/upload-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("actor-media")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) throw upErr;
+      const publicUrl = supabase.storage.from("actor-media").getPublicUrl(path).data.publicUrl;
+      const { error: insErr } = await supabase.from("actor_media").insert({
+        actor_id: actorId,
+        type,
+        url: publicUrl,
+        source: "manual",
+        uploaded_by: viewerId,
+      });
+      if (insErr) throw insErr;
+      toast.success(`${type} uploaded`);
+      await refreshSaved();
+      onChanged();
+    } catch (e: any) {
+      toast.error(`Upload failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeSaved = async (url: string) => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("actor_media")
+      .delete()
+      .eq("actor_id", actorId)
+      .eq("type", type)
+      .eq("url", url);
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await refreshSaved();
+    onChanged();
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <WebsiteResolverPanel resolver={resolver} />
-      <Button onClick={scrape} disabled={scraping || !resolver.website} variant="outline">
-        {scraping ? (
-          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-        ) : (
-          <Sparkles className="w-3 h-3 mr-1" />
+
+      {/* Currently saved */}
+      {savedUrls.length > 0 && (
+        <div>
+          <div className="text-xs text-foreground-muted mb-1.5">Currently saved</div>
+          <div className="flex flex-wrap gap-2">
+            {savedUrls.map((u) => (
+              <div key={u} className="relative group">
+                <img
+                  src={u}
+                  alt={`current ${type}`}
+                  className="w-20 h-20 object-contain rounded border border-border bg-background p-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSaved(u)}
+                  disabled={busy}
+                  className="absolute -top-1.5 -right-1.5 bg-background border border-border rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                  aria-label="Remove"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Find on website */}
+      <div>
+        <Button
+          onClick={findCandidates}
+          disabled={scraping || !resolver.website}
+          variant="outline"
+          size="sm"
+        >
+          {scraping ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Search className="w-3 h-3 mr-1" />
+          )}
+          Find {type} candidates on website
+        </Button>
+        {candidates.length > 0 && (
+          <div className="mt-2">
+            <div className="text-xs text-foreground-muted mb-1.5">
+              Click an image to save it as {type}.
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {candidates.map((u) => (
+                <button
+                  type="button"
+                  key={u}
+                  onClick={() => pickCandidate(u)}
+                  disabled={busy}
+                  className="border border-border rounded p-1 bg-background hover:border-primary transition disabled:opacity-50"
+                  title={u}
+                >
+                  <img
+                    src={u}
+                    alt="candidate"
+                    className="w-full h-16 object-contain"
+                    onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.2")}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
-        Scrape {type} from website
-      </Button>
-      <div className="text-xs text-foreground-muted">or paste a URL:</div>
-      <Input
-        placeholder="https://…"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
-      <Button onClick={saveManual} disabled={busy}>
-        Save {type}
-      </Button>
+      </div>
+
+      {/* Upload from disk */}
+      <div>
+        <Label className="text-xs text-foreground-muted">Upload from your computer</Label>
+        <Input
+          type="file"
+          accept="image/*"
+          disabled={uploading}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void uploadFile(f);
+            e.target.value = "";
+          }}
+          className="mt-1"
+        />
+      </div>
+
+      {/* Paste URL */}
+      <div>
+        <Label className="text-xs text-foreground-muted">Or paste an image URL</Label>
+        <div className="flex gap-2 mt-1">
+          <Input
+            placeholder="https://…"
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+          />
+          <Button onClick={saveManualUrl} disabled={busy || !manualUrl} size="sm">
+            Save
+          </Button>
+        </div>
+      </div>
+
+      {/* Explicit advance */}
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button onClick={onDone} size="sm" variant="default">
+          Done — next step
+          <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 };
+
 
 // ---- Contacts ----
 const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {

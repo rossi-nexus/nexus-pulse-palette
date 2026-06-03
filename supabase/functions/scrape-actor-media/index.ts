@@ -63,72 +63,76 @@ function resolveUrl(href: string, base: string): string | null {
   try { return new URL(href, base).href; } catch { return null; }
 }
 
-function extractLogo(html: string, baseUrl: string): string | null {
-  const linkTags = matchAll(html, /<link\b[^>]*>/gi);
-  const pickByRel = (relPattern: RegExp): string | null => {
-    for (const t of linkTags) {
-      const rel = attr(t, "rel") ?? "";
-      if (relPattern.test(rel)) {
-        const href = attr(t, "href");
-        if (href) return href;
-      }
-    }
-    return null;
+function extractLogoCandidates(html: string, baseUrl: string): string[] {
+  const out: string[] = [];
+  const push = (u: string | null | undefined) => {
+    if (!u) return;
+    const r = resolveUrl(u, baseUrl);
+    if (r && !out.includes(r)) out.push(r);
   };
-  const candidates: (string | null)[] = [
-    pickByRel(/apple-touch-icon-precomposed/i),
-    pickByRel(/apple-touch-icon/i),
-  ];
+  const linkTags = matchAll(html, /<link\b[^>]*>/gi);
+  for (const t of linkTags) {
+    const rel = (attr(t, "rel") ?? "").toLowerCase();
+    if (/apple-touch-icon/.test(rel) || /\bicon\b/.test(rel)) push(attr(t, "href"));
+  }
   const metaTags = matchAll(html, /<meta\b[^>]*>/gi);
   for (const t of metaTags) {
     const prop = (attr(t, "property") ?? attr(t, "name") ?? "").toLowerCase();
-    if (prop === "og:logo") candidates.push(attr(t, "content"));
+    if (prop === "og:logo" || prop === "og:image") push(attr(t, "content"));
   }
-  candidates.push(pickByRel(/^(shortcut\s+)?icon$/i) ?? pickByRel(/\bicon\b/i));
   const imgTags = matchAll(html, /<img\b[^>]*>/gi);
   for (const t of imgTags) {
     const cls = attr(t, "class") ?? "";
     const id = attr(t, "id") ?? "";
     const alt = attr(t, "alt") ?? "";
-    if (/logo/i.test(cls) || /logo/i.test(id) || /logo/i.test(alt)) {
-      const src = attr(t, "src");
-      if (src) { candidates.push(src); break; }
-    }
+    const src = attr(t, "src");
+    if (!src) continue;
+    if (/logo/i.test(cls) || /logo/i.test(id) || /logo/i.test(alt)) push(src);
   }
-  candidates.push("/favicon.ico");
-  for (const c of candidates) {
-    if (!c) continue;
-    const resolved = resolveUrl(c, baseUrl);
-    if (resolved) return resolved;
-  }
-  return null;
+  push("/favicon.ico");
+  return out.slice(0, 12);
 }
 
-function extractHero(html: string, baseUrl: string): string | null {
+function extractHeroCandidates(html: string, baseUrl: string): string[] {
+  const out: string[] = [];
+  const push = (u: string | null | undefined) => {
+    if (!u) return;
+    const r = resolveUrl(u, baseUrl);
+    if (r && !out.includes(r)) out.push(r);
+  };
   const metaTags = matchAll(html, /<meta\b[^>]*>/gi);
   for (const t of metaTags) {
     const prop = (attr(t, "property") ?? attr(t, "name") ?? "").toLowerCase();
     if (prop === "og:image" || prop === "og:image:url" || prop === "twitter:image") {
-      const c = attr(t, "content");
-      if (c) {
-        const r = resolveUrl(c, baseUrl);
-        if (r) return r;
-      }
+      push(attr(t, "content"));
     }
   }
   const imgTags = matchAll(html, /<img\b[^>]*>/gi);
   for (const t of imgTags) {
     const widthStr = attr(t, "width");
     const w = widthStr ? parseInt(widthStr, 10) : NaN;
-    if (Number.isFinite(w) && w >= 800) {
+    const src = attr(t, "src");
+    if (!src) continue;
+    if (Number.isFinite(w) && w >= 600) push(src);
+  }
+  // Fallback: include any reasonably sized-looking img if we got none.
+  if (out.length === 0) {
+    for (const t of imgTags) {
       const src = attr(t, "src");
-      if (src) {
-        const r = resolveUrl(src, baseUrl);
-        if (r) return r;
-      }
+      if (!src) continue;
+      if (/\.(png|jpe?g|webp)(\?|$)/i.test(src)) push(src);
+      if (out.length >= 8) break;
     }
   }
-  return null;
+  return out.slice(0, 12);
+}
+
+function extractLogo(html: string, baseUrl: string): string | null {
+  return extractLogoCandidates(html, baseUrl)[0] ?? null;
+}
+
+function extractHero(html: string, baseUrl: string): string | null {
+  return extractHeroCandidates(html, baseUrl)[0] ?? null;
 }
 
 interface ProductCandidate {
@@ -223,14 +227,26 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const actor_id = typeof body?.actor_id === "string" ? body.actor_id : null;
     const website_url = typeof body?.website_url === "string" ? body.website_url : null;
-    if (!actor_id || !website_url) return json({ error: "Missing actor_id or website_url" }, 400);
+    const mode: "auto" | "candidates" | "ingest" =
+      body?.mode === "candidates" || body?.mode === "ingest" ? body.mode : "auto";
+    const ingest_slot: Slot | null =
+      body?.slot === "logo" || body?.slot === "hero" ? body.slot : null;
+    const ingest_url_in: string | null =
+      typeof body?.url === "string" ? body.url : null;
 
-    let baseUrl: URL;
-    try {
-      baseUrl = new URL(website_url);
-      if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("bad proto");
-    } catch {
-      return json({ error: "Invalid website_url" }, 400);
+    if (!actor_id) return json({ error: "Missing actor_id" }, 400);
+    if (mode !== "ingest" && !website_url) return json({ error: "Missing website_url" }, 400);
+    if (mode === "ingest" && (!ingest_slot || !ingest_url_in))
+      return json({ error: "Missing slot or url for ingest" }, 400);
+
+    let baseUrl: URL | null = null;
+    if (website_url) {
+      try {
+        baseUrl = new URL(website_url);
+        if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("bad proto");
+      } catch {
+        return json({ error: "Invalid website_url" }, 400);
+      }
     }
 
     const supa = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
@@ -258,14 +274,64 @@ serve(async (req) => {
 
     const slotsToFill: Slot[] = SINGLE_SLOTS.filter((s) => !occupied.has(s));
 
-    const html = await fetchHtml(baseUrl.href);
+    // -------- candidates mode: return raw candidate URLs without saving --------
+    if (mode === "candidates") {
+      const html = await fetchHtml(baseUrl!.href);
+      if (!html) {
+        return json({ ok: true, candidates: { logo: [], hero: [] }, reason: "homepage_fetch_failed" });
+      }
+      return json({
+        ok: true,
+        candidates: {
+          logo: extractLogoCandidates(html, baseUrl!.href),
+          hero: extractHeroCandidates(html, baseUrl!.href),
+        },
+        occupied: Array.from(occupied),
+      });
+    }
+
+    // -------- ingest mode: download a user-chosen URL into a specific slot --------
+    if (mode === "ingest") {
+      const scrapedI: { slot: string; url: string; source_url: string }[] = [];
+      const skippedI: { slot: string; reason: string }[] = [];
+      const dl = await downloadImage(ingest_url_in!);
+      if (!dl) {
+        return json({ ok: false, error: "Could not download that image", scraped: [], skipped: [{ slot: ingest_slot!, reason: "download_failed" }] }, 400);
+      }
+      const ext = extFromContentType(dl.contentType) ?? "img";
+      const ts = Date.now();
+      const path = `${actor_id}/${ingest_slot}/picked-${ts}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supa.storage
+        .from("actor-media")
+        .upload(path, dl.bytes, { contentType: dl.contentType, upsert: false });
+      if (upErr) {
+        return json({ ok: false, error: `upload_failed: ${upErr.message}` }, 500);
+      }
+      const publicUrl = supa.storage.from("actor-media").getPublicUrl(path).data.publicUrl;
+      const { error: insErr } = await supa.from("actor_media").insert({
+        actor_id,
+        type: ingest_slot,
+        url: publicUrl,
+        original_url: ingest_url_in,
+        source: "user_picked",
+        uploaded_by: user!.id,
+      });
+      if (insErr) {
+        return json({ ok: false, error: `insert_failed: ${insErr.message}` }, 500);
+      }
+      scrapedI.push({ slot: ingest_slot!, url: publicUrl, source_url: ingest_url_in! });
+      return json({ ok: true, scraped: scrapedI, skipped: skippedI });
+    }
+
+    // -------- auto mode (legacy): scrape + ingest top candidate per slot --------
+    const html = await fetchHtml(baseUrl!.href);
     if (!html) {
       return json({ ok: true, scraped: [], skipped: slotsToFill, reason: "homepage_fetch_failed" });
     }
 
     const targets: { slot: Slot; url: string | null }[] = [];
     for (const slot of slotsToFill) {
-      const u = slot === "logo" ? extractLogo(html, baseUrl.href) : extractHero(html, baseUrl.href);
+      const u = slot === "logo" ? extractLogo(html, baseUrl!.href) : extractHero(html, baseUrl!.href);
       targets.push({ slot, url: u });
     }
 
@@ -312,7 +378,7 @@ serve(async (req) => {
           slot_type: slot,
           source_url: sourceUrl,
           scraped_at: new Date().toISOString(),
-          website_url: baseUrl.href,
+          website_url: baseUrl!.href,
           linked_product_name: linkedProductName,
         } as never,
         p_reason: "auto-scrape from website during onboarding/enrichment",
@@ -329,7 +395,7 @@ serve(async (req) => {
       let productHtml: string | null = null;
       let productPageUrl: string | null = null;
       for (const path of PRODUCT_PATHS) {
-        const cand = resolveUrl(path, baseUrl.href);
+        const cand = resolveUrl(path, baseUrl!.href);
         if (!cand) continue;
         const h = await fetchHtml(cand);
         if (h && h.length > 200) { productHtml = h; productPageUrl = cand; break; }
