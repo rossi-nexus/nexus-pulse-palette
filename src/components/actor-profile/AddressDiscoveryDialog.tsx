@@ -217,7 +217,7 @@ const AddressDiscoveryDialog = ({
     if (!/^https?:\/\//i.test(trimmed)) trimmed = `https://${trimmed}`;
     const { error } = await supabase
       .from("actors")
-      .update({ website: trimmed })
+      .update({ websites: [trimmed] })
       .eq("id", actorId);
     if (error) {
       toast.error(`Could not save website: ${error.message}`);
