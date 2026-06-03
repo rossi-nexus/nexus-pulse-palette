@@ -1155,7 +1155,8 @@ const MediaEditor = ({
 // ---- Contacts ----
 // Save as we go (multiple contacts), show existing, allow auto-scan and
 // manual entry, don't auto-advance.
-const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
+const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChanged }: EditorProps) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
@@ -1181,18 +1182,27 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
   const scan = async () => {
     setScanning(true);
     try {
+      let base_url = resolver.website;
+      if (!base_url) {
+        const refreshed = await resolver.refresh();
+        base_url = refreshed.website;
+      }
+      if (!base_url) {
+        toast.error("Add a website above first.");
+        return;
+      }
       const { data, error } = await supabase.functions.invoke(
         "enrich-from-team-page",
-        { body: { actor_id: actorId } },
+        { body: { actor_id: actorId, base_url } },
       );
-      if (error) throw new Error(error.message);
-      const added = (data as any)?.contacts_added ?? 0;
+      if (error) throw new Error((data as any)?.error ?? error.message);
+      const added = (data as any)?.written_count ?? (data as any)?.contacts_added ?? 0;
       if (added > 0) {
         toast.success(`Scanned team page — ${added} contact(s) added`);
         await loadExisting();
         onChanged();
       } else {
-        toast.error("Couldn't find any contacts on the team page.");
+        toast.error((data as any)?.message ?? "Couldn't find any contacts on the team page.");
       }
     } catch (e: any) {
       toast.error(`Scan failed: ${e?.message ?? "unknown"}`);
@@ -1237,6 +1247,7 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
 
   return (
     <div className="space-y-3">
+      <WebsiteResolverPanel resolver={resolver} />
       {existing.length > 0 && (
         <div className="space-y-1.5">
           <div className="text-xs text-foreground-muted">Currently saved ({existing.length})</div>
@@ -1267,7 +1278,7 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
         </div>
       )}
 
-      <Button onClick={scan} disabled={scanning} variant="outline" size="sm">
+      <Button onClick={scan} disabled={scanning || !resolver.website} variant="outline" size="sm">
         {scanning ? (
           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
         ) : (
@@ -1307,14 +1318,22 @@ const CATEGORY_MAP: Record<string, string> = {
 
 const OntologyEditor = ({
   actorId,
+  actorName,
+  website,
+  country,
   category,
   viewerId,
   onDone,
   onChanged,
 }: EditorProps & { category: string }) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<Array<{ id: string; raw_name: string }>>([]);
   const [busy, setBusy] = useState(false);
+  const [scraping, setScraping] = useState(false);
+  const [proposals, setProposals] = useState<
+    Array<{ entry_name: string; matched_entry_id: string | null; is_proposed_new: boolean; evidence: string; confidence: string }>
+  >([]);
   const [existing, setExisting] = useState<Array<{ id: string; ontology_entry_id: string; raw_name: string }>>([]);
   const ontologyType = CATEGORY_MAP[category];
 
@@ -1368,8 +1387,45 @@ const OntologyEditor = ({
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`Added "${entry.raw_name}"`);
+    setProposals((p) => p.filter((x) => x.matched_entry_id !== entry.id));
     await loadExisting();
     onChanged();
+  };
+
+  const scrape = async () => {
+    setScraping(true);
+    setProposals([]);
+    try {
+      let url = resolver.website;
+      if (!url) {
+        const refreshed = await resolver.refresh();
+        url = refreshed.website;
+      }
+      if (!url) {
+        toast.error("Add a website above first.");
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("enrich-from-url", {
+        body: {
+          url,
+          section_key: category,
+          actor_context: { actor_name: actorName, country: country ?? null },
+          existing_items: existing.map((e) => e.raw_name),
+        },
+      });
+      if (error) throw new Error((data as any)?.error ?? error.message);
+      const list = ((data as any)?.proposals ?? []) as any[];
+      if (list.length === 0) {
+        toast.error("Nothing new found on the website for this section.");
+      } else {
+        toast.success(`Found ${list.length} suggestion(s) — click to add`);
+      }
+      setProposals(list);
+    } catch (e: any) {
+      toast.error(`Scrape failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setScraping(false);
+    }
   };
 
   const remove = async (id: string) => {
@@ -1378,6 +1434,7 @@ const OntologyEditor = ({
     await loadExisting();
     onChanged();
   };
+
 
   return (
     <div className="space-y-3">
@@ -1406,6 +1463,59 @@ const OntologyEditor = ({
           </div>
         </div>
       )}
+
+      <WebsiteResolverPanel resolver={resolver} />
+
+      <div>
+        <Button
+          onClick={scrape}
+          disabled={scraping || !resolver.website}
+          variant="outline"
+          size="sm"
+        >
+          {scraping ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Sparkles className="w-3 h-3 mr-1" />
+          )}
+          Scrape {category} from website
+        </Button>
+        {proposals.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <div className="text-xs text-foreground-muted">
+              Click a suggestion to add it.
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {proposals.map((p, i) => {
+                const isMatched = !!p.matched_entry_id;
+                const matchedEntry = isMatched
+                  ? { id: p.matched_entry_id!, raw_name: p.entry_name }
+                  : null;
+                return (
+                  <button
+                    key={`${p.entry_name}-${i}`}
+                    type="button"
+                    disabled={busy || !isMatched}
+                    onClick={() => matchedEntry && pick(matchedEntry)}
+                    title={
+                      isMatched
+                        ? `${p.evidence} (confidence: ${p.confidence})`
+                        : `New concept "${p.entry_name}" — admin must add it to the ontology first`
+                    }
+                    className="inline-flex items-center gap-1 rounded-full bg-surface border border-border px-2 py-0.5 text-xs text-foreground hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {p.entry_name}
+                    {!isMatched && (
+                      <span className="text-[10px] text-foreground-muted">· new</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
 
       <Label className="text-xs text-foreground-muted">
         Find a {category.replace(/s$/, "")} to add
