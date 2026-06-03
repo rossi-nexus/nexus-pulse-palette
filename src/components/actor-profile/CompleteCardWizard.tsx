@@ -1247,6 +1247,7 @@ const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChang
 
   return (
     <div className="space-y-3">
+      <WebsiteResolverPanel resolver={resolver} />
       {existing.length > 0 && (
         <div className="space-y-1.5">
           <div className="text-xs text-foreground-muted">Currently saved ({existing.length})</div>
