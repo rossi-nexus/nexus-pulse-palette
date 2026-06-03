@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -80,6 +80,8 @@ import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
 import { RegistryRefreshDialog } from "@/components/actor-profile/RegistryRefreshDialog";
+import { MacroCard, type PresenceState, type TrustBand } from "@/components/actor-profile/MacroCard";
+import { ProvenanceBadge, computeProvenanceState } from "@/components/actor-profile/ProvenanceBadge";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
@@ -1307,6 +1309,129 @@ const ActorProfile = () => {
       actorType,
   );
 
+  // ---------- V3 Batch A — presence + trust per macro-card ----------
+  const anyStale = useMemo(() => {
+    const rows: Array<{ verified_at?: string | null; decays_at?: string | null }> = [
+      ...(dbActor ? [{ verified_at: dbActor.verified_at, decays_at: dbActor.decays_at }] : []),
+      ...classifications,
+      ...standards,
+      ...customers,
+      ...capacityRows,
+      ...contacts,
+    ];
+    const now = Date.now();
+    return rows.some((r) =>
+      r?.verified_at && r?.decays_at && new Date(r.decays_at).getTime() < now,
+    );
+  }, [dbActor, classifications, standards, customers, capacityRows, contacts]);
+
+  const dbVerified = source === "database" && Boolean(dbActor?.verified_at);
+  const trustForDb = (rowsAny: any[]): TrustBand => {
+    if (rowsAny.some((r: any) => r?.verified_at && r?.decays_at && new Date(r.decays_at).getTime() < Date.now())) return "stale";
+    if (rowsAny.some((r: any) => r?.verified_at)) return "verified";
+    if (source === "personal") return "user";
+    return "auto";
+  };
+
+  // Card 1 — Identity & Registry
+  const presenceIdentity: PresenceState = anyStale && dbVerified
+    ? "stale"
+    : !name
+      ? "missing"
+      : name && (orgNumber || website) && addressComposed
+        ? "complete"
+        : "partial";
+  const trustIdentity: TrustBand = dbVerified ? (anyStale ? "stale" : "verified") : (source === "personal" ? "user" : "auto");
+
+  // Card 2 — What They Do
+  const wtdCounts = (["capabilities", "competences", "domains", "products", "services"] as const)
+    .map((k) => ontology[k]?.length ?? 0);
+  const presenceWhatTheyDo: PresenceState = wtdCounts.every((n) => n > 0)
+    ? "complete"
+    : wtdCounts.some((n) => n > 0)
+      ? "partial"
+      : "missing";
+  const trustWhatTheyDo: TrustBand = trustForDb([
+    ...(personalOntologyEntries?.capabilities ?? []),
+    ...(dbOntologyEntries?.capabilities ?? []),
+  ]);
+
+  // Card 3 — Credentials
+  const credCounts = { cap: capacityRows.length, cls: classifications.length, std: standards.length, cust: customers.length };
+  const presenceCredentials: PresenceState = credCounts.cap > 0 && (credCounts.cls + credCounts.std > 0)
+    ? "complete"
+    : credCounts.cap > 0 || credCounts.cls + credCounts.std > 0
+      ? "partial"
+      : "missing";
+  const trustCredentials: TrustBand = trustForDb([...classifications, ...standards, ...customers, ...capacityRows]);
+
+  // Card 4 — People & Relationships
+  const presencePeople: PresenceState = contacts.length > 0 ? "complete" : "missing";
+  const trustPeople: TrustBand = trustForDb(contacts);
+
+  // Card 5 — Provenance & Outcomes
+  const presenceProvenance: PresenceState = dbActor?.source && actorOutcomes.length > 0
+    ? "complete"
+    : dbActor?.source || personal?.source_step
+      ? "partial"
+      : "missing";
+  const trustProvenance: TrustBand = "neutral";
+
+  // Card 6 — My Collection
+  const hasPersonalContent = Boolean(
+    (personal?.notes && personal.notes.trim()) ||
+      (personal?.tags && personal.tags.length > 0),
+  );
+  const presenceCollection: PresenceState = hasPersonalContent ? "complete" : "missing";
+  const trustCollection: TrustBand = "user";
+
+  // Linked personal actor (DB-side Card 6 CTA).
+  const [linkedPersonalId, setLinkedPersonalId] = useState<string | null>(null);
+  useEffect(() => {
+    if (source !== "database" || !dbActor?.id || !user?.id) {
+      setLinkedPersonalId(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("user_personal_actors")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("matched_main_db_actor_id", dbActor.id)
+        .maybeSingle();
+      if (!cancelled) setLinkedPersonalId(data?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [source, dbActor?.id, user?.id]);
+
+  const handleAddToCollection = async () => {
+    if (!user?.id || !dbActor) return;
+    if (linkedPersonalId) {
+      navigate(`/actors/${linkedPersonalId}`);
+      return;
+    }
+    const { data: created, error } = await supabase
+      .from("user_personal_actors")
+      .insert({
+        user_id: user.id,
+        actor_name: dbActor.legal_name,
+        country: dbActor.country,
+        actor_website: dbActor.websites?.[0] ?? null,
+        matched_main_db_actor_id: dbActor.id,
+        match_timestamp: new Date().toISOString(),
+        status: "personal",
+      })
+      .select("id")
+      .single();
+    if (error) {
+      toast.error(`Could not add to collection: ${error.message}`);
+      return;
+    }
+    toast.success("Added to your collection");
+    navigate(`/actors/${created.id}`);
+  };
+
   // ---------- Render ----------
   return (
     <div className="h-full overflow-auto bg-background">
@@ -1586,84 +1711,15 @@ const ActorProfile = () => {
           )}
         </div>
 
-        {/* Tags (personal actors only) */}
-        {source === "personal" && personal && (
-          <ProfileSection title="Tags">
-            {editingTags ? (
-              <div className="space-y-3">
-                <div className="bg-elevated border border-border rounded-md p-2">
-                  <TagInput
-                    tags={tagsDraft}
-                    onChange={setTagsDraft}
-                    placeholder="Add tag and press Enter…"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      const ok = await updateTags(personal.id, tagsDraft);
-                      if (ok) {
-                        setPersonal({ ...personal, tags: tagsDraft });
-                        setEditingTags(false);
-                      }
-                    }}
-                    disabled={busy === "tags"}
-                  >
-                    <Check className="w-3.5 h-3.5" /> Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingTags(false)}
-                  >
-                    <XIcon className="w-3.5 h-3.5" /> Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-3">
-                {personal.tags && personal.tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {personal.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-surface border border-border/60 text-foreground"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setTagsDraft([]);
-                      setEditingTags(true);
-                    }}
-                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
-                  >
-                    Add tags
-                  </button>
-                )}
-                {personal.tags && personal.tags.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => {
-                      setTagsDraft(personal.tags ?? []);
-                      setEditingTags(true);
-                    }}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                )}
-              </div>
-            )}
-          </ProfileSection>
-        )}
-
-        {/* Sections */}
+        {/* V3 Batch A — 5 macro-cards + My Collection */}
+        <MacroCard
+          title="Identity & Registry"
+          cardKey="identity"
+          viewerId={user?.id ?? null}
+          actorId={id ?? null}
+          presence={presenceIdentity}
+          trust={trustIdentity}
+        >
         {hasIdentity && (
           <ProfileSection
             title="Identity"
@@ -1819,14 +1875,16 @@ const ActorProfile = () => {
             )}
           </ProfileSection>
         )}
+        </MacroCard>
 
-        {/* Capacity (DB only, when present) */}
-        {source === "database" && capacityRows.length > 0 && (
-          <ProfileSection title="Capacity" count={capacityRows.length}>
-            <CapacityPanel rows={capacityRows} />
-          </ProfileSection>
-        )}
-
+        <MacroCard
+          title="What They Do"
+          cardKey="what_they_do"
+          viewerId={user?.id ?? null}
+          actorId={id ?? null}
+          presence={presenceWhatTheyDo}
+          trust={trustWhatTheyDo}
+        >
         {/* Ontology sections — always render for personal actors (with toolbar). DB actors only render when populated. */}
         {(["capabilities", "competences", "domains", "products", "services"] as const).map((key) => {
           const items = ontology[key];
@@ -2137,6 +2195,22 @@ const ActorProfile = () => {
             </ProfileSection>
           );
         })}
+        </MacroCard>
+
+        <MacroCard
+          title="Credentials"
+          cardKey="credentials"
+          viewerId={user?.id ?? null}
+          actorId={id ?? null}
+          presence={presenceCredentials}
+          trust={trustCredentials}
+        >
+        {/* Capacity (DB only, when present) */}
+        {source === "database" && capacityRows.length > 0 && (
+          <ProfileSection title="Capacity" count={capacityRows.length}>
+            <CapacityPanel rows={capacityRows} />
+          </ProfileSection>
+        )}
 
         {/* Classification */}
         {(source === "database" ? classifications : personalDerived.classification).length > 0 && (
@@ -2259,7 +2333,16 @@ const ActorProfile = () => {
             </div>
           </ProfileSection>
         )}
+        </MacroCard>
 
+        <MacroCard
+          title="People & Relationships"
+          cardKey="people"
+          viewerId={user?.id ?? null}
+          actorId={id ?? null}
+          presence={presencePeople}
+          trust={trustPeople}
+        >
         {/* Contacts (DB only) */}
         {source === "database" && dbActor && (
           <ProfileSection
@@ -2317,11 +2400,13 @@ const ActorProfile = () => {
                   >
                     <div className="flex items-center gap-2">
                       <div className="font-medium text-foreground">{c.name}</div>
-                      {c.source === "auto_scrape" && (
-                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30">
-                          Auto-extracted
-                        </span>
-                      )}
+                      <ProvenanceBadge
+                        source={c.source}
+                        verified_at={c.verified_at}
+                        verifier_id={c.verifier_id}
+                        decays_at={c.decays_at}
+                        confidence={c.verifier_confidence}
+                      />
                     </div>
                     {c.title && (
                       <div className="text-xs text-foreground-secondary">{c.title}</div>
@@ -2354,77 +2439,29 @@ const ActorProfile = () => {
           </ProfileSection>
         )}
 
-
-        {/* Notes (personal actors only) */}
-        {source === "personal" && personal && (
-          <ProfileSection title="Notes">
-            {editingNotes ? (
-              <div className="space-y-3">
-                <Textarea
-                  value={notesDraft}
-                  onChange={(e) => setNotesDraft(e.target.value)}
-                  placeholder="Add notes about this actor…"
-                  className="min-h-[120px]"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      const ok = await updateNotes(personal.id, notesDraft);
-                      if (ok) {
-                        setPersonal({ ...personal, notes: notesDraft });
-                        setEditingNotes(false);
-                      }
-                    }}
-                    disabled={busy === "notes"}
-                  >
-                    <Check className="w-3.5 h-3.5" /> Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingNotes(false)}
-                  >
-                    <XIcon className="w-3.5 h-3.5" /> Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-3">
-                {personal.notes && personal.notes.trim().length > 0 ? (
-                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed flex-1">
-                    {personal.notes}
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setNotesDraft("");
-                      setEditingNotes(true);
-                    }}
-                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
-                  >
-                    Add notes
-                  </button>
-                )}
-                {personal.notes && personal.notes.trim().length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => {
-                      setNotesDraft(personal.notes ?? "");
-                      setEditingNotes(true);
-                    }}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                )}
-              </div>
-            )}
+        {/* P10: Aliases & former names */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Aliases & former names">
+            <AliasesSection actorId={dbActor.id} canEdit={isAdmin} />
           </ProfileSection>
         )}
 
+        {/* P10/P1: Related entities (corporate groups, acquisitions, renames) */}
+        {source === "database" && dbActor && (
+          <ProfileSection title="Related entities">
+            <RelatedEntitiesSection actorId={dbActor.id} canEdit={isAdmin} />
+          </ProfileSection>
+        )}
+        </MacroCard>
+
+        <MacroCard
+          title="Provenance & Outcomes"
+          cardKey="provenance"
+          viewerId={user?.id ?? null}
+          actorId={id ?? null}
+          presence={presenceProvenance}
+          trust={trustProvenance}
+        >
         {/* Source & Provenance */}
         <ProfileSection
           title="Source & Provenance"
@@ -2517,26 +2554,6 @@ const ActorProfile = () => {
           </div>
         </ProfileSection>
 
-        {/* Smart Merge: "From your collection" — surfaces user's personal
-            notes, tags, and item-addition proposals against this DB actor. */}
-        {source === "database" && dbActor && (
-          <FromYourCollectionPanel dbActorId={dbActor.id} />
-        )}
-
-        {/* P10/P1: Related entities (corporate groups, acquisitions, renames) */}
-        {source === "database" && dbActor && (
-          <ProfileSection title="Related entities">
-            <RelatedEntitiesSection actorId={dbActor.id} canEdit={isAdmin} />
-          </ProfileSection>
-        )}
-
-        {/* P10: Aliases & former names */}
-        {source === "database" && dbActor && (
-          <ProfileSection title="Aliases & former names">
-            <AliasesSection actorId={dbActor.id} canEdit={isAdmin} />
-          </ProfileSection>
-        )}
-
         {/* Phase 6.5.6: Outcome history (database actors only — outcomes link to verified records) */}
         {source === "database" && dbActor && (
           <ProfileSection title="Outcome history" count={actorOutcomes.length}>
@@ -2612,6 +2629,180 @@ const ActorProfile = () => {
             )}
           </div>
         </ProfileSection>
+        </MacroCard>
+
+        <MacroCard
+          title={`My Collection on ${name}`}
+          cardKey="my_collection"
+          viewerId={user?.id ?? null}
+          actorId={id ?? null}
+          presence={presenceCollection}
+          trust={trustCollection} variant="collection"
+        >
+          {source === "database" && dbActor && user && (
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <p className="text-sm text-foreground-secondary flex-1 min-w-[200px]">
+                Your personal collection on this actor. Add notes, evidence, and personal tags in your collection view.
+              </p>
+              <Button size="sm" variant="outline" onClick={handleAddToCollection}>
+                {linkedPersonalId ? "Edit in my collection" : "Add to my collection"}
+              </Button>
+            </div>
+          )}
+
+        {/* Tags (personal actors only) */}
+        {source === "personal" && personal && (
+          <ProfileSection title="Tags">
+            {editingTags ? (
+              <div className="space-y-3">
+                <div className="bg-elevated border border-border rounded-md p-2">
+                  <TagInput
+                    tags={tagsDraft}
+                    onChange={setTagsDraft}
+                    placeholder="Add tag and press Enter…"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await updateTags(personal.id, tagsDraft);
+                      if (ok) {
+                        setPersonal({ ...personal, tags: tagsDraft });
+                        setEditingTags(false);
+                      }
+                    }}
+                    disabled={busy === "tags"}
+                  >
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingTags(false)}
+                  >
+                    <XIcon className="w-3.5 h-3.5" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                {personal.tags && personal.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {personal.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-surface border border-border/60 text-foreground"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setTagsDraft([]);
+                      setEditingTags(true);
+                    }}
+                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    Add tags
+                  </button>
+                )}
+                {personal.tags && personal.tags.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => {
+                      setTagsDraft(personal.tags ?? []);
+                      setEditingTags(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </ProfileSection>
+        )}
+
+        {/* Notes (personal actors only) */}
+        {source === "personal" && personal && (
+          <ProfileSection title="Notes">
+            {editingNotes ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  placeholder="Add notes about this actor…"
+                  className="min-h-[120px]"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const ok = await updateNotes(personal.id, notesDraft);
+                      if (ok) {
+                        setPersonal({ ...personal, notes: notesDraft });
+                        setEditingNotes(false);
+                      }
+                    }}
+                    disabled={busy === "notes"}
+                  >
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingNotes(false)}
+                  >
+                    <XIcon className="w-3.5 h-3.5" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                {personal.notes && personal.notes.trim().length > 0 ? (
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed flex-1">
+                    {personal.notes}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNotesDraft("");
+                      setEditingNotes(true);
+                    }}
+                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    Add notes
+                  </button>
+                )}
+                {personal.notes && personal.notes.trim().length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => {
+                      setNotesDraft(personal.notes ?? "");
+                      setEditingNotes(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </ProfileSection>
+        )}
+
+        {/* Smart Merge: "From your collection" — surfaces user's personal
+            notes, tags, and item-addition proposals against this DB actor. */}
+        {source === "database" && dbActor && (
+          <FromYourCollectionPanel dbActorId={dbActor.id} />
+        )}
+        </MacroCard>
       </div>
 
       {/* Confirmation dialogs (personal actors) */}
