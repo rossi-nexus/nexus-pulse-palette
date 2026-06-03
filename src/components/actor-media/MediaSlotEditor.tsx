@@ -372,7 +372,7 @@ export function MediaSlotEditor({
           <DialogTitle className="text-foreground">
             {slotType === "logo" && "Add logo"}
             {slotType === "hero" && "Add hero image"}
-            {slotType === "product" && "Add product image"}
+            {slotType === "product" && (linkedProductName ? `Add image for "${linkedProductName}"` : "Add product image")}
           </DialogTitle>
         </DialogHeader>
 
