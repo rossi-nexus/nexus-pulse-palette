@@ -426,6 +426,23 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
               onAddRole={onAddRoleFromCoverage}
             />
           )}
+
+          {/* AX3b — header toolbar: save / edit constraints / map */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <ConstraintPills constraints={effectiveConstraints} onRemove={removePill} />
+            <div className="flex items-center gap-1 ml-auto">
+              <Button variant="ghost" size="sm" onClick={() => setEditConstraintsOpen(true)} className="gap-1.5 text-foreground-muted hover:text-foreground h-7">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Edit constraints
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSaveOpen(true)} className="gap-1.5 text-foreground-muted hover:text-foreground h-7" disabled={!interpretation}>
+                <Bookmark className="w-3.5 h-3.5" />
+                Save this search
+              </Button>
+              <SessionMapButton variant="search" />
+            </div>
+          </div>
+
           {/* Role progress boxes */}
           <div className="flex gap-2 pb-2 w-full">
             {orderedRoles.map(result => (
