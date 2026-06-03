@@ -337,6 +337,8 @@ function normalizeAnalysis(raw: any): any {
   a.domains = a.domains.filter((d: any) => d?.evidence && d?.domainName);
   a.products = a.products.filter((p: any) => p?.evidence && p?.productName);
   a.services = a.services.filter((s: any) => s?.evidence && s?.serviceName);
+  a.standards = a.standards.filter((s: any) => s?.evidence && s?.standardName);
+  a.capacity = a.capacity.filter((c: any) => c?.evidence && c?.attributeType && c?.valueText);
   a.customerHistory = a.customerHistory.filter((c: any) => c?.evidence && c?.customerName);
 
   // headquarters_address: pass through only if it has at least one address field + evidence
