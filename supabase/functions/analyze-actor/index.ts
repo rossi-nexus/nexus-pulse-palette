@@ -160,14 +160,39 @@ const ANALYSIS_TOOL_SCHEMA = {
         },
         standards: {
           type: "array",
+          description: "Standards / certifications evidenced for this actor.",
           items: {
             type: "object",
             properties: {
-              standardName: { type: "string" },
+              standardName: { type: "string", description: "Canonical form when identifiable (e.g. 'ISO 9001', 'NATO AQAP-2110'); otherwise as-found." },
               standardNumber: { type: "string" },
+              certifyingBody: { type: "string", description: "Issuer / registrar if mentioned, e.g. 'DNV', 'Kiwa'." },
+              validFrom: { type: "string", description: "ISO date YYYY-MM-DD if mentioned." },
+              validTo: { type: "string", description: "ISO date YYYY-MM-DD if mentioned." },
               evidence: { type: "string" },
+              sourceUrl: { type: "string" },
             },
             required: ["standardName", "evidence"],
+          },
+        },
+        capacity: {
+          type: "array",
+          description: "Capacity signals (team size, fleet, mobilization, production capacity) evidenced for this actor.",
+          items: {
+            type: "object",
+            properties: {
+              attributeType: {
+                type: "string",
+                enum: ["team_size", "fleet_size", "mobilization_time", "production_capacity", "other_capacity"],
+              },
+              valueText: { type: "string", description: "Human-readable value, always provided (e.g. '120 employees', '24h', '8000 tonnes/year')." },
+              valueMin: { type: "number" },
+              valueMax: { type: "number" },
+              unit: { type: "string" },
+              evidence: { type: "string" },
+              sourceUrl: { type: "string" },
+            },
+            required: ["attributeType", "valueText", "evidence"],
           },
         },
         customerHistory: {
