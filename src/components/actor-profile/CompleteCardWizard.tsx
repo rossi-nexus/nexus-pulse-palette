@@ -456,7 +456,7 @@ const CompleteCardWizard = ({
               website={website}
               country={country}
               viewerId={viewerId}
-              onDone={() => advance(true)}
+              onDone={returnToPlan}
               onChanged={onChanged}
             />
 
@@ -464,17 +464,26 @@ const CompleteCardWizard = ({
               <Button
                 size="sm"
                 variant="ghost"
-                disabled={stepIdx === 0}
-                onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
+                onClick={() => setPhase("plan")}
               >
-                <ChevronLeft className="w-3 h-3 mr-1" /> Back
+                <ChevronLeft className="w-3 h-3 mr-1" /> All sections
               </Button>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => advance(false)}>
-                  Skip this step
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={stepIdx === 0}
+                  onClick={() => goToNeighbor(-1)}
+                >
+                  Previous
                 </Button>
-                <Button size="sm" variant="ghost" onClick={onClose}>
-                  <X className="w-3 h-3 mr-1" /> Cancel wizard
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={stepIdx >= visibleSections.length - 1}
+                  onClick={() => goToNeighbor(1)}
+                >
+                  Next <ChevronRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>
             </div>
