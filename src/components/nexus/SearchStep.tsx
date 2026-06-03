@@ -552,7 +552,39 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
             </Button>
           </div>
         )}
+
+        {/* AX3b — sticky compare bar */}
+        {compareSet.items.length >= 2 && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2 rounded-card bg-elevated border border-accent-blue/40 shadow-lg">
+            <GitCompare className="w-4 h-4 text-accent-blue" />
+            <span className="text-body-sm text-foreground">
+              Comparing <span className="font-mono text-accent-blue">{compareSet.items.length}</span> of {compareSet.max} actors
+            </span>
+            <Button size="sm" onClick={() => setCompareOpen(true)}>Open compare</Button>
+            <Button size="sm" variant="ghost" onClick={compareSet.clear}>Clear</Button>
+          </div>
+        )}
       </div>
+
+      <CompareModal
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        items={compareSet.items}
+        onInclude={compareInclude}
+        onSave={compareSave}
+      />
+      <SaveSearchDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        needPayload={interpretation ? { ...interpretation, constraints: effectiveConstraints } : null}
+      />
+      <EditConstraintsSlideOver
+        open={editConstraintsOpen}
+        onOpenChange={setEditConstraintsOpen}
+        constraints={effectiveConstraints}
+        originalConstraints={interpretation?.constraints ?? {}}
+        onApply={rerunWith}
+      />
     </StepContainer>
   );
 };
