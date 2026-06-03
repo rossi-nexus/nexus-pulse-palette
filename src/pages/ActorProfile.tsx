@@ -1513,6 +1513,74 @@ const ActorProfile = () => {
     navigate(`/actors/${created.id}`);
   };
 
+  // V3 Batch B.2 — wizard section list. Each entry represents one missing/partial
+  // thing the wizard can walk the editor through. Skipped sections are still
+  // included so the wizard can render an un-skip toggle.
+  const skippedKeys = new Set(sectionSkips.map((s) => s.section_key));
+  const wizardSections: SectionStatus[] = useMemo(() => {
+    if (!dbActor) return [];
+    const out: SectionStatus[] = [];
+    const push = (
+      key: WizardSectionKey,
+      label: string,
+      cardLabel: string,
+      missing: boolean,
+      partial: boolean,
+      helpText: string,
+    ) => {
+      if (missing) out.push({ key, label, cardLabel, presence: "missing", helpText });
+      else if (partial) out.push({ key, label, cardLabel, presence: "partial", helpText });
+    };
+    // Identity / address
+    push("address", "Address", "Identity & Registry", !addressComposed, false,
+      "Street, postal code, city.");
+    // Media
+    const hasLogo = media.some((m) => m.type === "logo");
+    const hasHero = media.some((m) => m.type === "hero");
+    push("logo", "Logo", "Identity & Registry", !hasLogo, false,
+      "Used wherever the actor is referenced.");
+    push("hero", "Hero image", "Identity & Registry", !hasHero, false,
+      "Banner at the top of the profile.");
+    // Description
+    const hasSummary = descriptions.some((d) => d.type === "summary");
+    push("description", "Summary description", "Identity & Registry", !hasSummary, false,
+      "A short paragraph describing what the actor does.");
+    // Ontology
+    (["capabilities", "competences", "domains", "products", "services"] as const).forEach((k) => {
+      const count = ontology[k]?.length ?? 0;
+      push(k as WizardSectionKey, k.charAt(0).toUpperCase() + k.slice(1), "What They Do",
+        count === 0, false,
+        `Add at least one ${k.replace(/s$/, "")} tag.`);
+    });
+    // Contacts
+    push("contacts", "Contacts", "People & Relationships", contacts.length === 0, false,
+      "At least one named contact with email/phone/LinkedIn.");
+    // Aliases
+    push("aliases", "Aliases", "People & Relationships", false, true,
+      "Former names, trade names, brand names, abbreviations.");
+    // Relationships
+    push("relationships", "Related entities", "People & Relationships", false, true,
+      "Parent/subsidiary/acquired/merged relationships.");
+    // Credentials
+    const credMissing = !(credCounts.cap > 0 && (credCounts.cls + credCounts.std > 0));
+    push("credentials", "Credentials & references", "Credentials",
+      credCounts.cap + credCounts.cls + credCounts.std + credCounts.cust === 0, credMissing,
+      "Capacity attributes, classifications, standards, customer references.");
+    return out;
+  }, [dbActor, addressComposed, media, descriptions, ontology, contacts, credCounts]);
+
+  const wizardActiveSections = wizardSections.filter((s) => !skippedKeys.has(s.key));
+  const canEditDb = source === "database" && (
+    isAdmin || dbActor?.verifier_id === user?.id
+  );
+  const canShowWizard = canEditDb && wizardActiveSections.length > 0;
+
+  // Skipped sections that belong to the Identity card (used to render the
+  // "marked not applicable" subtext per Batch B.2 §4).
+  const identitySkips = sectionSkips.filter((s) =>
+    ["address", "logo", "hero", "description"].includes(s.section_key),
+  );
+
   // ---------- Render ----------
   return (
     <div className="h-full overflow-auto bg-background">
