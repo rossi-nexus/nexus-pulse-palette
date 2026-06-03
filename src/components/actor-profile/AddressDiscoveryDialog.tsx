@@ -37,7 +37,7 @@ interface Props {
   onSaved: () => void;
 }
 
-type Step = "choose" | "loading" | "pick" | "confirm";
+type Step = "choose" | "needOrg" | "needWebsite" | "loading" | "pick" | "confirm";
 type DiscoverySource = "registry" | "auto_enrichment" | "manual";
 
 interface WebsiteCandidate extends AddressFields {
@@ -69,6 +69,8 @@ const AddressDiscoveryDialog = ({
   const [candidates, setCandidates] = useState<WebsiteCandidate[]>([]);
   const [busy, setBusy] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string | null>(null);
+  const [orgInput, setOrgInput] = useState("");
+  const [websiteInput, setWebsiteInput] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -77,6 +79,8 @@ const AddressDiscoveryDialog = ({
       setCandidates([]);
       setDiagnostics(null);
       setSourceLabel(null);
+      setOrgInput("");
+      setWebsiteInput("");
       setDraft({
         street_address: null,
         postal_code: null,
@@ -87,18 +91,14 @@ const AddressDiscoveryDialog = ({
     }
   }, [open, country]);
 
-  const discoverFromRegistry = async () => {
-    if (!orgNumber) {
-      toast.error("No org number on file.");
-      return;
-    }
+  const runRegistryLookup = async (org: string) => {
     setBusy(true);
     setStep("loading");
     try {
       const { data, error } = await supabase.functions.invoke("enrich-from-registry", {
         body: {
           mode: "org_number",
-          org_number: orgNumber,
+          org_number: org,
           actor_context: { country },
         },
       });
@@ -121,23 +121,19 @@ const AddressDiscoveryDialog = ({
       setStep("confirm");
     } catch (e: any) {
       toast.error(`Registry lookup failed: ${e?.message ?? "unknown"}`);
-      setStep("choose");
+      setStep(orgNumber ? "choose" : "needOrg");
     } finally {
       setBusy(false);
     }
   };
 
-  const discoverFromWebsite = async () => {
-    if (!website) {
-      toast.error("No website on file.");
-      return;
-    }
+  const runWebsiteLookup = async (site: string) => {
     setBusy(true);
     setStep("loading");
     try {
       const { data, error } = await supabase.functions.invoke(
         "enrich-address-from-website",
-        { body: { website } },
+        { body: { website: site } },
       );
       if (error) throw new Error(error.message);
       const payload = data as any;
@@ -151,7 +147,7 @@ const AddressDiscoveryDialog = ({
       setDiagnostics(diagSummary || "no matches");
       if (list.length === 0) {
         toast.error("Couldn't find an address on the website.");
-        setStep("choose");
+        setStep(website ? "choose" : "needWebsite");
         return;
       }
       if (list.length === 1) {
@@ -171,10 +167,63 @@ const AddressDiscoveryDialog = ({
       }
     } catch (e: any) {
       toast.error(`Website discovery failed: ${e?.message ?? "unknown"}`);
-      setStep("choose");
+      setStep(website ? "choose" : "needWebsite");
     } finally {
       setBusy(false);
     }
+  };
+
+
+  const startRegistry = () => {
+    if (!orgNumber) {
+      setStep("needOrg");
+      return;
+    }
+    runRegistryLookup(orgNumber);
+  };
+
+  const startWebsite = () => {
+    if (!website) {
+      setStep("needWebsite");
+      return;
+    }
+    runWebsiteLookup(website);
+  };
+
+  const submitOrgInput = async () => {
+    const trimmed = orgInput.trim();
+    if (!trimmed) {
+      toast.error("Enter an org number.");
+      return;
+    }
+    // Persist to actor so it shows on the card going forward.
+    const { error } = await supabase
+      .from("actors")
+      .update({ org_number: trimmed })
+      .eq("id", actorId);
+    if (error) {
+      toast.error(`Could not save org number: ${error.message}`);
+      return;
+    }
+    await runRegistryLookup(trimmed);
+  };
+
+  const submitWebsiteInput = async () => {
+    let trimmed = websiteInput.trim();
+    if (!trimmed) {
+      toast.error("Enter a website URL.");
+      return;
+    }
+    if (!/^https?:\/\//i.test(trimmed)) trimmed = `https://${trimmed}`;
+    const { error } = await supabase
+      .from("actors")
+      .update({ websites: [trimmed] })
+      .eq("id", actorId);
+    if (error) {
+      toast.error(`Could not save website: ${error.message}`);
+      return;
+    }
+    await runWebsiteLookup(trimmed);
   };
 
   const enterManually = () => {
@@ -182,6 +231,7 @@ const AddressDiscoveryDialog = ({
     setSourceLabel("Entered manually");
     setStep("confirm");
   };
+
 
   const pickCandidate = (c: WebsiteCandidate) => {
     setDraft({
@@ -240,10 +290,9 @@ const AddressDiscoveryDialog = ({
               subtitle={
                 orgNumber
                   ? `Look up ${orgNumber} in the official business registry.`
-                  : "No org number on file — add one first."
+                  : "Add an org number to look up the registry."
               }
-              disabled={!orgNumber}
-              onClick={discoverFromRegistry}
+              onClick={startRegistry}
             />
             <OptionCard
               icon={Globe}
@@ -251,10 +300,9 @@ const AddressDiscoveryDialog = ({
               subtitle={
                 website
                   ? `Scan ${website.replace(/^https?:\/\//, "")} for a postal address.`
-                  : "No website on file — add one first."
+                  : "Add a website URL to scan for an address."
               }
-              disabled={!website}
-              onClick={discoverFromWebsite}
+              onClick={startWebsite}
             />
             <OptionCard
               icon={Pencil}
@@ -264,6 +312,53 @@ const AddressDiscoveryDialog = ({
             />
           </div>
         )}
+
+        {step === "needOrg" && (
+          <div className="space-y-3">
+            <p className="text-xs text-foreground-muted">
+              No org number on file. Enter one to look up the registry.
+            </p>
+            <Input
+              autoFocus
+              placeholder="e.g. 975995453"
+              value={orgInput}
+              onChange={(e) => setOrgInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitOrgInput()}
+            />
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setStep("choose")}>
+                <ArrowLeft className="w-3 h-3 mr-1" /> Back
+              </Button>
+              <Button disabled={busy} onClick={submitOrgInput}>
+                Look up
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === "needWebsite" && (
+          <div className="space-y-3">
+            <p className="text-xs text-foreground-muted">
+              No website on file. Enter one to scan for an address.
+            </p>
+            <Input
+              autoFocus
+              placeholder="e.g. equipnor.no"
+              value={websiteInput}
+              onChange={(e) => setWebsiteInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitWebsiteInput()}
+            />
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setStep("choose")}>
+                <ArrowLeft className="w-3 h-3 mr-1" /> Back
+              </Button>
+              <Button disabled={busy} onClick={submitWebsiteInput}>
+                Scan website
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
 
         {step === "loading" && (
           <div className="flex items-center justify-center py-12 text-foreground-muted text-sm">
