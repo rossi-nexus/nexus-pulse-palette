@@ -1311,6 +1311,48 @@ const ActorProfile = () => {
     );
   }, [dbActor, classifications, standards, customers, capacityRows, contacts]);
 
+  // V3 Batch B.2 — section skips + wizard + address discovery state.
+  const [sectionSkips, setSectionSkips] = useState<
+    Array<{ section_key: string; reason: string | null; skipped_by: string | null; skipped_at: string }>
+  >([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!dbActor?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("actor_section_skips")
+        .select("section_key, reason, skipped_by, skipped_at")
+        .eq("actor_id", dbActor.id);
+      if (!cancelled) setSectionSkips((data ?? []) as any);
+    })();
+    return () => { cancelled = true; };
+  }, [dbActor?.id]);
+
+  const refreshSectionSkips = async () => {
+    if (!dbActor?.id) return;
+    const { data } = await supabase
+      .from("actor_section_skips")
+      .select("section_key, reason, skipped_by, skipped_at")
+      .eq("actor_id", dbActor.id);
+    setSectionSkips((data ?? []) as any);
+  };
+
+  // Auto-launch the wizard if the URL says so (hybrid Add Actor → ?wizard=1).
+  useEffect(() => {
+    if (source !== "database" || !dbActor?.id) return;
+    if (searchParams.get("wizard") === "1") {
+      setWizardOpen(true);
+      // Strip the param so a manual refresh doesn't keep re-opening it.
+      const next = new URLSearchParams(searchParams);
+      next.delete("wizard");
+      setSearchParams(next, { replace: true });
+    }
+  }, [source, dbActor?.id, searchParams, setSearchParams]);
+
   // ---------- Loading state ----------
 
   if (loading) {
