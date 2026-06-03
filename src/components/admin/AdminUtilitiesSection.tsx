@@ -210,20 +210,24 @@ export const AdminUtilitiesSection = () => {
         return;
       }
       if (u.kind === "rpc") {
-        let count: number | null = null;
-        if (typeof data === "number") count = data;
-        else if (Array.isArray(data) && data.length > 0) {
-          const v = data[0];
-          if (typeof v === "number") count = v;
-          else if (v && typeof v === "object") {
-            count = data.length;
-          } else {
-            count = Number(v) || 0;
+        if (u.rawData) {
+          toast.success(u.successFmt(data));
+        } else {
+          let count: number | null = null;
+          if (typeof data === "number") count = data;
+          else if (Array.isArray(data) && data.length > 0) {
+            const v = data[0];
+            if (typeof v === "number") count = v;
+            else if (v && typeof v === "object") {
+              count = data.length;
+            } else {
+              count = Number(v) || 0;
+            }
+          } else if (data != null) {
+            count = Number(data) || 0;
           }
-        } else if (data != null) {
-          count = Number(data) || 0;
+          toast.success(u.successFmt(count));
         }
-        toast.success(u.successFmt(count));
       } else {
         toast.success(u.successFmt(data));
       }
