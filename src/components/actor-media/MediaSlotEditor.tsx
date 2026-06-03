@@ -41,6 +41,12 @@ interface Props {
   actorId: string | null;        // null => deferred mode (onboarding)
   slotType: MediaSlotType;
   defaultQuery?: string;         // e.g. legal_name or product name
+  /**
+   * V3 batch #3 Area 2 — when slotType='product' and this is set, the new
+   * actor_media row gets crop_data.linked_product_name = linkedProductName.
+   * That ties the image to a specific product card in ProductCardGrid.
+   */
+  linkedProductName?: string;
   currentMedia?: ActorMediaRecord | null;
   onSave: (media: ActorMediaRecord) => void;
 }
@@ -62,6 +68,7 @@ export function MediaSlotEditor({
   actorId,
   slotType,
   defaultQuery,
+  linkedProductName,
   onSave,
 }: Props) {
   const [tab, setTab] = useState<Tab>("search");
@@ -298,7 +305,13 @@ export function MediaSlotEditor({
           type: slotType,
           url: croppedUrl,
           original_url: originalUrl,
-          crop_data: { croppedAreaPixels, zoom } as any,
+          crop_data: {
+            croppedAreaPixels,
+            zoom,
+            ...(slotType === "product" && linkedProductName
+              ? { linked_product_name: linkedProductName }
+              : {}),
+          } as any,
           source: inputSource,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id ?? null,
         })
@@ -359,7 +372,7 @@ export function MediaSlotEditor({
           <DialogTitle className="text-foreground">
             {slotType === "logo" && "Add logo"}
             {slotType === "hero" && "Add hero image"}
-            {slotType === "product" && "Add product image"}
+            {slotType === "product" && (linkedProductName ? `Add image for "${linkedProductName}"` : "Add product image")}
           </DialogTitle>
         </DialogHeader>
 

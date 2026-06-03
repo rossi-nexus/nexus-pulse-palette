@@ -18,27 +18,40 @@ const UA = "Mozilla/5.0 (compatible; NEXUS-ContactScrape/1.0; +https://nexus.app
 const FETCH_TIMEOUT_MS = 6_000;
 // Hard cap on candidates probed so wall-time can't blow up on slow hosts.
 // (Equipnor-style sites return ~5s per 404; sequential 30× would exceed Supabase wall-time.)
-const MAX_CANDIDATES = 16;
+const MAX_CANDIDATES = 20;
 // English + Norwegian (no/da/sv close enough) candidate paths.
+// NOTE: /teamet (Norwegian definite form of "team") was missing in v1 — Equipnor's
+// team page lives at /teamet/ and discovery alone wasn't catching it.
 const CANDIDATE_PATHS = [
+  // Strong team signals
+  "/team",
+  "/teamet",
+  "/our-team",
+  "/the-team",
+  "/vart-team",
+  "/vaart-team",
+  "/people",
+  "/personer",
+  "/staff",
+  "/folk",
+  "/ansatte",
+  "/medarbeidere",
+  // Leadership
+  "/leadership",
+  "/ledelse",
+  "/ledelsen",
+  "/ledergruppe",
+  "/management",
+  "/styret",
+  "/board",
+  // About / contact (weaker)
   "/about",
   "/about-us",
-  "/team",
-  "/our-team",
-  "/leadership",
-  "/people",
+  "/om-oss",
+  "/om",
   "/contact",
   "/contacts",
   "/contact-us",
-  "/staff",
-  "/om-oss",
-  "/om",
-  "/medarbeidere",
-  "/ansatte",
-  "/folk",
-  "/styret",
-  "/ledelse",
-  "/ledelsen",
   "/kontakt",
   "/kontakt-oss",
 ];
@@ -47,6 +60,29 @@ const PAGE_HINT_TOKENS = [
   "team", "leadership", "contact", "people", "staff", "about",
   "om oss", "medarbeidere", "ansatte", "ledelse", "styret", "kontakt", "folk",
 ];
+// Path-based scoring — primary selector. URL path is a much stronger signal of
+// "this is a team page" than token presence in body text (an /about/ page also
+// mentions "team").
+//
+// TEST CASE: equipnor.no should yield Gunnar Børte (CEO),
+// Martin Brinkmann (Head of Product & Solutions),
+// Morten Karlsen (Sales & Marketing Manager),
+// Charlotte [...] from /teamet/ directly.
+// /teamet/ (+10) MUST beat /om-equipnor/ (+2) regardless of token score.
+function scorePath(urlStr: string): number {
+  let path = "";
+  try { path = new URL(urlStr).pathname.toLowerCase().replace(/\/+$/, ""); } catch { return 0; }
+  // Strong team signals
+  if (/^\/(team|teamet|our-team|the-team|vart-team|vaart-team|people|personer|staff|folk|ansatte|medarbeidere)(\/|$)/.test(path)) return 10;
+  // Medium leadership signals
+  if (/^\/(leadership|ledelse|ledelsen|ledergruppe|management|styret|board)(\/|$)/.test(path)) return 5;
+  // Weak about/contact signals
+  if (/^\/(about|about-us|om|om-[a-z0-9-]+|om-oss|contact|contacts|contact-us|kontakt|kontakt-oss)(\/|$)/.test(path)) return 2;
+  return 0;
+}
+
+const MAX_FALLBACK_ATTEMPTS = 3;
+
 const MAX_CONTACTS = 20;
 const MAX_TEXT_CHARS = 16_000;
 
@@ -149,32 +185,37 @@ async function discoverLinkedPages(baseUrl: string): Promise<string[]> {
   }
 }
 
-async function findTeamPage(baseUrl: string): Promise<CandidatePage | null> {
+async function findTeamPages(baseUrl: string): Promise<CandidatePage[]> {
   // 1) Build candidate list: hardcoded paths + homepage-discovered links.
   const hardcoded: string[] = [];
   for (const path of CANDIDATE_PATHS) {
     try { hardcoded.push(new URL(path, baseUrl).href); } catch { /* skip */ }
   }
   const linked = await discoverLinkedPages(baseUrl);
-  const linkedSet = new Set(linked);
+  // Put linked first — nav anchors are intrinsically more likely.
   const candidates = Array.from(new Set([...linked, ...hardcoded])).slice(0, MAX_CANDIDATES);
   console.log(`[enrich-from-team-page] probing ${candidates.length} candidates (linked=${linked.length}, hardcoded=${hardcoded.length})`);
+  console.log(`[enrich-from-team-page] linked URLs: ${JSON.stringify(linked)}`);
 
-  // 2) Probe in parallel — sequential was hitting Supabase wall-time on slow hosts
-  //    (~5s per 404 × 20+ candidates). Promise.all bounds wall-time to ~FETCH_TIMEOUT_MS.
+  // 2) Probe in parallel.
   const results = await Promise.all(candidates.map(async (c) => ({ url: c, page: await tryFetchPage(c) })));
-  let best: CandidatePage | null = null;
+  const scored: Array<CandidatePage & { pathScore: number; combined: number }> = [];
   for (const { url, page } of results) {
     if (!page) continue;
-    // Linked URLs were already prefiltered by team-ish anchor text/href, so accept
-    // them even when token-score is 0 (sparse SPA HTML on WordPress/Avada/etc.).
-    const minScore = linkedSet.has(url) ? 0 : 1;
-    if (page.score >= minScore && (best === null || page.score > best.score)) {
-      best = page;
-    }
+    const pathScore = scorePath(url);
+    // Combined: pathScore dominates (×100) so token score only breaks ties
+    // among URLs with the same path classification.
+    const combined = pathScore * 100 + page.score;
+    scored.push({ ...page, pathScore, combined });
+    console.log(`[enrich-from-team-page] candidate ${url} pathScore=${pathScore} tokenScore=${page.score} combined=${combined}`);
   }
-  if (best) console.log(`[enrich-from-team-page] best candidate ${best.url} score=${best.score} chars=${best.text.length}`);
-  return best;
+  // Sort descending; keep only candidates with any signal (path OR token).
+  scored.sort((a, b) => b.combined - a.combined);
+  const ranked = scored.filter((c) => c.pathScore > 0 || c.score > 0);
+  if (ranked.length > 0) {
+    console.log(`[enrich-from-team-page] ranked top: ${ranked.slice(0, 3).map((c) => `${c.url}(${c.combined})`).join(", ")}`);
+  }
+  return ranked;
 }
 
 interface ScrapedContact {
@@ -248,10 +289,12 @@ ${pageText}
 """
 
 Rules:
-- Only return real named individuals.
-- Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are not individuals.
-- Skip a contact if the only information is a name with NO title, email, phone, or LinkedIn. (Name alone is too noisy.)
-- Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef" count as titles.
+- Return ALL named people you find on the page, even if some fields are missing.
+- A name + role is sufficient — do NOT require email or phone to include a person.
+- Look for structured team cards (heading with name, sub-heading with title, bio in prose, contact icons for email/phone/LinkedIn). WordPress/Avada and similar themes commonly use this layout.
+- Capture: full name (not initials), title/role if present, email (from mailto: links or visible text), phone (from tel: links or visible text), linkedin URL if present.
+- Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are NOT individuals.
+- Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef", "Head of …", "CEO", "CTO" all count as titles.
 - Maximum 20 contacts.
 - linkedin must be a full URL (https://...).
 - If nothing qualifies, return an empty array.
@@ -338,8 +381,8 @@ serve(async (req) => {
     const isAdmin = isAdminData === true;
     if (!isAdmin && actorRow.verifier_id !== user.id) return json({ error: "Forbidden" }, 403);
 
-    const found = await findTeamPage(baseUrl.href);
-    if (!found) {
+    const ranked = await findTeamPages(baseUrl.href);
+    if (ranked.length === 0) {
       console.log(`[enrich-from-team-page] no team page found for ${baseUrl.href}`);
       return json({
         ok: true,
@@ -350,24 +393,6 @@ serve(async (req) => {
         reason: "no_team_page_found",
       });
     }
-    console.log(`[enrich-from-team-page] candidate ${found.url} score=${found.score}`);
-
-    let contacts: ScrapedContact[];
-    try {
-      contacts = await llmExtractContacts(found.text, found.url, lovableKey);
-    } catch (e) {
-      console.error(`[enrich-from-team-page] llm error`, e);
-      return json({
-        ok: false,
-        error: (e as Error).message,
-        source_url: found.url,
-      }, 502);
-    }
-
-    const filtered = contacts.filter(
-      (c) => c.name && (c.title || c.email || c.phone || c.linkedin),
-    );
-    console.log(`[enrich-from-team-page] llm returned ${contacts.length}, kept ${filtered.length}`);
 
     const { data: existing } = await supa
       .from("actor_contacts")
@@ -376,6 +401,50 @@ serve(async (req) => {
     const seen = new Set<string>(
       (existing ?? []).map((r) => (r.name ?? "").trim().toLowerCase()),
     );
+
+    // Try up to MAX_FALLBACK_ATTEMPTS candidates in order. Stop as soon as one
+    // yields at least one extractable contact.
+    const tried: string[] = [];
+    let chosen: CandidatePage | null = null;
+    let filtered: ScrapedContact[] = [];
+    let lastError: string | null = null;
+
+    for (const candidate of ranked.slice(0, MAX_FALLBACK_ATTEMPTS)) {
+      tried.push(candidate.url);
+      console.log(`[enrich-from-team-page] attempt ${tried.length} → ${candidate.url}`);
+      let contacts: ScrapedContact[] = [];
+      try {
+        contacts = await llmExtractContacts(candidate.text, candidate.url, lovableKey);
+      } catch (e) {
+        lastError = (e as Error).message;
+        console.error(`[enrich-from-team-page] llm error on ${candidate.url}`, e);
+        continue;
+      }
+      const kept = contacts.filter(
+        (c) => c.name && (c.title || c.email || c.phone || c.linkedin),
+      );
+      console.log(`[enrich-from-team-page] ${candidate.url} → llm=${contacts.length} kept=${kept.length}`);
+      if (kept.length > 0) {
+        chosen = candidate;
+        filtered = kept;
+        break;
+      }
+    }
+
+    console.log(`[enrich-from-team-page] attempts: ${JSON.stringify(tried)} chosen=${chosen?.url ?? "none"}`);
+
+    if (!chosen) {
+      return json({
+        ok: true,
+        scraped_count: 0,
+        written_count: 0,
+        skipped_count: 0,
+        source_url: ranked[0]?.url ?? null,
+        attempts: tried,
+        reason: lastError ? "llm_error" : "no_contacts_found",
+        error: lastError,
+      });
+    }
 
     let written = 0;
     let skipped = 0;
@@ -407,8 +476,9 @@ serve(async (req) => {
       p_actor_id: actor_id,
       p_programme_id: null,
       p_changes: {
-        source_url: found.url,
+        source_url: chosen.url,
         base_url: baseUrl.href,
+        attempts: tried,
         scraped_count: filtered.length,
         written_count: written,
         skipped_count: skipped,
@@ -421,7 +491,8 @@ serve(async (req) => {
       scraped_count: filtered.length,
       written_count: written,
       skipped_count: skipped,
-      source_url: found.url,
+      source_url: chosen.url,
+      attempts: tried,
     });
   } catch (e) {
     console.error(`[enrich-from-team-page] fatal`, e);

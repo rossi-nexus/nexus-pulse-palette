@@ -485,8 +485,22 @@ const ActorProfile = () => {
   // Part 2 / Prompt 2: registry refresh dialog for the DB-side edit toolbar.
   const [registryRefreshOpen, setRegistryRefreshOpen] = useState(false);
   // P3: media slot editor state
-  const [mediaEditor, setMediaEditor] = useState<{ slot: MediaSlotType } | null>(null);
+  // V3 batch #3 Area 2 — extended with linkedProductName + replaceMediaId
+  // so per-product "Add image" / "Replace image" share the same editor.
+  const [mediaEditor, setMediaEditor] = useState<{
+    slot: MediaSlotType;
+    linkedProductName?: string;
+    replaceMediaId?: string;
+    defaultQuery?: string;
+  } | null>(null);
   const openMediaEditor = (slot: MediaSlotType) => setMediaEditor({ slot });
+  const openProductImageEditor = (productName: string, replaceMediaId?: string) =>
+    setMediaEditor({
+      slot: "product",
+      linkedProductName: productName,
+      replaceMediaId,
+      defaultQuery: `${name} ${productName}`.trim(),
+    });
   // Continuation Area 3: media polling for freshly onboarded actors.
   const [mediaPolling, setMediaPolling] = useState(false);
   const [mediaPollTimedOut, setMediaPollTimedOut] = useState(false);
@@ -532,6 +546,27 @@ const ActorProfile = () => {
       toast.success("Image deleted.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete image.");
+    }
+  };
+
+  // V3 batch #3 Area 2 — link/unlink an actor_media row to a product name by
+  // patching crop_data.linked_product_name. Used by orphan-linking dropdown.
+  const linkMediaToProduct = async (
+    m: { id: string; crop_data?: any },
+    productName: string | null,
+  ) => {
+    if (!id) return;
+    try {
+      const next = { ...(m.crop_data ?? {}), linked_product_name: productName };
+      const { error } = await supabase
+        .from("actor_media")
+        .update({ crop_data: next })
+        .eq("id", m.id);
+      if (error) throw error;
+      await refreshMedia();
+      toast.success(productName ? `Linked to "${productName}"` : "Unlinked from product");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update link.");
     }
   };
 
@@ -1836,28 +1871,61 @@ const ActorProfile = () => {
                   </div>
                 ) : null;
               })()}
-              {source === "database" && key === "products" && editingDbIdentity && (
-                <div className="mb-3 space-y-2">
-                  {media
-                    .filter((m) => m.type === "product")
-                    .map((pm: any) => (
-                      <div key={pm.id} className="flex items-center gap-2 text-xs">
-                        <span className="text-foreground-muted truncate flex-1">{pm.url.split("/").pop()}</span>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)}>
-                          <MediaTrash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openMediaEditor("product")}
-                  >
-                    <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
-                    Add product image
-                  </Button>
-                </div>
-              )}
+              {source === "database" && key === "products" && editingDbIdentity && (() => {
+                // V3 batch #3 Area 2 — Standalone "Add product image" button
+                // is removed. Instead: per-card Add/Replace lives in
+                // ProductCardGrid. This block now shows the management list
+                // of all product images with link/unlink controls.
+                const productMedia = media.filter((m) => m.type === "product");
+                if (productMedia.length === 0) return null;
+                const productNames = dbOntologyEntries.products.map((e) => e.name);
+                return (
+                  <div className="mb-3 space-y-1.5 border border-border/60 rounded-md p-2 bg-surface/40">
+                    <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1">
+                      Product image management
+                    </div>
+                    {productMedia.map((pm: any) => {
+                      const linked = pm.crop_data?.linked_product_name ?? null;
+                      return (
+                        <div key={pm.id} className="flex items-center gap-2 text-xs">
+                          <img
+                            src={pm.url}
+                            alt=""
+                            className="w-10 h-10 object-cover rounded border border-border shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-foreground-muted truncate">
+                              {pm.url.split("/").pop()}
+                            </div>
+                            {linked ? (
+                              <div className="text-accent-teal truncate">
+                                Linked to: {linked}
+                              </div>
+                            ) : (
+                              <div className="text-warning">Unlinked</div>
+                            )}
+                          </div>
+                          <select
+                            className="bg-elevated border border-border rounded px-2 py-1 text-xs"
+                            value={linked ?? ""}
+                            onChange={(e) =>
+                              linkMediaToProduct(pm, e.target.value || null)
+                            }
+                          >
+                            <option value="">— Unlinked —</option>
+                            {productNames.map((pn) => (
+                              <option key={pn} value={pn}>{pn}</option>
+                            ))}
+                          </select>
+                          <Button size="sm" variant="ghost" onClick={() => handleDeleteMedia(pm)} title="Delete image">
+                            <MediaTrash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
               {items.length > 0 ? (
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
@@ -1881,6 +1949,16 @@ const ActorProfile = () => {
                         crop_data: m.crop_data ?? null,
                       }))}
                     actorName={name}
+                    editable={editingDbIdentity}
+                    onAddImage={(productName) => openProductImageEditor(productName)}
+                    onReplaceImage={async (productName, mediaId) => {
+                      // Replace = delete existing, then open editor for new.
+                      const existing = media.find((m: any) => m.id === mediaId);
+                      if (existing) {
+                        await handleDeleteMedia(existing as any).catch(() => {});
+                      }
+                      openProductImageEditor(productName);
+                    }}
                   />
                 ) : source === "database" ? (
                   <OntologyEntryList entries={dbOntologyEntries[key]} />
@@ -2701,7 +2779,8 @@ const ActorProfile = () => {
           onOpenChange={(o) => !o && setMediaEditor(null)}
           actorId={id}
           slotType={mediaEditor.slot}
-          defaultQuery={name}
+          defaultQuery={mediaEditor.defaultQuery ?? name}
+          linkedProductName={mediaEditor.linkedProductName}
           onSave={() => {
             setMediaEditor(null);
             void handleMediaSaved();
