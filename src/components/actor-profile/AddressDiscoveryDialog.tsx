@@ -290,10 +290,9 @@ const AddressDiscoveryDialog = ({
               subtitle={
                 orgNumber
                   ? `Look up ${orgNumber} in the official business registry.`
-                  : "No org number on file — add one first."
+                  : "Add an org number to look up the registry."
               }
-              disabled={!orgNumber}
-              onClick={discoverFromRegistry}
+              onClick={startRegistry}
             />
             <OptionCard
               icon={Globe}
@@ -301,10 +300,9 @@ const AddressDiscoveryDialog = ({
               subtitle={
                 website
                   ? `Scan ${website.replace(/^https?:\/\//, "")} for a postal address.`
-                  : "No website on file — add one first."
+                  : "Add a website URL to scan for an address."
               }
-              disabled={!website}
-              onClick={discoverFromWebsite}
+              onClick={startWebsite}
             />
             <OptionCard
               icon={Pencil}
@@ -314,6 +312,53 @@ const AddressDiscoveryDialog = ({
             />
           </div>
         )}
+
+        {step === "needOrg" && (
+          <div className="space-y-3">
+            <p className="text-xs text-foreground-muted">
+              No org number on file. Enter one to look up the registry.
+            </p>
+            <Input
+              autoFocus
+              placeholder="e.g. 975995453"
+              value={orgInput}
+              onChange={(e) => setOrgInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitOrgInput()}
+            />
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setStep("choose")}>
+                <ArrowLeft className="w-3 h-3 mr-1" /> Back
+              </Button>
+              <Button disabled={busy} onClick={submitOrgInput}>
+                Look up
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === "needWebsite" && (
+          <div className="space-y-3">
+            <p className="text-xs text-foreground-muted">
+              No website on file. Enter one to scan for an address.
+            </p>
+            <Input
+              autoFocus
+              placeholder="e.g. equipnor.no"
+              value={websiteInput}
+              onChange={(e) => setWebsiteInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitWebsiteInput()}
+            />
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setStep("choose")}>
+                <ArrowLeft className="w-3 h-3 mr-1" /> Back
+              </Button>
+              <Button disabled={busy} onClick={submitWebsiteInput}>
+                Scan website
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
 
         {step === "loading" && (
           <div className="flex items-center justify-center py-12 text-foreground-muted text-sm">
