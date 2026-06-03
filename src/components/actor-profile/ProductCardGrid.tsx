@@ -78,7 +78,7 @@ function pickImage(name: string, media: ProductMediaRow[]): ProductMediaRow | nu
   return null;
 }
 
-export function ProductCardGrid({ products, descriptions, media, actorName }: Props) {
+export function ProductCardGrid({ products, descriptions, media, actorName, editable, onAddImage, onReplaceImage }: Props) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   const cards = useMemo(
