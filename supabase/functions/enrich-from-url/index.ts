@@ -164,6 +164,8 @@ function buildPrompt(args: {
     args.existingItems.length > 0 ? args.existingItems.join(", ") : "(none)";
   return `You are extracting ${cfg.description} from a company's web page for the NEXUS discovery platform.
 
+LANGUAGE: All output (entry names, evidence, descriptions) MUST be in English. If source material is in another language (e.g. Norwegian, Swedish, Danish, Finnish), translate to clear professional English. Do not echo source-language phrases unless they are proper nouns — company names, product brand names, person names, and place names stay as-is. Translate role/title words to English equivalents.
+
 Company: ${args.actorName}
 ${args.actorDescription ? `Description: ${args.actorDescription}\n` : ""}${args.country ? `Country: ${args.country}\n` : ""}Source URL: ${args.url}
 

@@ -19,9 +19,10 @@ interface Utility {
   id: string;
   label: string;
   subtext: string;
-  rpc: string;
+  kind: "rpc" | "function";
+  target: string; // rpc name or function name
   confirm: string;
-  successFmt: (count: number | null) => string;
+  successFmt: (data: any) => string;
 }
 
 const UTILITIES: Utility[] = [
@@ -30,7 +31,8 @@ const UTILITIES: Utility[] = [
     label: "Backfill actor descriptions",
     subtext:
       "Re-populates descriptions on actors that lack them by pulling from their original analysis_data. Safe to run multiple times.",
-    rpc: "fn_backfill_actor_descriptions_from_personal",
+    kind: "rpc",
+    target: "fn_backfill_actor_descriptions_from_personal",
     confirm: "Backfill descriptions for actors lacking them?",
     successFmt: (n) => `Backfilled descriptions for ${n ?? 0} actors`,
   },
@@ -39,7 +41,8 @@ const UTILITIES: Utility[] = [
     label: "Backfill missing actor geocoding",
     subtext:
       "Geocodes personal actors that lack coordinates. Uses Nominatim — may take a few seconds per actor.",
-    rpc: "fn_geocode_missing_personal_actors",
+    kind: "rpc",
+    target: "fn_geocode_missing_personal_actors",
     confirm: "Geocode personal actors missing coordinates?",
     successFmt: (n) => `Geocoded ${n ?? 0} personal actors`,
   },
@@ -47,9 +50,24 @@ const UTILITIES: Utility[] = [
     id: "cleanup_drafts",
     label: "Cleanup old consultant drafts",
     subtext: "Deletes consultant_drafts rows older than 30 days.",
-    rpc: "fn_cleanup_old_drafts",
+    kind: "rpc",
+    target: "fn_cleanup_old_drafts",
     confirm: "Delete consultant drafts older than 30 days?",
     successFmt: (n) => `Deleted ${n ?? 0} old drafts`,
+  },
+  {
+    id: "translate_to_english",
+    label: "Translate Norwegian content to English",
+    subtext:
+      "Translates persisted actor descriptions, evidence, and roles from Norwegian to English. Safe to re-run — already-English rows are skipped.",
+    kind: "function",
+    target: "translate-actor-content",
+    confirm:
+      "Translate Norwegian content for all flagged rows? This may take a few seconds per row.",
+    successFmt: (d: any) =>
+      d
+        ? `Translated: ${d.personal_actors_updated ?? 0} actors, ${d.personal_descriptions_translated ?? 0} descriptions, ${d.personal_fields_translated ?? 0} analysis fields, ${d.evidence_translated ?? 0} evidence, ${d.roles_translated ?? 0} roles${d.errors ? ` · ${d.errors} errors` : ""}`
+        : "Translation complete",
   },
 ];
 
@@ -62,21 +80,34 @@ export const AdminUtilitiesSection = () => {
   const runUtility = async (u: Utility) => {
     setRunningId(u.id);
     try {
-      const { data, error } = await (supabase.rpc as any)(u.rpc);
+      let data: any = null;
+      let error: any = null;
+      if (u.kind === "rpc") {
+        const res = await (supabase.rpc as any)(u.target);
+        data = res.data;
+        error = res.error;
+      } else {
+        const res = await supabase.functions.invoke(u.target, { body: {} });
+        data = res.data;
+        error = res.error;
+      }
       if (error) {
-        toast.error(`${u.label} failed: ${error.message}`);
+        toast.error(`${u.label} failed: ${error.message ?? "Unknown error"}`);
         return;
       }
-      // RPCs may return a bare integer, a single row, or an array. Coerce.
-      let count: number | null = null;
-      if (typeof data === "number") count = data;
-      else if (Array.isArray(data) && data.length > 0) {
-        const v = data[0];
-        count = typeof v === "number" ? v : Number(v) || 0;
-      } else if (data != null) {
-        count = Number(data) || 0;
+      if (u.kind === "rpc") {
+        let count: number | null = null;
+        if (typeof data === "number") count = data;
+        else if (Array.isArray(data) && data.length > 0) {
+          const v = data[0];
+          count = typeof v === "number" ? v : Number(v) || 0;
+        } else if (data != null) {
+          count = Number(data) || 0;
+        }
+        toast.success(u.successFmt(count));
+      } else {
+        toast.success(u.successFmt(data));
       }
-      toast.success(u.successFmt(count));
     } catch (e: any) {
       toast.error(`${u.label} failed: ${e?.message ?? "Unknown error"}`);
     } finally {
@@ -88,7 +119,7 @@ export const AdminUtilitiesSection = () => {
   return (
     <section className="space-y-3">
       <h2 className="text-h2 text-foreground">Admin utilities</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {UTILITIES.map((u) => (
           <div
             key={u.id}

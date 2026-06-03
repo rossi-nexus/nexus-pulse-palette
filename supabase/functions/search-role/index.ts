@@ -54,6 +54,8 @@ const QUERY_TOOL_SCHEMA = {
 
 const ACTOR_VALIDATION_PROMPT = `You are an actor (company/organization) identification specialist for the defence, security, and critical infrastructure sectors.
 
+LANGUAGE: All output text (actor descriptions, evidence) MUST be in English. Translate any Norwegian/Swedish/Danish/Finnish source content into clear professional English. Company names and place names stay as-is.
+
 Given a set of web search results and a role description with target categories, identify distinct actors (companies or organizations) that could fulfill this role.
 
 For each actor found:
