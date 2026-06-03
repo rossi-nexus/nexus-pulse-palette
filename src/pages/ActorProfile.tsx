@@ -1616,6 +1616,8 @@ const ActorProfile = () => {
                 decaysAt={dbActor.decays_at}
               />
             )}
+            {/* V3 Batch B item 2 — viewer role badge */}
+            <ViewerRoleBadge role={viewerRole} />
             {dbActor?.actor_classification === "reference" && (
               <Badge variant="outline" className="text-[10px] bg-info/10 text-info border-info/30 uppercase tracking-wider">
                 Reference
