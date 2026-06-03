@@ -75,7 +75,7 @@ import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
 import { ActorLogo, ActorHeroBanner } from "@/components/actor-profile/ActorMedia";
 import { MediaSlotEditor, type MediaSlotType, type ActorMediaRecord } from "@/components/actor-media/MediaSlotEditor";
-import { ImagePlus, Trash2 as MediaTrash2 } from "lucide-react";
+import { ImagePlus, Trash2 as MediaTrash2, Loader2, Sparkles } from "lucide-react";
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
