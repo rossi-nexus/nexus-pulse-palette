@@ -516,17 +516,34 @@ serve(async (req) => {
         .eq("actor_id", actorId)
         .eq("type", "product");
       const existingUrls = new Set((existing ?? []).map((r: any) => r.url));
+      // Audit-batch defensive linking: only set linked_product_name when an
+      // explicit association signal exists. Otherwise persist as orphan and
+      // leave reassignment to a human reviewer.
+      let linkedCount = 0;
+      let orphanCount = 0;
       const toInsert = images
         .filter((img) => !existingUrls.has(img.url))
-        .map((img) => ({
-          actor_id: actorId,
-          type: "product",
-          url: img.url,
-          original_url: img.url,
-          source: "auto_enrichment",
-          uploaded_by: user.id,
-          crop_data: { linked_product_name: productName, alt: img.alt, source_page: productUrl },
-        }));
+        .map((img) => {
+          const assoc = hasStrongProductAssociation(img, productName);
+          if (assoc.linked) linkedCount++; else orphanCount++;
+          return {
+            actor_id: actorId,
+            type: "product",
+            url: img.url,
+            original_url: img.url,
+            source: "auto_enrichment",
+            uploaded_by: user.id,
+            crop_data: {
+              linked_product_name: assoc.linked ? productName : null,
+              candidate_product_name: assoc.linked ? null : productName,
+              link_reason: assoc.reason,
+              alt: img.alt,
+              source_page: productUrl,
+            },
+          };
+        });
+      diag.images_linked = linkedCount;
+      diag.images_orphaned = orphanCount;
       if (toInsert.length > 0) {
         const { error: insertErr } = await admin.from("actor_media").insert(toInsert as any);
         if (!insertErr) imagesAdded = toInsert.length;
