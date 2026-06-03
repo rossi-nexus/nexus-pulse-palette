@@ -320,7 +320,7 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
               location: locationBits.join(", ") || undefined,
               country: row.country ?? undefined,
               website,
-              description: `Verified actor (weighted overlap ${overlap.toFixed(2)}).`,
+              description: `${Array.isArray(row.matched_entry_ids) ? row.matched_entry_ids.length : 0} of ${targetEntryIds.length} tags matched`,
               match_strength: overlap >= 2.5 ? "strong" : overlap >= 1.4 ? "moderate" : "weak",
               actor_type: "commercial" as ActorTypeTag,
               sources: website ? [{ url: website, title: row.legal_name, type: "company_website" as const, credibility: "high" as const }] : [],
