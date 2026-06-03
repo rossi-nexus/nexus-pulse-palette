@@ -216,8 +216,12 @@ export type Database = {
           decays_at: string | null
           email: string | null
           id: string
+          is_featured: boolean
+          is_hidden: boolean
           linkedin: string | null
+          linkedin_url: string | null
           name: string
+          notes: string | null
           phone: string | null
           source: string
           title: string | null
@@ -230,8 +234,12 @@ export type Database = {
           decays_at?: string | null
           email?: string | null
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           linkedin?: string | null
+          linkedin_url?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
           source?: string
           title?: string | null
@@ -244,8 +252,12 @@ export type Database = {
           decays_at?: string | null
           email?: string | null
           id?: string
+          is_featured?: boolean
+          is_hidden?: boolean
           linkedin?: string | null
+          linkedin_url?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
           source?: string
           title?: string | null
@@ -559,6 +571,38 @@ export type Database = {
           {
             foreignKeyName: "actor_relationships_target_actor_id_fkey"
             columns: ["target_actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      actor_section_skips: {
+        Row: {
+          actor_id: string
+          reason: string | null
+          section_key: string
+          skipped_at: string
+          skipped_by: string | null
+        }
+        Insert: {
+          actor_id: string
+          reason?: string | null
+          section_key: string
+          skipped_at?: string
+          skipped_by?: string | null
+        }
+        Update: {
+          actor_id?: string
+          reason?: string | null
+          section_key?: string
+          skipped_at?: string
+          skipped_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actor_section_skips_actor_id_fkey"
+            columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "actors"
             referencedColumns: ["id"]
