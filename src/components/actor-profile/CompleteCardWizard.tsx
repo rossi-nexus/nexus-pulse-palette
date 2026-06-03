@@ -509,7 +509,11 @@ const MediaEditor = ({
       const { data, error } = await supabase.functions.invoke("scrape-actor-media", {
         body: { actor_id: actorId, website_url },
       });
-      if (error) throw new Error(error.message);
+      if (error) {
+        const detail = (data as any)?.error ?? error.message;
+        throw new Error(detail);
+      }
+
       const scrapedList = (data as any)?.scraped ?? [];
       const found = scrapedList.some((s: any) => s.slot === type);
       if (found) {
