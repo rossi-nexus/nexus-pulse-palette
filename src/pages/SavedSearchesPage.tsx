@@ -54,7 +54,7 @@ const SavedSearchesPage = () => {
         p_weights: null,
       });
       if (scoreErr) throw scoreErr;
-      const byId = new Map((scoreRows ?? []).map((s: any) => [s.actor_id, s]));
+      const byId = new Map<string, any>((scoreRows ?? []).map((s: any) => [s.actor_id as string, s]));
       const merged = (rankRows ?? []).map((r: any) => ({ ...r, ...(byId.get(r.actor_id) ?? {}) }));
       merged.sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0));
       setRunResults((prev) => ({ ...prev, [id]: merged }));
