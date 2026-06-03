@@ -500,7 +500,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
                             Commercial actors ({commercial.length})
                           </div>
                           {commercial.map(actor => (
-                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} isCompareSelected={compareSet.has(actor.id)} onToggleCompare={compareSet.toggle} />
                           ))}
                         </>
                       )}
@@ -510,7 +510,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
                             Reference actors ({reference.length})
                           </div>
                           {reference.map(actor => (
-                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} isCompareSelected={compareSet.has(actor.id)} onToggleCompare={compareSet.toggle} />
                           ))}
                         </>
                       )}
