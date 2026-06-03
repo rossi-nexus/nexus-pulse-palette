@@ -393,6 +393,60 @@ const OrphanMediaPage = () => {
           </div>
         )}
       </div>
+
+      {/* Floating bulk-action toolbar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-elevated shadow-xl">
+            <span className="text-xs text-foreground font-medium">
+              {selected.size} selected
+            </span>
+            <div className="w-px h-4 bg-border" />
+            <TooltipProvider>
+              {bulkLinkDisabled ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" disabled>
+                        Bulk link to…
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Selected rows span multiple actors. Bulk-link works only within a single actor.
+                  </TooltipContent>
+                </Tooltip>
+              ) : bulkLinkProducts.length === 0 ? (
+                <Button size="sm" variant="outline" disabled title="No products available">
+                  Bulk link to…
+                </Button>
+              ) : (
+                <Select onValueChange={(v) => bulkLinkToProduct(v)}>
+                  <SelectTrigger className="h-8 text-xs w-44">
+                    <SelectValue placeholder="Bulk link to…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bulkLinkProducts.map((p) => (
+                      <SelectItem key={p} value={p} className="text-xs">
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </TooltipProvider>
+            <Button size="sm" variant="outline" onClick={bulkMarkNotProduct}>
+              Mark not-product
+            </Button>
+            <Button size="sm" variant="destructive" onClick={bulkDelete}>
+              <Trash2 className="w-3 h-3 mr-1" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
