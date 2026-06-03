@@ -85,6 +85,12 @@ import { ProvenanceBadge, computeProvenanceState } from "@/components/actor-prof
 import { ViewerRoleBadge } from "@/components/actor-profile/ViewerRoleBadge";
 import { useViewerActorRole } from "@/hooks/useViewerActorRole";
 import { ContactList, type ContactRow } from "@/components/actor-profile/ContactList";
+import CompleteCardWizard, {
+  type SectionStatus,
+  type WizardSectionKey,
+} from "@/components/actor-profile/CompleteCardWizard";
+import AddressDiscoveryDialog from "@/components/actor-profile/AddressDiscoveryDialog";
+import { ListChecks, MapPin } from "lucide-react";
 import {
   CollectionConflictBanner,
   computeIdentityConflicts,
