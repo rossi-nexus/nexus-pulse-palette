@@ -459,6 +459,11 @@ serve(async (req) => {
     }
 
     if (!productUrl) {
+      // V3 Batch C §4 — surface external brand domains the editor can try
+      // when discovery on the actor's own site fails (Equipnor case).
+      const referencedBrandUrls = baseUrl
+        ? await collectReferencedBrandUrls(baseUrl, productName, admin, actorId)
+        : [];
       return json({
         found: false,
         product_url: null,
@@ -468,6 +473,7 @@ serve(async (req) => {
         specs_count: 0,
         datasheets_added: 0,
         suggested_tags: [],
+        referenced_brand_urls: referencedBrandUrls,
         raw_diagnostics: diag,
       });
     }
