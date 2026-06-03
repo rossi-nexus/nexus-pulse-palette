@@ -241,7 +241,9 @@ const CompleteCardWizard = ({
   const [stats, setStats] = useState({ added: 0, skipped: 0 });
   const [busy, setBusy] = useState(false);
 
-  // Initialise keep map from sections.
+  // Initialise keep map from sections — only when the wizard opens, so that
+  // refreshing actor data mid-walk (via onChanged) does not reset the phase
+  // back to "plan".
   useEffect(() => {
     if (!open) return;
     setPhase("plan");
@@ -253,7 +255,8 @@ const CompleteCardWizard = ({
     });
     setKeep(init);
     setSkipReason({});
-  }, [open, sections]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const skippedKeys = new Set(skipped.map((s) => s.section_key));
   const visibleSections = useMemo(
