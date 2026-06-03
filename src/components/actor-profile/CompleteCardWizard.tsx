@@ -1093,12 +1093,30 @@ const MediaEditor = ({
 
 
 // ---- Contacts ----
+// Save as we go (multiple contacts), show existing, allow auto-scan and
+// manual entry, don't auto-advance.
 const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [existing, setExisting] = useState<
+    Array<{ id: string; name: string; title: string | null; email: string | null; phone: string | null; source: string }>
+  >([]);
+
+  const loadExisting = async () => {
+    const { data } = await supabase
+      .from("actor_contacts")
+      .select("id, name, title, email, phone, source")
+      .eq("actor_id", actorId)
+      .order("created_at", { ascending: false });
+    setExisting((data ?? []) as any);
+  };
+  useEffect(() => {
+    void loadExisting();
+  }, [actorId]);
 
   const scan = async () => {
     setScanning(true);
@@ -1111,8 +1129,8 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
       const added = (data as any)?.contacts_added ?? 0;
       if (added > 0) {
         toast.success(`Scanned team page — ${added} contact(s) added`);
+        await loadExisting();
         onChanged();
-        onDone();
       } else {
         toast.error("Couldn't find any contacts on the team page.");
       }
@@ -1134,6 +1152,7 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
       name: name.trim(),
       title: title.trim() || null,
       email: email.trim() || null,
+      phone: phone.trim() || null,
       source: "manual",
       verifier_id: viewerId,
       verified_at: new Date().toISOString(),
@@ -1144,13 +1163,51 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
       return;
     }
     toast.success("Contact added");
+    setName(""); setTitle(""); setEmail(""); setPhone("");
+    await loadExisting();
     onChanged();
-    onDone();
+  };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("actor_contacts").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    await loadExisting();
+    onChanged();
   };
 
   return (
     <div className="space-y-3">
-      <Button onClick={scan} disabled={scanning} variant="outline">
+      {existing.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs text-foreground-muted">Currently saved ({existing.length})</div>
+          {existing.map((c) => (
+            <div
+              key={c.id}
+              className="flex items-start justify-between rounded-md border border-border bg-surface px-3 py-2 text-sm group"
+            >
+              <div>
+                <div className="text-foreground font-medium">{c.name}</div>
+                {(c.title || c.email || c.phone) && (
+                  <div className="text-xs text-foreground-muted">
+                    {[c.title, c.email, c.phone].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+                <div className="text-[10px] uppercase tracking-wider text-foreground-muted">{c.source}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => remove(c.id)}
+                className="p-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
+                aria-label="Remove"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Button onClick={scan} disabled={scanning} variant="outline" size="sm">
         {scanning ? (
           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
         ) : (
@@ -1158,18 +1215,28 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
         )}
         Scan team page
       </Button>
-      <div className="text-xs text-foreground-muted">or add manually:</div>
+
+      <div className="text-xs text-foreground-muted">Or add manually:</div>
       <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
       <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
       <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <Button onClick={save} disabled={busy}>
+      <Input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <Button onClick={save} disabled={busy || !name.trim()} size="sm">
         Add contact
       </Button>
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button onClick={onDone} size="sm">
+          Done — next step
+          <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 };
 
 // ---- Ontology (capabilities / competences / domains / products / services) ----
+// Add multiple tags, show existing, search + pick, don't auto-advance.
 const CATEGORY_MAP: Record<string, string> = {
   capabilities: "capability",
   competences: "competence",
@@ -1188,7 +1255,26 @@ const OntologyEditor = ({
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<Array<{ id: string; raw_name: string }>>([]);
   const [busy, setBusy] = useState(false);
+  const [existing, setExisting] = useState<Array<{ id: string; ontology_entry_id: string; raw_name: string }>>([]);
   const ontologyType = CATEGORY_MAP[category];
+
+  const loadExisting = async () => {
+    const { data } = await supabase
+      .from("actor_ontology_tags")
+      .select("id, ontology_entry_id, ontology_entries!inner(raw_name, ontology_categories!inner(type))")
+      .eq("actor_id", actorId)
+      .eq("ontology_entries.ontology_categories.type", ontologyType);
+    setExisting(
+      ((data ?? []) as any[]).map((r) => ({
+        id: r.id,
+        ontology_entry_id: r.ontology_entry_id,
+        raw_name: r.ontology_entries?.raw_name ?? "",
+      })),
+    );
+  };
+  useEffect(() => {
+    void loadExisting();
+  }, [actorId, ontologyType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1203,12 +1289,14 @@ const OntologyEditor = ({
         .limit(15);
       if (!cancelled) setOptions((data ?? []) as any);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [query, ontologyType]);
 
   const pick = async (entry: { id: string; raw_name: string }) => {
+    if (existing.some((e) => e.ontology_entry_id === entry.id)) {
+      toast.error("Already added.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from("actor_ontology_tags").insert({
       actor_id: actorId,
@@ -1218,17 +1306,47 @@ const OntologyEditor = ({
       accepted_at: new Date().toISOString(),
     });
     setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     toast.success(`Added "${entry.raw_name}"`);
+    await loadExisting();
     onChanged();
-    onDone();
+  };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("actor_ontology_tags").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    await loadExisting();
+    onChanged();
   };
 
   return (
     <div className="space-y-3">
+      {existing.length > 0 && (
+        <div>
+          <div className="text-xs text-foreground-muted mb-1.5">
+            Currently saved ({existing.length})
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {existing.map((e) => (
+              <span
+                key={e.id}
+                className="inline-flex items-center gap-1 rounded-full bg-surface border border-border px-2 py-0.5 text-xs text-foreground"
+              >
+                {e.raw_name}
+                <button
+                  type="button"
+                  onClick={() => remove(e.id)}
+                  className="hover:text-destructive"
+                  aria-label="Remove"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Label className="text-xs text-foreground-muted">
         Find a {category.replace(/s$/, "")} to add
       </Label>
@@ -1241,26 +1359,51 @@ const OntologyEditor = ({
         {options.length === 0 ? (
           <div className="text-xs text-foreground-muted p-3">No matches.</div>
         ) : (
-          options.map((o) => (
-            <button
-              key={o.id}
-              disabled={busy}
-              onClick={() => pick(o)}
-              className="block w-full text-left px-3 py-1.5 text-sm hover:bg-elevated text-foreground"
-            >
-              {o.raw_name}
-            </button>
-          ))
+          options.map((o) => {
+            const already = existing.some((e) => e.ontology_entry_id === o.id);
+            return (
+              <button
+                key={o.id}
+                disabled={busy || already}
+                onClick={() => pick(o)}
+                className="block w-full text-left px-3 py-1.5 text-sm hover:bg-elevated text-foreground disabled:opacity-40"
+              >
+                {o.raw_name} {already && <span className="text-[10px] text-foreground-muted">· added</span>}
+              </button>
+            );
+          })
         )}
+      </div>
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button onClick={onDone} size="sm">
+          Done — next step
+          <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
       </div>
     </div>
   );
 };
 
 // ---- Aliases ----
+// Add multiple, show existing, don't auto-advance.
 const AliasEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [existing, setExisting] = useState<Array<{ id: string; alias_name: string; alias_type: string | null }>>([]);
+
+  const loadExisting = async () => {
+    const { data } = await supabase
+      .from("actor_aliases")
+      .select("id, alias_name, alias_type")
+      .eq("actor_id", actorId)
+      .order("created_at", { ascending: false });
+    setExisting((data ?? []) as any);
+  };
+  useEffect(() => {
+    void loadExisting();
+  }, [actorId]);
+
   const save = async () => {
     if (!name.trim()) return;
     setBusy(true);
@@ -1270,21 +1413,65 @@ const AliasEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
       created_by: viewerId,
     });
     setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     toast.success("Alias added");
+    setName("");
+    await loadExisting();
     onChanged();
-    onDone();
   };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("actor_aliases").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    await loadExisting();
+    onChanged();
+  };
+
   return (
     <div className="space-y-3">
+      {existing.length > 0 && (
+        <div>
+          <div className="text-xs text-foreground-muted mb-1.5">Currently saved</div>
+          <div className="flex flex-wrap gap-1.5">
+            {existing.map((a) => (
+              <span
+                key={a.id}
+                className="inline-flex items-center gap-1 rounded-full bg-surface border border-border px-2 py-0.5 text-xs text-foreground"
+              >
+                {a.alias_name}
+                <button
+                  type="button"
+                  onClick={() => remove(a.id)}
+                  className="hover:text-destructive"
+                  aria-label="Remove"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Label className="text-xs text-foreground-muted">Alias name</Label>
-      <Input value={name} onChange={(e) => setName(e.target.value)} />
-      <Button onClick={save} disabled={busy}>
-        Add alias
-      </Button>
+      <div className="flex gap-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") void save(); }}
+          placeholder="e.g. trading name, abbreviation"
+        />
+        <Button onClick={save} disabled={busy || !name.trim()} size="sm">
+          Add
+        </Button>
+      </div>
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button onClick={onDone} size="sm">
+          Done — next step
+          <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 };
