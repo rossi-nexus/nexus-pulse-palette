@@ -174,94 +174,56 @@ const AddressDiscoveryDialog = ({
   };
 
 
-  const discoverFromRegistry = async () => {
+  const startRegistry = () => {
     if (!orgNumber) {
-      toast.error("No org number on file.");
+      setStep("needOrg");
       return;
     }
-    setBusy(true);
-    setStep("loading");
-    try {
-      const { data, error } = await supabase.functions.invoke("enrich-from-registry", {
-        body: {
-          mode: "org_number",
-          org_number: orgNumber,
-          actor_context: { country },
-        },
-      });
-      if (error) throw new Error(error.message);
-      const payload = data as any;
-      if (payload?.error) throw new Error(payload.error);
-      const addr: AddressFields = {
-        street_address: payload?.street_address ?? null,
-        postal_code: payload?.postal_code ?? null,
-        city: payload?.city ?? null,
-        region: payload?.region ?? null,
-        country: payload?.country ?? country ?? null,
-      };
-      if (!addr.street_address && !addr.city) {
-        throw new Error("Registry returned no address fields.");
-      }
-      setDraft(addr);
-      setSource("registry");
-      setSourceLabel(`From BRREG · ${new Date().toLocaleDateString()}`);
-      setStep("confirm");
-    } catch (e: any) {
-      toast.error(`Registry lookup failed: ${e?.message ?? "unknown"}`);
-      setStep("choose");
-    } finally {
-      setBusy(false);
-    }
+    runRegistryLookup(orgNumber);
   };
 
-  const discoverFromWebsite = async () => {
+  const startWebsite = () => {
     if (!website) {
-      toast.error("No website on file.");
+      setStep("needWebsite");
       return;
     }
-    setBusy(true);
-    setStep("loading");
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "enrich-address-from-website",
-        { body: { website } },
-      );
-      if (error) throw new Error(error.message);
-      const payload = data as any;
-      if (payload?.error) throw new Error(payload.error);
-      const list: WebsiteCandidate[] = payload?.candidates ?? [];
-      const diag: { path: string; hits: number; status: string }[] = payload?.diagnostics ?? [];
-      const diagSummary = diag
-        .filter((d) => d.hits > 0)
-        .map((d) => `${d.path} (${d.hits})`)
-        .join(", ");
-      setDiagnostics(diagSummary || "no matches");
-      if (list.length === 0) {
-        toast.error("Couldn't find an address on the website.");
-        setStep("choose");
-        return;
-      }
-      if (list.length === 1) {
-        setDraft({
-          street_address: list[0].street_address,
-          postal_code: list[0].postal_code,
-          city: list[0].city,
-          region: list[0].region,
-          country: list[0].country ?? country ?? null,
-        });
-        setSource("auto_enrichment");
-        setSourceLabel(`From website · ${list[0].matched_path}`);
-        setStep("confirm");
-      } else {
-        setCandidates(list);
-        setStep("pick");
-      }
-    } catch (e: any) {
-      toast.error(`Website discovery failed: ${e?.message ?? "unknown"}`);
-      setStep("choose");
-    } finally {
-      setBusy(false);
+    runWebsiteLookup(website);
+  };
+
+  const submitOrgInput = async () => {
+    const trimmed = orgInput.trim();
+    if (!trimmed) {
+      toast.error("Enter an org number.");
+      return;
     }
+    // Persist to actor so it shows on the card going forward.
+    const { error } = await supabase
+      .from("actors")
+      .update({ org_number: trimmed })
+      .eq("id", actorId);
+    if (error) {
+      toast.error(`Could not save org number: ${error.message}`);
+      return;
+    }
+    await runRegistryLookup(trimmed);
+  };
+
+  const submitWebsiteInput = async () => {
+    let trimmed = websiteInput.trim();
+    if (!trimmed) {
+      toast.error("Enter a website URL.");
+      return;
+    }
+    if (!/^https?:\/\//i.test(trimmed)) trimmed = `https://${trimmed}`;
+    const { error } = await supabase
+      .from("actors")
+      .update({ website: trimmed })
+      .eq("id", actorId);
+    if (error) {
+      toast.error(`Could not save website: ${error.message}`);
+      return;
+    }
+    await runWebsiteLookup(trimmed);
   };
 
   const enterManually = () => {
@@ -269,6 +231,7 @@ const AddressDiscoveryDialog = ({
     setSourceLabel("Entered manually");
     setStep("confirm");
   };
+
 
   const pickCandidate = (c: WebsiteCandidate) => {
     setDraft({
