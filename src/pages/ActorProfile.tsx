@@ -1289,6 +1289,22 @@ const ActorProfile = () => {
     [linkedPersonal, dbActor],
   );
 
+  // V3 Batch A — presence + trust per macro-card (must run before any early return).
+  const anyStale = useMemo(() => {
+    const rows: Array<{ verified_at?: string | null; decays_at?: string | null }> = [
+      ...(dbActor ? [{ verified_at: dbActor.verified_at, decays_at: dbActor.decays_at }] : []),
+      ...classifications,
+      ...standards,
+      ...customers,
+      ...capacityRows,
+      ...contacts,
+    ];
+    const now = Date.now();
+    return rows.some((r) =>
+      r?.verified_at && r?.decays_at && new Date(r.decays_at).getTime() < now,
+    );
+  }, [dbActor, classifications, standards, customers, capacityRows, contacts]);
+
   // ---------- Loading state ----------
 
   if (loading) {
