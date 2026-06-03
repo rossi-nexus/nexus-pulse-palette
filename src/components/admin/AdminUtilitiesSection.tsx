@@ -49,6 +49,31 @@ const UTILITIES: Utility[] = [
     successFmt: (n) => `Geocoded ${n ?? 0} personal actors`,
   },
   {
+    id: "geocode_verified",
+    label: "Backfill missing verified actor geocoding",
+    subtext:
+      "Geocodes verified main-database actors that lack coordinates. Same Nominatim pipeline — one actor per call, loops client-side to avoid timeouts.",
+    kind: "rpc",
+    target: "fn_geocode_missing_verified_actors",
+    confirm: "Geocode verified actors missing coordinates?",
+    successFmt: (n) => `Geocoded ${n ?? 0} verified actors`,
+  },
+  {
+    id: "backfill_ontology_confidence",
+    label: "Backfill ontology tag confidence",
+    subtext:
+      "Fills the confidence rating on ontology tags that currently have none, based on existing evidence and source signals. Required by the AX3a multi-axis ranker. Safe to re-run.",
+    kind: "rpc",
+    target: "fn_backfill_ontology_tag_confidence",
+    confirm: "Backfill confidence on all ontology tags currently unrated?",
+    rawData: true,
+    successFmt: (d: any) => {
+      const r = Array.isArray(d) ? d[0] : d;
+      if (!r) return "Confidence backfill complete";
+      return `Confidence backfilled — updated ${r.rows_updated ?? 0} rows; ${r.rows_with_confidence ?? 0} tags now have explicit confidence.`;
+    },
+  },
+  {
     id: "cleanup_drafts",
     label: "Cleanup old consultant drafts",
     subtext: "Deletes consultant_drafts rows older than 30 days.",
