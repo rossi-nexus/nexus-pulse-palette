@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Play, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { resolveAxisWeights, useUserPreferences } from "@/hooks/useUserPreferences";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "never";
