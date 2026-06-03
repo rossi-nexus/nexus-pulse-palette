@@ -18,27 +18,40 @@ const UA = "Mozilla/5.0 (compatible; NEXUS-ContactScrape/1.0; +https://nexus.app
 const FETCH_TIMEOUT_MS = 6_000;
 // Hard cap on candidates probed so wall-time can't blow up on slow hosts.
 // (Equipnor-style sites return ~5s per 404; sequential 30× would exceed Supabase wall-time.)
-const MAX_CANDIDATES = 16;
+const MAX_CANDIDATES = 20;
 // English + Norwegian (no/da/sv close enough) candidate paths.
+// NOTE: /teamet (Norwegian definite form of "team") was missing in v1 — Equipnor's
+// team page lives at /teamet/ and discovery alone wasn't catching it.
 const CANDIDATE_PATHS = [
+  // Strong team signals
+  "/team",
+  "/teamet",
+  "/our-team",
+  "/the-team",
+  "/vart-team",
+  "/vaart-team",
+  "/people",
+  "/personer",
+  "/staff",
+  "/folk",
+  "/ansatte",
+  "/medarbeidere",
+  // Leadership
+  "/leadership",
+  "/ledelse",
+  "/ledelsen",
+  "/ledergruppe",
+  "/management",
+  "/styret",
+  "/board",
+  // About / contact (weaker)
   "/about",
   "/about-us",
-  "/team",
-  "/our-team",
-  "/leadership",
-  "/people",
+  "/om-oss",
+  "/om",
   "/contact",
   "/contacts",
   "/contact-us",
-  "/staff",
-  "/om-oss",
-  "/om",
-  "/medarbeidere",
-  "/ansatte",
-  "/folk",
-  "/styret",
-  "/ledelse",
-  "/ledelsen",
   "/kontakt",
   "/kontakt-oss",
 ];
@@ -47,6 +60,29 @@ const PAGE_HINT_TOKENS = [
   "team", "leadership", "contact", "people", "staff", "about",
   "om oss", "medarbeidere", "ansatte", "ledelse", "styret", "kontakt", "folk",
 ];
+// Path-based scoring — primary selector. URL path is a much stronger signal of
+// "this is a team page" than token presence in body text (an /about/ page also
+// mentions "team").
+//
+// TEST CASE: equipnor.no should yield Gunnar Børte (CEO),
+// Martin Brinkmann (Head of Product & Solutions),
+// Morten Karlsen (Sales & Marketing Manager),
+// Charlotte [...] from /teamet/ directly.
+// /teamet/ (+10) MUST beat /om-equipnor/ (+2) regardless of token score.
+function scorePath(urlStr: string): number {
+  let path = "";
+  try { path = new URL(urlStr).pathname.toLowerCase().replace(/\/+$/, ""); } catch { return 0; }
+  // Strong team signals
+  if (/^\/(team|teamet|our-team|the-team|vart-team|vaart-team|people|personer|staff|folk|ansatte|medarbeidere)(\/|$)/.test(path)) return 10;
+  // Medium leadership signals
+  if (/^\/(leadership|ledelse|ledelsen|ledergruppe|management|styret|board)(\/|$)/.test(path)) return 5;
+  // Weak about/contact signals
+  if (/^\/(about|about-us|om|om-[a-z0-9-]+|om-oss|contact|contacts|contact-us|kontakt|kontakt-oss)(\/|$)/.test(path)) return 2;
+  return 0;
+}
+
+const MAX_FALLBACK_ATTEMPTS = 3;
+
 const MAX_CONTACTS = 20;
 const MAX_TEXT_CHARS = 16_000;
 
