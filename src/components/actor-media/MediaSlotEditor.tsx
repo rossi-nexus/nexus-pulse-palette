@@ -68,6 +68,7 @@ export function MediaSlotEditor({
   actorId,
   slotType,
   defaultQuery,
+  linkedProductName,
   onSave,
 }: Props) {
   const [tab, setTab] = useState<Tab>("search");
