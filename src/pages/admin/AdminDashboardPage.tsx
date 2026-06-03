@@ -181,6 +181,9 @@ const AdminDashboardPage = () => {
             </div>
           )}
         </section>
+
+
+        <AdminUtilitiesSection />
       </div>
     </div>
   );
