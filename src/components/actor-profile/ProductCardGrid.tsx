@@ -11,6 +11,7 @@
  *   as a manual fallback when auto-enrichment can't find an image.
  */
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ExternalLink, Info, ImagePlus, Replace, Sparkles, Loader2, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { productSlug } from "@/lib/productSlug";
 
 export interface ProductTag {
   entry_name: string;
