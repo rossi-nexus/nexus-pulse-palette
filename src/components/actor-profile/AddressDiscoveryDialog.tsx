@@ -278,6 +278,14 @@ const AddressDiscoveryDialog = ({
       toast.error("Address must include at least a street or city.");
       return;
     }
+    // actors.source has a CHECK constraint — map our discovery sources
+    // to the allowed enum values.
+    const sourceColumn =
+      source === "registry"
+        ? "registry_import"
+        : source === "auto_enrichment"
+          ? "url_import"
+          : "manual";
     setBusy(true);
     const { error } = await supabase
       .from("actors")
@@ -287,7 +295,7 @@ const AddressDiscoveryDialog = ({
         city: draft.city,
         region: draft.region,
         country: draft.country,
-        source,
+        source: sourceColumn,
       })
       .eq("id", actorId);
     setBusy(false);
