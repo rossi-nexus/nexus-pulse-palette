@@ -448,7 +448,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
     try {
       const { data: actorRow, error: aErr } = await supabase
         .from("actors")
-        .select("websites, name")
+        .select("websites, legal_name")
         .eq("id", actorId)
         .maybeSingle();
       if (aErr) throw new Error(aErr.message);
@@ -463,7 +463,7 @@ const DescriptionEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps
           body: {
             actor_id: actorId,
             website_url,
-            actor_name: actorRow?.name,
+            actor_name: actorRow?.legal_name,
           },
         },
       );
