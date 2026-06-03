@@ -87,9 +87,15 @@ export interface RoleSearchResult {
 
 interface UseSearchProps {
   sessionId: string | null;
+  /** AX4 — optional per-search override (e.g. from saved search). */
+  axisWeightsOverride?: Partial<AxisWeights> | null;
 }
 
-export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
+export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchProps = { sessionId: null }) {
+  const { user } = useAuth();
+  const { weights: userDefaultWeights } = useUserPreferences();
+  const track = useTrackInteraction(sessionId);
+
   const [status, setStatus] = useState<SearchStatus>("not_started");
   const [roleResults, setRoleResults] = useState<Map<string, RoleSearchResult>>(new Map());
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
@@ -97,6 +103,12 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
   const [error, setError] = useState<string | null>(null);
   /** B3: per-role mode toggle. Defaults to "web" to match legacy behaviour. */
   const [roleSearchModes, setRoleSearchModes] = useState<Map<string, RoleSearchMode>>(new Map());
+
+  /** AX4 — resolved weights for v2 RPC: override → user default → null (system default). */
+  const resolvedWeights = useMemo(
+    () => resolveAxisWeights(axisWeightsOverride, userDefaultWeights),
+    [axisWeightsOverride, userDefaultWeights],
+  );
 
   const setRoleSearchMode = useCallback((roleId: string, mode: RoleSearchMode) => {
     setRoleSearchModes(prev => {
