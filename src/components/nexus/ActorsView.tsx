@@ -343,8 +343,10 @@ const ActorsView = () => {
               <MapIcon className="w-3.5 h-3.5" />
               Map
             </button>
+            </div>
           </div>
         </div>
+
 
 
         {/* Tabs */}
