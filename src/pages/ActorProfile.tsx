@@ -82,6 +82,13 @@ import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog"
 import { RegistryRefreshDialog } from "@/components/actor-profile/RegistryRefreshDialog";
 import { MacroCard, type PresenceState, type TrustBand } from "@/components/actor-profile/MacroCard";
 import { ProvenanceBadge, computeProvenanceState } from "@/components/actor-profile/ProvenanceBadge";
+import { ViewerRoleBadge } from "@/components/actor-profile/ViewerRoleBadge";
+import { useViewerActorRole } from "@/hooks/useViewerActorRole";
+import { ContactList, type ContactRow } from "@/components/actor-profile/ContactList";
+import {
+  CollectionConflictBanner,
+  computeIdentityConflicts,
+} from "@/components/actor-profile/CollectionConflictBanner";
 import { cn } from "@/lib/utils";
 
 type Source = "personal" | "database";
