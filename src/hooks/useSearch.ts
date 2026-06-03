@@ -52,7 +52,9 @@ export interface ActorCardData {
     overlap?: number;
     outcome?: number;
     decay?: number;
-  };
+    // AX3a — v2 axis breakdown (jsonb passthrough). AX3b renders.
+    [axis: string]: any;
+  } | null;
   /** P11 — per-role weighted match strength used by cross-role ranking. */
   cross_role_score?: number;
   /** P11 — per-role match-strength inputs feeding cross_role_score. */
