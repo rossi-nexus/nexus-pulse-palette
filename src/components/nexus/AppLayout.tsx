@@ -8,6 +8,7 @@ import ProductDetailPage from "@/pages/ProductDetailPage";
 import AddActorPage from "@/pages/AddActorPage";
 import ActorsMapPage from "@/pages/ActorsMapPage";
 import SavedSearchesPage from "@/pages/SavedSearchesPage";
+import UserPreferencesPage from "@/pages/UserPreferencesPage";
 import { SessionProvider } from "@/contexts/SessionContext";
 
 /**
