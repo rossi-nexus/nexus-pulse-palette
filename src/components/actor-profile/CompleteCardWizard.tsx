@@ -1196,7 +1196,7 @@ const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChang
         { body: { actor_id: actorId, base_url } },
       );
       if (error) throw new Error((data as any)?.error ?? error.message);
-      const added = (data as any)?.contacts_added ?? 0;
+      const added = (data as any)?.written_count ?? (data as any)?.contacts_added ?? 0;
       if (added > 0) {
         toast.success(`Scanned team page — ${added} contact(s) added`);
         await loadExisting();
