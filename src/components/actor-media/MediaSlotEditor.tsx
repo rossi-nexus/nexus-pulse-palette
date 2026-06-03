@@ -305,7 +305,13 @@ export function MediaSlotEditor({
           type: slotType,
           url: croppedUrl,
           original_url: originalUrl,
-          crop_data: { croppedAreaPixels, zoom } as any,
+          crop_data: {
+            croppedAreaPixels,
+            zoom,
+            ...(slotType === "product" && linkedProductName
+              ? { linked_product_name: linkedProductName }
+              : {}),
+          } as any,
           source: inputSource,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id ?? null,
         })
