@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { productSlug } from "@/lib/productSlug";
+import ProvenanceBadge from "@/components/actor-profile/ProvenanceBadge";
 
 export interface ProductTag {
   entry_name: string;
@@ -271,19 +272,31 @@ export function ProductCardGrid({
                   <span className="text-sm font-medium text-foreground leading-snug">
                     {c.tag.entry_name}
                   </span>
-                  {c.tag.confidence && (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[10px] uppercase tracking-wider shrink-0",
-                        c.tag.confidence === "high" && "bg-success/10 text-success border-success/30",
-                        c.tag.confidence === "medium" && "bg-info/10 text-info border-info/30",
-                        c.tag.confidence === "low" && "bg-warning/10 text-warning border-warning/30",
-                      )}
-                    >
-                      {c.tag.confidence}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <ProvenanceBadge
+                      source={(c.descRow as any)?.source ?? (c.tag.source_url ? "auto_enrichment" : null)}
+                      source_url={c.tag.source_url ?? (c.descRow as any)?.source_url ?? null}
+                      evidence={c.tag.evidence ?? null}
+                      confidence={c.tag.confidence ?? null}
+                      verified_at={(c.descRow as any)?.verified_at ?? null}
+                      verifier_id={(c.descRow as any)?.verifier_id ?? null}
+                      decays_at={(c.descRow as any)?.decays_at ?? null}
+                      size="sm"
+                    />
+                    {c.tag.confidence && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] uppercase tracking-wider",
+                          c.tag.confidence === "high" && "bg-success/10 text-success border-success/30",
+                          c.tag.confidence === "medium" && "bg-info/10 text-info border-info/30",
+                          c.tag.confidence === "low" && "bg-warning/10 text-warning border-warning/30",
+                        )}
+                      >
+                        {c.tag.confidence}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 {c.description ? (
                   <p className="text-xs italic text-foreground-secondary line-clamp-3 leading-relaxed">

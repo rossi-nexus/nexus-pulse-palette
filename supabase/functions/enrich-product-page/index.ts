@@ -248,6 +248,10 @@ function extractImages(html: string, pageUrl: string): ImageHit[] {
  * function happened to be processing, causing flag SVGs and partner-brand
  * assets to be assigned to "C4ISR System" on Equipnor.
  */
+// IMPORTANT: keep in sync with fn_check_strong_product_association in Postgres.
+// Both implementations encode the same logic; the Postgres twin is invoked by
+// fn_reprocess_auto_enrichment_media to retroactively classify existing rows.
+// Any change here must be mirrored there.
 function hasStrongProductAssociation(
   img: ImageHit,
   productName: string,

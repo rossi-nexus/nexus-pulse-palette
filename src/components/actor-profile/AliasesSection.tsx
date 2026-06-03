@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Trash2 } from "lucide-react";
+import ProvenanceBadge from "@/components/actor-profile/ProvenanceBadge";
 import { toast } from "sonner";
 
 type AliasType = "former_name" | "trade_name" | "brand" | "abbreviation";
@@ -90,7 +91,7 @@ const AliasesSection = ({
               className="flex items-start gap-3 bg-elevated/40 border border-border rounded-md px-3 py-2"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-foreground font-medium">
                     {r.alias_name}
                   </span>
@@ -99,6 +100,12 @@ const AliasesSection = ({
                       {TYPE_LABELS[r.alias_type]}
                     </Badge>
                   )}
+                  <ProvenanceBadge
+                    source={r.source_url ? "auto_enrichment" : null}
+                    source_url={r.source_url}
+                    evidence={r.evidence}
+                    size="sm"
+                  />
                 </div>
                 {(r.valid_from || r.valid_to) && (
                   <div className="text-xs text-foreground-muted mt-1">

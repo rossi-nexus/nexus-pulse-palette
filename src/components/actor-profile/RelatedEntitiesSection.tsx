@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import ProvenanceBadge from "@/components/actor-profile/ProvenanceBadge";
 
 type RelType =
   | "parent_of"
@@ -134,6 +135,14 @@ const RelatedEntitiesSection = ({ actorId, canEdit }: Props) => {
                 <Badge variant="outline" className="text-[10px] mt-0.5">
                   {label}
                 </Badge>
+                <div className="mt-0.5">
+                  <ProvenanceBadge
+                    source={r.source_url ? "auto_enrichment" : null}
+                    source_url={r.source_url}
+                    evidence={r.evidence}
+                    size="sm"
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <a
                     href={`/actors/${otherId}`}

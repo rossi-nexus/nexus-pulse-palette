@@ -518,7 +518,7 @@ const ActorProfile = () => {
     if (!id) return;
     const { data } = await supabase
       .from("actor_media")
-      .select("id, type, url, original_url, crop_data")
+      .select("id, type, url, original_url, crop_data, source")
       .eq("actor_id", id);
     if (data) setMedia(data as any);
   };
@@ -731,7 +731,7 @@ const ActorProfile = () => {
             supabase.from("actor_standards").select("*").eq("actor_id", id),
             supabase.from("actor_customer_history").select("*").eq("actor_id", id),
             supabase.from("actor_descriptions").select("*").eq("actor_id", id),
-            supabase.from("actor_media").select("id, type, url, original_url, crop_data").eq("actor_id", id),
+            supabase.from("actor_media").select("id, type, url, original_url, crop_data, source").eq("actor_id", id),
             supabase.from("actor_capacity_attributes").select("id, attribute_type, value_text, value_min, value_max, unit, evidence").eq("actor_id", id),
           ]);
 
@@ -773,7 +773,7 @@ const ActorProfile = () => {
       if (cancelled) return;
       const { data } = await supabase
         .from("actor_media")
-        .select("id, type, url, original_url, crop_data")
+        .select("id, type, url, original_url, crop_data, source")
         .eq("actor_id", id);
       if (cancelled) return;
       if (data) setMedia(data as any);
@@ -1519,7 +1519,7 @@ const ActorProfile = () => {
           if (hero) {
             return (
               <div className="relative group">
-                <ActorHeroBanner url={hero.url} alt={`${name} hero`} />
+                <ActorHeroBanner url={hero.url} alt={`${name} hero`} provenance={{ source: hero.source ?? null }} />
                 {editingDbIdentity && (
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
                     <Button size="sm" variant="secondary" onClick={() => openMediaEditor("hero")}>
@@ -1587,7 +1587,7 @@ const ActorProfile = () => {
                     />
                   );
                 }
-                const inner = <ActorLogo name={name} url={logo?.url ?? null} />;
+                const inner = <ActorLogo name={name} url={logo?.url ?? null} provenance={logo ? { source: logo.source ?? null } : null} />;
                 if (!editingDbIdentity) return inner;
                 return (
                   <div className="relative group">
