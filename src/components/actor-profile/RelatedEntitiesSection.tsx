@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import ProvenanceBadge from "@/components/actor-profile/ProvenanceBadge";
 
 type RelType =
   | "parent_of"
