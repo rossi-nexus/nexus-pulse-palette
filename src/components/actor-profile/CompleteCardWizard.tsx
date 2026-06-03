@@ -1278,7 +1278,7 @@ const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChang
         </div>
       )}
 
-      <Button onClick={scan} disabled={scanning} variant="outline" size="sm">
+      <Button onClick={scan} disabled={scanning || !resolver.website} variant="outline" size="sm">
         {scanning ? (
           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
         ) : (
