@@ -1519,7 +1519,7 @@ const ActorProfile = () => {
           if (hero) {
             return (
               <div className="relative group">
-                <ActorHeroBanner url={hero.url} alt={`${name} hero`} />
+                <ActorHeroBanner url={hero.url} alt={`${name} hero`} provenance={{ source: hero.source ?? null }} />
                 {editingDbIdentity && (
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
                     <Button size="sm" variant="secondary" onClick={() => openMediaEditor("hero")}>
