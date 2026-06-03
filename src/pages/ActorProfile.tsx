@@ -2624,14 +2624,80 @@ const ActorProfile = () => {
           trust={trustCollection} variant="collection"
         >
           {source === "database" && dbActor && user && (
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <p className="text-sm text-foreground-secondary flex-1 min-w-[200px]">
-                Your personal collection on this actor. Add notes, evidence, and personal tags in your collection view.
-              </p>
-              <Button size="sm" variant="outline" onClick={handleAddToCollection}>
-                {linkedPersonalId ? "Edit in my collection" : "Add to my collection"}
-              </Button>
-            </div>
+            <>
+              {/* V3 Batch B item 3 — conflict banner */}
+              {linkedPersonalId && collectionConflicts.length > 0 && (
+                <CollectionConflictBanner
+                  conflicts={collectionConflicts}
+                  personalId={linkedPersonalId}
+                  onSuggest={() => navigate(`/actors/${linkedPersonalId}`)}
+                />
+              )}
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <p className="text-sm text-foreground-secondary flex-1 min-w-[200px]">
+                  Your personal collection on this actor. Add notes, evidence, and personal tags in your collection view.
+                </p>
+                <Button size="sm" variant="outline" onClick={handleAddToCollection}>
+                  {linkedPersonalId ? "Edit in my collection" : "Add to my collection"}
+                </Button>
+              </div>
+              {/* V3 Batch B item 3 — read-only personal content rendered on the canonical view */}
+              {linkedPersonal && (
+                <div className="space-y-3 mb-4">
+                  {linkedPersonal.tags && linkedPersonal.tags.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                        Your tags
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {linkedPersonal.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-surface border border-border/60 text-foreground"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {linkedPersonal.notes && linkedPersonal.notes.trim().length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                        Your notes
+                      </div>
+                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-surface border border-border/60 rounded-md p-3">
+                        {linkedPersonal.notes}
+                      </p>
+                    </div>
+                  )}
+                  {linkedPersonal.source_urls && linkedPersonal.source_urls.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                        Your evidence
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {linkedPersonal.source_urls.map((u, i) => (
+                          <a
+                            key={i}
+                            href={u}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-accent-teal hover:underline truncate inline-flex items-center gap-1"
+                          >
+                            {u}
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-[11px] text-foreground-muted">
+                    Added to your collection {formatDate(linkedPersonal.created_at)}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
         {/* Tags (personal actors only) */}
