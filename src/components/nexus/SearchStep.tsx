@@ -167,6 +167,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
     undoTriage,
     lock,
     unlock,
+    rescoreActor,
   } = hook;
 
   const expandedResult = orderedRoles.find(r => r.role_id === expandedRoleId);
