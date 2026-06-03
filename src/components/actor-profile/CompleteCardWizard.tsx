@@ -495,11 +495,23 @@ const MediaEditor = ({
   const scrape = async () => {
     setScraping(true);
     try {
+      const { data: actorRow, error: aErr } = await supabase
+        .from("actors")
+        .select("websites")
+        .eq("id", actorId)
+        .maybeSingle();
+      if (aErr) throw new Error(aErr.message);
+      const website_url = actorRow?.websites?.[0] ?? null;
+      if (!website_url) {
+        toast.error("No website on file. Paste a URL below instead.");
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("scrape-actor-media", {
-        body: { actor_id: actorId },
+        body: { actor_id: actorId, website_url },
       });
       if (error) throw new Error(error.message);
-      const found = (data as any)?.[`${type}_url`] ?? null;
+      const scrapedList = (data as any)?.scraped ?? [];
+      const found = scrapedList.some((s: any) => s.slot === type);
       if (found) {
         toast.success(`${type} found and saved`);
         onChanged();
@@ -513,6 +525,7 @@ const MediaEditor = ({
       setScraping(false);
     }
   };
+
 
   const saveManual = async () => {
     if (!url) {
