@@ -41,6 +41,12 @@ interface Props {
   actorId: string | null;        // null => deferred mode (onboarding)
   slotType: MediaSlotType;
   defaultQuery?: string;         // e.g. legal_name or product name
+  /**
+   * V3 batch #3 Area 2 — when slotType='product' and this is set, the new
+   * actor_media row gets crop_data.linked_product_name = linkedProductName.
+   * That ties the image to a specific product card in ProductCardGrid.
+   */
+  linkedProductName?: string;
   currentMedia?: ActorMediaRecord | null;
   onSave: (media: ActorMediaRecord) => void;
 }
