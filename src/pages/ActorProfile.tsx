@@ -3255,6 +3255,44 @@ const ActorProfile = () => {
           }}
         />
       )}
+
+      {/* V3 Batch B.2 — Complete-this-card wizard */}
+      {dbActor && user?.id && (
+        <CompleteCardWizard
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          actorId={dbActor.id}
+          actorName={name}
+          orgNumber={orgNumber ?? null}
+          website={website ?? null}
+          country={country ?? null}
+          sections={wizardSections}
+          skipped={sectionSkips}
+          viewerId={user.id}
+          onChanged={() => {
+            void refreshSectionSkips();
+            void refreshMedia();
+            void refreshDescriptions();
+          }}
+        />
+      )}
+
+      {/* V3 Batch B.2 — Address Discovery Dialog (standalone trigger from Identity card) */}
+      {dbActor && (
+        <AddressDiscoveryDialog
+          open={addressDialogOpen}
+          onClose={() => setAddressDialogOpen(false)}
+          actorId={dbActor.id}
+          actorName={name}
+          orgNumber={orgNumber ?? null}
+          website={website ?? null}
+          country={country ?? null}
+          onSaved={() => {
+            // Trigger a refetch by toggling the source effect dependency. Reload the page state.
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 };
