@@ -287,7 +287,7 @@ export const AdminUtilitiesSection = () => {
             >
               {runningId === u.id ? "Running…" : "Run"}
             </Button>
-            {u.id === "geocode_personal" && runningId === u.id && geocodeProgress && (
+            {(u.id === "geocode_personal" || u.id === "geocode_verified") && runningId === u.id && geocodeProgress && (
               <p className="text-caption text-foreground-muted">{geocodeProgress}</p>
             )}
           </div>
