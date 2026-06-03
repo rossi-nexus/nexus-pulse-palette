@@ -71,12 +71,14 @@ export type Database = {
       actor_capacity_attributes: {
         Row: {
           actor_id: string
-          actor_ontology_tag_id: string
+          actor_ontology_tag_id: string | null
           attribute_type: string
           created_at: string
           decays_at: string | null
           evidence: string | null
           id: string
+          source: string | null
+          source_url: string | null
           unit: string | null
           value_max: number | null
           value_min: number | null
@@ -87,12 +89,14 @@ export type Database = {
         }
         Insert: {
           actor_id: string
-          actor_ontology_tag_id: string
+          actor_ontology_tag_id?: string | null
           attribute_type: string
           created_at?: string
           decays_at?: string | null
           evidence?: string | null
           id?: string
+          source?: string | null
+          source_url?: string | null
           unit?: string | null
           value_max?: number | null
           value_min?: number | null
@@ -103,12 +107,14 @@ export type Database = {
         }
         Update: {
           actor_id?: string
-          actor_ontology_tag_id?: string
+          actor_ontology_tag_id?: string | null
           attribute_type?: string
           created_at?: string
           decays_at?: string | null
           evidence?: string | null
           id?: string
+          source?: string | null
+          source_url?: string | null
           unit?: string | null
           value_max?: number | null
           value_min?: number | null
@@ -618,6 +624,8 @@ export type Database = {
           evidence: string | null
           id: string
           scope: string | null
+          source: string | null
+          source_url: string | null
           standard_name: string
           standard_number: string | null
           valid_from: string | null
@@ -634,6 +642,8 @@ export type Database = {
           evidence?: string | null
           id?: string
           scope?: string | null
+          source?: string | null
+          source_url?: string | null
           standard_name: string
           standard_number?: string | null
           valid_from?: string | null
@@ -650,6 +660,8 @@ export type Database = {
           evidence?: string | null
           id?: string
           scope?: string | null
+          source?: string | null
+          source_url?: string | null
           standard_name?: string
           standard_number?: string | null
           valid_from?: string | null
@@ -1826,6 +1838,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      earth: { Args: never; Returns: number }
       fn_accept_item_addition: {
         Args: { p_accepted_items: Json; p_queue_id: string; p_reason?: string }
         Returns: string
@@ -1952,6 +1965,13 @@ export type Database = {
           tags_updated: number
         }[]
       }
+      fn_backfill_ontology_tag_confidence: {
+        Args: never
+        Returns: {
+          rows_updated: number
+          rows_with_confidence: number
+        }[]
+      }
       fn_backfill_provenance_labels: {
         Args: never
         Returns: {
@@ -2025,6 +2045,16 @@ export type Database = {
           total_count: number
         }[]
       }
+      fn_geocode_missing_verified_actors: {
+        Args: never
+        Returns: {
+          processed_actor_id: string
+          processed_actor_name: string
+          processed_count: number
+          remaining_count: number
+          total_count: number
+        }[]
+      }
       fn_import_actor_from_registry: {
         Args: {
           p_data: Json
@@ -2057,6 +2087,18 @@ export type Database = {
           p_verification: Json
         }
         Returns: Json
+      }
+      fn_persist_actor_enrichment: {
+        Args: {
+          p_actor_id: string
+          p_capacity?: Json
+          p_source_url?: string
+          p_standards?: Json
+        }
+        Returns: {
+          capacity_inserted: number
+          standards_inserted: number
+        }[]
       }
       fn_programme_summary: {
         Args: { p_programme_id: string }

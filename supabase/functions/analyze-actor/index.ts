@@ -29,19 +29,20 @@ For each of the 5 ontology dimensions, identify ONLY items where you found evide
 
 Additionally, extract if found:
 - Security classification level (which national systems, what level, evidence source)
-- Standards and certifications (ISO, AQAP, STANAG, etc.)
+- Standards and certifications (ISO, AQAP, STANAG, NS-EN, NATO, etc.). For each, capture: standard_name (the well-known canonical form when you can identify it — e.g. "ISO 9001", "ISO 14001", "NS-EN 1090", "NATO AQAP-2110"; otherwise the name as found), standard_number (the bare number if separable), certifying_body (the issuer/registrar if mentioned, e.g. "DNV", "Kiwa", "Lloyd's Register"), valid_from / valid_to (ISO dates if mentioned, omit otherwise), evidence, source_url.
+- Capacity signals: team_size, fleet_size, mobilization_time (e.g. "immediate", "24h", "1 week"), production_capacity, or other quantifiable capacity attributes. Each capacity item must have: attribute_type (one of: team_size | fleet_size | mobilization_time | production_capacity | other_capacity), value_text (human-readable value, always provided), optional value_min and value_max numeric bounds when the source gives a range, optional unit (e.g. "people", "vehicles", "tonnes/year"), evidence, source_url. Only emit capacity items you actually found evidence for.
 - Customer references (who they've worked for, in what domain, when)
 - Headquarters address (extract from About / Contact / Footer / company info sections). Provide as a structured object with street, postal_code, city, region, country (ISO-2 or full name), required evidence, and source_url. Omit entirely if you cannot find it.
 
 Rules:
-- ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, or customer references.
+- ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, customer references, capacity signals, or certifications.
 - Every match MUST have an evidence field explaining what specific text or information supports it.
 - If the search results contain limited information, produce a shorter profile. Do not pad with assumptions.
 - Match strength is not your concern here — that was assessed in Step 3. Your job is to provide detailed evidence of what this company can do.
 - Use the ontology entry IDs from the role targets when matching. If a capability matches a target entry, use that entry's ID. If you find something not in the targets, describe it but mark it as "additional" (no ontology ID).
 - For classification: be specific about which country's system (NO, SE, NATO, etc.) and the national term (HEMMELIG, HEMLIG, etc.). Only report what you found evidence for.
 - For customer references: include the customer segment (defense, civil_government, commercial, export) where identifiable.
-- All enum values MUST be lowercase: confidence ("high"|"medium"|"low"), classification level ("top_secret"|"secret"|"confidential"|"restricted"|"industrial_security"|"unclassified"|"unknown"), customer segment ("defense"|"civil_government"|"commercial"|"export"), source type ("company_website"|"news"|"directory"|"government"|"linkedin"|"annual_report"|"other").`;
+- All enum values MUST be lowercase: confidence ("high"|"medium"|"low"), classification level ("top_secret"|"secret"|"confidential"|"restricted"|"industrial_security"|"unclassified"|"unknown"), customer segment ("defense"|"civil_government"|"commercial"|"export"), source type ("company_website"|"news"|"directory"|"government"|"linkedin"|"annual_report"|"other"), capacity attribute_type ("team_size"|"fleet_size"|"mobilization_time"|"production_capacity"|"other_capacity").`;
 
 const ANALYSIS_TOOL_SCHEMA = {
   type: "function" as const,
@@ -159,14 +160,39 @@ const ANALYSIS_TOOL_SCHEMA = {
         },
         standards: {
           type: "array",
+          description: "Standards / certifications evidenced for this actor.",
           items: {
             type: "object",
             properties: {
-              standardName: { type: "string" },
+              standardName: { type: "string", description: "Canonical form when identifiable (e.g. 'ISO 9001', 'NATO AQAP-2110'); otherwise as-found." },
               standardNumber: { type: "string" },
+              certifyingBody: { type: "string", description: "Issuer / registrar if mentioned, e.g. 'DNV', 'Kiwa'." },
+              validFrom: { type: "string", description: "ISO date YYYY-MM-DD if mentioned." },
+              validTo: { type: "string", description: "ISO date YYYY-MM-DD if mentioned." },
               evidence: { type: "string" },
+              sourceUrl: { type: "string" },
             },
             required: ["standardName", "evidence"],
+          },
+        },
+        capacity: {
+          type: "array",
+          description: "Capacity signals (team size, fleet, mobilization, production capacity) evidenced for this actor.",
+          items: {
+            type: "object",
+            properties: {
+              attributeType: {
+                type: "string",
+                enum: ["team_size", "fleet_size", "mobilization_time", "production_capacity", "other_capacity"],
+              },
+              valueText: { type: "string", description: "Human-readable value, always provided (e.g. '120 employees', '24h', '8000 tonnes/year')." },
+              valueMin: { type: "number" },
+              valueMax: { type: "number" },
+              unit: { type: "string" },
+              evidence: { type: "string" },
+              sourceUrl: { type: "string" },
+            },
+            required: ["attributeType", "valueText", "evidence"],
           },
         },
         customerHistory: {
@@ -271,6 +297,7 @@ function normalizeAnalysis(raw: any): any {
   a.products = Array.isArray(raw?.products) ? raw.products : [];
   a.services = Array.isArray(raw?.services) ? raw.services : [];
   a.standards = Array.isArray(raw?.standards) ? raw.standards : [];
+  a.capacity = Array.isArray(raw?.capacity) ? raw.capacity : [];
   a.customerHistory = Array.isArray(raw?.customerHistory) ? raw.customerHistory : [];
   a.analysisSources = Array.isArray(raw?.analysisSources) ? raw.analysisSources : [];
 
@@ -310,6 +337,8 @@ function normalizeAnalysis(raw: any): any {
   a.domains = a.domains.filter((d: any) => d?.evidence && d?.domainName);
   a.products = a.products.filter((p: any) => p?.evidence && p?.productName);
   a.services = a.services.filter((s: any) => s?.evidence && s?.serviceName);
+  a.standards = a.standards.filter((s: any) => s?.evidence && s?.standardName);
+  a.capacity = a.capacity.filter((c: any) => c?.evidence && c?.attributeType && c?.valueText);
   a.customerHistory = a.customerHistory.filter((c: any) => c?.evidence && c?.customerName);
 
   // headquarters_address: pass through only if it has at least one address field + evidence
@@ -381,6 +410,12 @@ serve(async (req) => {
     const actor = body.actor as ActorIn;
     const role = body.role as RoleIn;
     const constraints = body.constraints || {};
+    // AX2: optional persistence target — when provided AND it matches a row in
+    // public.actors, extracted capacity + standards are written via the
+    // SECURITY DEFINER fn_persist_actor_enrichment RPC (idempotent).
+    const persistToActorId: string | null = typeof body.persist_to_actor_id === "string"
+      ? body.persist_to_actor_id
+      : null;
 
     if (!actor || !actor.name) {
       return new Response(JSON.stringify({ error: "Missing actor" }), {
@@ -615,6 +650,64 @@ ${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.s
 
     const analysis = normalizeAnalysis(analysisRaw);
 
+    // AX2 persistence — write capacity + standards to satellite tables when
+    // a target verified-actor id is provided. Service-role required because
+    // those tables are admin-write via RLS; fn_persist_actor_enrichment is
+    // SECURITY DEFINER and accepts service-role callers (auth.uid() NULL).
+    let persistResult: { capacity_inserted: number; standards_inserted: number } | null = null;
+    let persistError: string | null = null;
+    if (persistToActorId && (analysis.capacity?.length || analysis.standards?.length)) {
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!serviceRoleKey) {
+        persistError = "SUPABASE_SERVICE_ROLE_KEY not configured — persistence skipped.";
+        console.warn(persistError);
+      } else {
+        try {
+          const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+          const capacityRows = (analysis.capacity ?? []).map((c: any) => ({
+            attribute_type: c.attributeType,
+            value_text: c.valueText,
+            value_min: typeof c.valueMin === "number" ? c.valueMin : null,
+            value_max: typeof c.valueMax === "number" ? c.valueMax : null,
+            unit: c.unit ?? null,
+            evidence: c.evidence ?? null,
+            source_url: c.sourceUrl ?? null,
+          }));
+          const standardRows = (analysis.standards ?? []).map((s: any) => ({
+            standard_name: s.standardName,
+            standard_number: s.standardNumber ?? null,
+            certifying_body: s.certifyingBody ?? null,
+            valid_from: s.validFrom ?? null,
+            valid_to: s.validTo ?? null,
+            evidence: s.evidence ?? null,
+            source_url: s.sourceUrl ?? null,
+          }));
+          const { data: persistData, error: persistErr } = await supabaseAdmin.rpc(
+            "fn_persist_actor_enrichment",
+            {
+              p_actor_id: persistToActorId,
+              p_capacity: capacityRows,
+              p_standards: standardRows,
+              p_source_url: actor.website ?? null,
+            },
+          );
+          if (persistErr) {
+            persistError = persistErr.message ?? String(persistErr);
+            console.error("fn_persist_actor_enrichment failed:", persistErr);
+          } else {
+            const row = Array.isArray(persistData) ? persistData[0] : persistData;
+            persistResult = {
+              capacity_inserted: Number(row?.capacity_inserted ?? 0),
+              standards_inserted: Number(row?.standards_inserted ?? 0),
+            };
+          }
+        } catch (e) {
+          persistError = (e as Error).message ?? "unknown persist error";
+          console.error("Persist call threw:", e);
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       actor_id: actor.id,
       role_id: role.id,
@@ -623,6 +716,8 @@ ${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.s
       sources_gathered: gatheredResults.length,
       serper_partial_failure: serperFailed,
       analysis_mode: mode,
+      persist_result: persistResult,
+      persist_error: persistError,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("analyze-actor error:", e);
