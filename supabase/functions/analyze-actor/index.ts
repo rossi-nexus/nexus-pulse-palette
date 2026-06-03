@@ -29,19 +29,20 @@ For each of the 5 ontology dimensions, identify ONLY items where you found evide
 
 Additionally, extract if found:
 - Security classification level (which national systems, what level, evidence source)
-- Standards and certifications (ISO, AQAP, STANAG, etc.)
+- Standards and certifications (ISO, AQAP, STANAG, NS-EN, NATO, etc.). For each, capture: standard_name (the well-known canonical form when you can identify it — e.g. "ISO 9001", "ISO 14001", "NS-EN 1090", "NATO AQAP-2110"; otherwise the name as found), standard_number (the bare number if separable), certifying_body (the issuer/registrar if mentioned, e.g. "DNV", "Kiwa", "Lloyd's Register"), valid_from / valid_to (ISO dates if mentioned, omit otherwise), evidence, source_url.
+- Capacity signals: team_size, fleet_size, mobilization_time (e.g. "immediate", "24h", "1 week"), production_capacity, or other quantifiable capacity attributes. Each capacity item must have: attribute_type (one of: team_size | fleet_size | mobilization_time | production_capacity | other_capacity), value_text (human-readable value, always provided), optional value_min and value_max numeric bounds when the source gives a range, optional unit (e.g. "people", "vehicles", "tonnes/year"), evidence, source_url. Only emit capacity items you actually found evidence for.
 - Customer references (who they've worked for, in what domain, when)
 - Headquarters address (extract from About / Contact / Footer / company info sections). Provide as a structured object with street, postal_code, city, region, country (ISO-2 or full name), required evidence, and source_url. Omit entirely if you cannot find it.
 
 Rules:
-- ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, or customer references.
+- ONLY report what you found in the provided search results. NEVER invent capabilities, products, services, customer references, capacity signals, or certifications.
 - Every match MUST have an evidence field explaining what specific text or information supports it.
 - If the search results contain limited information, produce a shorter profile. Do not pad with assumptions.
 - Match strength is not your concern here — that was assessed in Step 3. Your job is to provide detailed evidence of what this company can do.
 - Use the ontology entry IDs from the role targets when matching. If a capability matches a target entry, use that entry's ID. If you find something not in the targets, describe it but mark it as "additional" (no ontology ID).
 - For classification: be specific about which country's system (NO, SE, NATO, etc.) and the national term (HEMMELIG, HEMLIG, etc.). Only report what you found evidence for.
 - For customer references: include the customer segment (defense, civil_government, commercial, export) where identifiable.
-- All enum values MUST be lowercase: confidence ("high"|"medium"|"low"), classification level ("top_secret"|"secret"|"confidential"|"restricted"|"industrial_security"|"unclassified"|"unknown"), customer segment ("defense"|"civil_government"|"commercial"|"export"), source type ("company_website"|"news"|"directory"|"government"|"linkedin"|"annual_report"|"other").`;
+- All enum values MUST be lowercase: confidence ("high"|"medium"|"low"), classification level ("top_secret"|"secret"|"confidential"|"restricted"|"industrial_security"|"unclassified"|"unknown"), customer segment ("defense"|"civil_government"|"commercial"|"export"), source type ("company_website"|"news"|"directory"|"government"|"linkedin"|"annual_report"|"other"), capacity attribute_type ("team_size"|"fleet_size"|"mobilization_time"|"production_capacity"|"other_capacity").`;
 
 const ANALYSIS_TOOL_SCHEMA = {
   type: "function" as const,
