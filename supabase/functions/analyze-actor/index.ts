@@ -410,6 +410,12 @@ serve(async (req) => {
     const actor = body.actor as ActorIn;
     const role = body.role as RoleIn;
     const constraints = body.constraints || {};
+    // AX2: optional persistence target — when provided AND it matches a row in
+    // public.actors, extracted capacity + standards are written via the
+    // SECURITY DEFINER fn_persist_actor_enrichment RPC (idempotent).
+    const persistToActorId: string | null = typeof body.persist_to_actor_id === "string"
+      ? body.persist_to_actor_id
+      : null;
 
     if (!actor || !actor.name) {
       return new Response(JSON.stringify({ error: "Missing actor" }), {
