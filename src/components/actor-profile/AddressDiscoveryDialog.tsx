@@ -69,6 +69,8 @@ const AddressDiscoveryDialog = ({
   const [candidates, setCandidates] = useState<WebsiteCandidate[]>([]);
   const [busy, setBusy] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string | null>(null);
+  const [orgInput, setOrgInput] = useState("");
+  const [websiteInput, setWebsiteInput] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -77,6 +79,8 @@ const AddressDiscoveryDialog = ({
       setCandidates([]);
       setDiagnostics(null);
       setSourceLabel(null);
+      setOrgInput("");
+      setWebsiteInput("");
       setDraft({
         street_address: null,
         postal_code: null,
@@ -86,6 +90,89 @@ const AddressDiscoveryDialog = ({
       });
     }
   }, [open, country]);
+
+  const runRegistryLookup = async (org: string) => {
+    setBusy(true);
+    setStep("loading");
+    try {
+      const { data, error } = await supabase.functions.invoke("enrich-from-registry", {
+        body: {
+          mode: "org_number",
+          org_number: org,
+          actor_context: { country },
+        },
+      });
+      if (error) throw new Error(error.message);
+      const payload = data as any;
+      if (payload?.error) throw new Error(payload.error);
+      const addr: AddressFields = {
+        street_address: payload?.street_address ?? null,
+        postal_code: payload?.postal_code ?? null,
+        city: payload?.city ?? null,
+        region: payload?.region ?? null,
+        country: payload?.country ?? country ?? null,
+      };
+      if (!addr.street_address && !addr.city) {
+        throw new Error("Registry returned no address fields.");
+      }
+      setDraft(addr);
+      setSource("registry");
+      setSourceLabel(`From BRREG · ${new Date().toLocaleDateString()}`);
+      setStep("confirm");
+    } catch (e: any) {
+      toast.error(`Registry lookup failed: ${e?.message ?? "unknown"}`);
+      setStep(orgNumber ? "choose" : "needOrg");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runWebsiteLookup = async (site: string) => {
+    setBusy(true);
+    setStep("loading");
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "enrich-address-from-website",
+        { body: { website: site } },
+      );
+      if (error) throw new Error(error.message);
+      const payload = data as any;
+      if (payload?.error) throw new Error(payload.error);
+      const list: WebsiteCandidate[] = payload?.candidates ?? [];
+      const diag: { path: string; hits: number; status: string }[] = payload?.diagnostics ?? [];
+      const diagSummary = diag
+        .filter((d) => d.hits > 0)
+        .map((d) => `${d.path} (${d.hits})`)
+        .join(", ");
+      setDiagnostics(diagSummary || "no matches");
+      if (list.length === 0) {
+        toast.error("Couldn't find an address on the website.");
+        setStep(website ? "choose" : "needWebsite");
+        return;
+      }
+      if (list.length === 1) {
+        setDraft({
+          street_address: list[0].street_address,
+          postal_code: list[0].postal_code,
+          city: list[0].city,
+          region: list[0].region,
+          country: list[0].country ?? country ?? null,
+        });
+        setSource("auto_enrichment");
+        setSourceLabel(`From website · ${list[0].matched_path}`);
+        setStep("confirm");
+      } else {
+        setCandidates(list);
+        setStep("pick");
+      }
+    } catch (e: any) {
+      toast.error(`Website discovery failed: ${e?.message ?? "unknown"}`);
+      setStep(website ? "choose" : "needWebsite");
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   const discoverFromRegistry = async () => {
     if (!orgNumber) {
