@@ -381,8 +381,8 @@ serve(async (req) => {
     const isAdmin = isAdminData === true;
     if (!isAdmin && actorRow.verifier_id !== user.id) return json({ error: "Forbidden" }, 403);
 
-    const found = await findTeamPage(baseUrl.href);
-    if (!found) {
+    const ranked = await findTeamPages(baseUrl.href);
+    if (ranked.length === 0) {
       console.log(`[enrich-from-team-page] no team page found for ${baseUrl.href}`);
       return json({
         ok: true,
@@ -393,24 +393,6 @@ serve(async (req) => {
         reason: "no_team_page_found",
       });
     }
-    console.log(`[enrich-from-team-page] candidate ${found.url} score=${found.score}`);
-
-    let contacts: ScrapedContact[];
-    try {
-      contacts = await llmExtractContacts(found.text, found.url, lovableKey);
-    } catch (e) {
-      console.error(`[enrich-from-team-page] llm error`, e);
-      return json({
-        ok: false,
-        error: (e as Error).message,
-        source_url: found.url,
-      }, 502);
-    }
-
-    const filtered = contacts.filter(
-      (c) => c.name && (c.title || c.email || c.phone || c.linkedin),
-    );
-    console.log(`[enrich-from-team-page] llm returned ${contacts.length}, kept ${filtered.length}`);
 
     const { data: existing } = await supa
       .from("actor_contacts")
@@ -419,6 +401,50 @@ serve(async (req) => {
     const seen = new Set<string>(
       (existing ?? []).map((r) => (r.name ?? "").trim().toLowerCase()),
     );
+
+    // Try up to MAX_FALLBACK_ATTEMPTS candidates in order. Stop as soon as one
+    // yields at least one extractable contact.
+    const tried: string[] = [];
+    let chosen: CandidatePage | null = null;
+    let filtered: ScrapedContact[] = [];
+    let lastError: string | null = null;
+
+    for (const candidate of ranked.slice(0, MAX_FALLBACK_ATTEMPTS)) {
+      tried.push(candidate.url);
+      console.log(`[enrich-from-team-page] attempt ${tried.length} → ${candidate.url}`);
+      let contacts: ScrapedContact[] = [];
+      try {
+        contacts = await llmExtractContacts(candidate.text, candidate.url, lovableKey);
+      } catch (e) {
+        lastError = (e as Error).message;
+        console.error(`[enrich-from-team-page] llm error on ${candidate.url}`, e);
+        continue;
+      }
+      const kept = contacts.filter(
+        (c) => c.name && (c.title || c.email || c.phone || c.linkedin),
+      );
+      console.log(`[enrich-from-team-page] ${candidate.url} → llm=${contacts.length} kept=${kept.length}`);
+      if (kept.length > 0) {
+        chosen = candidate;
+        filtered = kept;
+        break;
+      }
+    }
+
+    console.log(`[enrich-from-team-page] attempts: ${JSON.stringify(tried)} chosen=${chosen?.url ?? "none"}`);
+
+    if (!chosen) {
+      return json({
+        ok: true,
+        scraped_count: 0,
+        written_count: 0,
+        skipped_count: 0,
+        source_url: ranked[0]?.url ?? null,
+        attempts: tried,
+        reason: lastError ? "llm_error" : "no_contacts_found",
+        error: lastError,
+      });
+    }
 
     let written = 0;
     let skipped = 0;
@@ -450,8 +476,9 @@ serve(async (req) => {
       p_actor_id: actor_id,
       p_programme_id: null,
       p_changes: {
-        source_url: found.url,
+        source_url: chosen.url,
         base_url: baseUrl.href,
+        attempts: tried,
         scraped_count: filtered.length,
         written_count: written,
         skipped_count: skipped,
@@ -464,7 +491,8 @@ serve(async (req) => {
       scraped_count: filtered.length,
       written_count: written,
       skipped_count: skipped,
-      source_url: found.url,
+      source_url: chosen.url,
+      attempts: tried,
     });
   } catch (e) {
     console.error(`[enrich-from-team-page] fatal`, e);
