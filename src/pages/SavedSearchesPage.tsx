@@ -95,7 +95,7 @@ const SavedSearchesPage = () => {
                 </p>
               </div>
               <div className="flex gap-1.5">
-                <Button size="sm" variant="outline" onClick={() => runNow(r.id, r.need_payload)} disabled={running === r.id}>
+                <Button size="sm" variant="outline" onClick={() => runNow(r.id, r.need_payload, r.axis_weights ?? null)} disabled={running === r.id}>
                   <Play className="w-3 h-3 mr-1" /> {running === r.id ? "Running…" : "Run now"}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={async () => { try { await remove(r.id); toast.success("Deleted"); } catch (e: any) { toast.error(e?.message); } }}>
