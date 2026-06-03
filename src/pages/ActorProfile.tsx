@@ -2779,7 +2779,8 @@ const ActorProfile = () => {
           onOpenChange={(o) => !o && setMediaEditor(null)}
           actorId={id}
           slotType={mediaEditor.slot}
-          defaultQuery={name}
+          defaultQuery={mediaEditor.defaultQuery ?? name}
+          linkedProductName={mediaEditor.linkedProductName}
           onSave={() => {
             setMediaEditor(null);
             void handleMediaSaved();
