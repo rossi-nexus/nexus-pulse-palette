@@ -1155,7 +1155,8 @@ const MediaEditor = ({
 // ---- Contacts ----
 // Save as we go (multiple contacts), show existing, allow auto-scan and
 // manual entry, don't auto-advance.
-const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
+const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChanged }: EditorProps) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [email, setEmail] = useState("");
@@ -1181,18 +1182,27 @@ const ContactsEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) =
   const scan = async () => {
     setScanning(true);
     try {
+      let base_url = resolver.website;
+      if (!base_url) {
+        const refreshed = await resolver.refresh();
+        base_url = refreshed.website;
+      }
+      if (!base_url) {
+        toast.error("Add a website above first.");
+        return;
+      }
       const { data, error } = await supabase.functions.invoke(
         "enrich-from-team-page",
-        { body: { actor_id: actorId } },
+        { body: { actor_id: actorId, base_url } },
       );
-      if (error) throw new Error(error.message);
+      if (error) throw new Error((data as any)?.error ?? error.message);
       const added = (data as any)?.contacts_added ?? 0;
       if (added > 0) {
         toast.success(`Scanned team page — ${added} contact(s) added`);
         await loadExisting();
         onChanged();
       } else {
-        toast.error("Couldn't find any contacts on the team page.");
+        toast.error((data as any)?.message ?? "Couldn't find any contacts on the team page.");
       }
     } catch (e: any) {
       toast.error(`Scan failed: ${e?.message ?? "unknown"}`);
