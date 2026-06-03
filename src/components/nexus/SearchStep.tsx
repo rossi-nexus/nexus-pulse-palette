@@ -137,6 +137,13 @@ interface SearchStepProps {
 const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames, sessionId = null, onAddRoleFromCoverage }: SearchStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [editConstraintsOpen, setEditConstraintsOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const compareSet = useCompareSet();
+  // AX3b — local override so "Edit constraints" can re-run without mutating the locked Step 2 output.
+  const [constraintsOverride, setConstraintsOverride] = useState<any | null>(null);
+
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
@@ -164,9 +171,62 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
 
   const expandedResult = orderedRoles.find(r => r.role_id === expandedRoleId);
 
+  // AX3b — effective constraints used by header pills + Edit dialog.
+  const effectiveConstraints = useMemo(
+    () => constraintsOverride ?? interpretation?.constraints ?? {},
+    [constraintsOverride, interpretation],
+  );
+
+  const rerunWith = (nextConstraints: any) => {
+    if (!interpretation) return;
+    const nextInterp: Interpretation = { ...interpretation, constraints: nextConstraints } as any;
+    setConstraintsOverride(nextConstraints);
+    startSearch(nextInterp);
+    toast.success("Re-running with updated constraints");
+  };
+
+  const removePill = (key: string) => {
+    const next = JSON.parse(JSON.stringify(effectiveConstraints ?? {}));
+    if (key.startsWith("certifications.required:")) {
+      const v = key.split(":")[1];
+      next.certifications = next.certifications ?? {};
+      next.certifications.required = (next.certifications.required ?? []).filter((c: string) => c !== v);
+    } else if (key.startsWith("certifications.preferred:")) {
+      const v = key.split(":")[1];
+      next.certifications = next.certifications ?? {};
+      next.certifications.preferred = (next.certifications.preferred ?? []).filter((c: string) => c !== v);
+    } else {
+      const [a, b] = key.split(".");
+      if (a && b && next[a]) delete next[a][b];
+    }
+    rerunWith(next);
+  };
+
+  const compareInclude = (a: ActorCardData) => {
+    // Find the role this actor belongs to so includeActor knows where to apply.
+    for (const r of orderedRoles) {
+      if (r.actors.some((x) => x.id === a.id)) {
+        includeActor(r.role_id, a.id);
+        toast.success(`Included ${a.name}`);
+        return;
+      }
+    }
+  };
+  const compareSave = (a: ActorCardData) => {
+    for (const r of orderedRoles) {
+      if (r.actors.some((x) => x.id === a.id)) {
+        saveForLater(r.role_id, a.id);
+        toast.success(`Saved ${a.name}`);
+        return;
+      }
+    }
+  };
+
   const showDev =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("dev") === "step3";
+
+
 
   // Not started
   if (status === "not_started") {
