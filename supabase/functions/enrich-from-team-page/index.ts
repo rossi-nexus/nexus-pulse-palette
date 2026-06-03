@@ -133,7 +133,59 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-interface CandidatePage { url: string; text: string; score: number; }
+interface ContactDetailCandidate {
+  type: "email" | "phone" | "linkedin";
+  value: string;
+  nearby_text: string;
+}
+
+interface CandidatePage {
+  url: string;
+  text: string;
+  score: number;
+  details: ContactDetailCandidate[];
+}
+
+// V3 Batch B item 4 — pull mailto:, tel:, and linkedin.com/in/... out of raw
+// HTML, with a small window of surrounding text so the LLM can correlate the
+// detail to the nearest person.
+function extractContactDetails(html: string): ContactDetailCandidate[] {
+  const out: ContactDetailCandidate[] = [];
+  const PATTERNS: Array<{ type: ContactDetailCandidate["type"]; re: RegExp; extract: (m: RegExpExecArray) => string }> = [
+    { type: "email", re: /(?:mailto:)([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,})/gi, extract: (m) => m[1] },
+    // Standalone email (not inside mailto) — guard against template noise.
+    { type: "email", re: /(?<![a-zA-Z0-9._\-])([A-Z0-9._%+\-]{2,}@[A-Z0-9.\-]+\.[A-Z]{2,})/gi, extract: (m) => m[1] },
+    { type: "phone", re: /(?:tel:)([+0-9()\-.\s]{6,})/gi, extract: (m) => m[1].trim() },
+    { type: "linkedin", re: /https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub)\/[A-Za-z0-9\-_%/.]+/gi, extract: (m) => m[0].replace(/[)>"',]+$/, "") },
+  ];
+  const skipMailbox = /^(?:info|contact|sales|support|hello|hei|post|kontakt|firmapost|enquiries|admin|office|press|hr|recruitment|jobb|career|careers)@/i;
+  const seen = new Set<string>();
+
+  for (const { type, re, extract } of PATTERNS) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    let safety = 0;
+    while ((m = re.exec(html)) !== null && safety++ < 500) {
+      const raw = extract(m).trim();
+      if (!raw) continue;
+      if (type === "email" && skipMailbox.test(raw)) continue;
+      const key = `${type}:${raw.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // Pull a ~120-char window around the match for nearby text.
+      const idx = m.index;
+      const start = Math.max(0, idx - 200);
+      const end = Math.min(html.length, idx + raw.length + 200);
+      const slice = html.slice(start, end);
+      const nearby = stripHtml(slice).replace(/\s+/g, " ").trim().slice(0, 240);
+
+      out.push({ type, value: raw, nearby_text: nearby });
+      if (out.length >= 60) return out;
+    }
+  }
+  return out;
+}
 
 async function tryFetchPage(candidate: string): Promise<CandidatePage | null> {
   try {
@@ -149,7 +201,8 @@ async function tryFetchPage(candidate: string): Promise<CandidatePage | null> {
     const truncated = text.length > MAX_TEXT_CHARS
       ? text.slice(0, MAX_TEXT_CHARS) + "\n\n[Content truncated]"
       : text;
-    return { url: candidate, text: truncated, score };
+    const details = extractContactDetails(html);
+    return { url: candidate, text: truncated, score, details };
   } catch {
     return null;
   }
