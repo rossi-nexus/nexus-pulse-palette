@@ -109,12 +109,12 @@ const AddActorPage = () => {
             trade_names: (p.trade_names ?? []).join(", "),
             source: "registry",
           });
-          setRegistryBanner(`Pre-filled from ${REGISTRIES[registryId]?.label ?? registryId}.`);
+          setRegistryBanner(`Pre-filled from ${registryName(registryId)}.`);
         }
       } else {
         setForm({ ...emptyForm, country, org_number: orgNumber.trim(), source: "manual" });
         setRegistryBanner(
-          `Not found in ${REGISTRIES[registryId]?.label ?? registryId}. Continue with blank form.`,
+          `Not found in ${registryName(registryId)}. Continue with blank form.`,
         );
       }
       setStep(2);
@@ -220,7 +220,7 @@ const AddActorPage = () => {
                 value={orgNumber}
                 onChange={(e) => setOrgNumber(e.target.value)}
                 placeholder={
-                  registryId ? `e.g. 975995453 (${REGISTRIES[registryId]?.label})` : "Org / registration number"
+                  registryId ? `e.g. 975995453 (${registryName(registryId)})` : "Org / registration number"
                 }
               />
             </div>
