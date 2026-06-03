@@ -200,6 +200,9 @@ const TOOL_SCHEMA = {
                 min_value: { type: "number" },
                 max_value: { type: "number" },
                 unit: { type: "string" },
+                min_team_size: { type: ["integer", "null"], description: "Minimum headcount the actor must have." },
+                max_mobilization_days: { type: ["integer", "null"], description: "Maximum mobilization/response time in days." },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
               },
             },
             standards: {
@@ -207,6 +210,38 @@ const TOOL_SCHEMA = {
               properties: {
                 required: { type: "array", items: { type: "string" } },
                 preferred: { type: "array", items: { type: "string" } },
+              },
+            },
+            certifications: {
+              type: "object",
+              description: "Structured certification requirements used by the ranking engine.",
+              properties: {
+                required: { type: "array", items: { type: "string" }, description: "Must-have certifications (e.g. ['ISO 9001', 'AQAP 2110'])." },
+                preferred: { type: "array", items: { type: "string" }, description: "Nice-to-have certifications." },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            language: {
+              type: "object",
+              properties: {
+                required: { type: "array", items: { type: "string" }, description: "ISO 639-1 codes or language names required for delivery." },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            urgency: {
+              type: "object",
+              properties: {
+                level: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                rationale: { type: "string" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            budget: {
+              type: "object",
+              properties: {
+                max_eur: { type: ["integer", "null"] },
+                currency_original: { type: "string" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
               },
             },
             contract_duration: {
@@ -219,6 +254,11 @@ const TOOL_SCHEMA = {
               },
             },
             search_context: { type: "string" },
+            inference_paths: {
+              type: "object",
+              description: "Per-axis explanation of why a constraint was inferred. Keys are axis names (e.g. 'capacity', 'certifications', 'urgency'); values are short rationale strings citing the source phrase.",
+              additionalProperties: { type: "string" },
+            },
           },
         },
         clarification_points: {
