@@ -549,6 +549,27 @@ const ActorProfile = () => {
     }
   };
 
+  // V3 batch #3 Area 2 — link/unlink an actor_media row to a product name by
+  // patching crop_data.linked_product_name. Used by orphan-linking dropdown.
+  const linkMediaToProduct = async (
+    m: { id: string; crop_data?: any },
+    productName: string | null,
+  ) => {
+    if (!id) return;
+    try {
+      const next = { ...(m.crop_data ?? {}), linked_product_name: productName };
+      const { error } = await supabase
+        .from("actor_media")
+        .update({ crop_data: next })
+        .eq("id", m.id);
+      if (error) throw error;
+      await refreshMedia();
+      toast.success(productName ? `Linked to "${productName}"` : "Unlinked from product");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update link.");
+    }
+  };
+
   // Manual ontology entry — which ontology section is in add mode + the draft
   type OntologyKey = "capabilities" | "competences" | "domains" | "products" | "services";
   const [addingOntology, setAddingOntology] = useState<OntologyKey | null>(null);
