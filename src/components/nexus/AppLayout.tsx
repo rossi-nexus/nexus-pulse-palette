@@ -4,6 +4,8 @@ import SidebarNav from "./SidebarNav";
 import PipelineView from "./PipelineView";
 import ActorsView from "./ActorsView";
 import ActorProfile from "@/pages/ActorProfile";
+import ProductDetailPage from "@/pages/ProductDetailPage";
+import AddActorPage from "@/pages/AddActorPage";
 import ActorsMapPage from "@/pages/ActorsMapPage";
 import { SessionProvider } from "@/contexts/SessionContext";
 
