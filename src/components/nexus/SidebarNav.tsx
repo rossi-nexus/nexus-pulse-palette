@@ -91,6 +91,7 @@ const SidebarNav = () => {
   const navItems = [
     { to: "/pipeline", icon: Zap, label: "Pipeline" },
     { to: "/actors", icon: Database, label: "Actors" },
+    { to: "/saved-searches", icon: Bookmark, label: "Saved searches" },
     ...(isAdmin ? [{ to: "/admin", icon: Settings, label: "Admin" }] : []),
   ];
 
