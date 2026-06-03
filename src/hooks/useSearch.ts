@@ -23,6 +23,8 @@ export interface ActorCardData {
   name: string;
   location?: string;
   country?: string;
+  latitude?: number;
+  longitude?: number;
   website?: string;
   description: string;
   match_strength: "strong" | "moderate" | "weak";
@@ -326,6 +328,8 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
               name: row.legal_name,
               location: locationBits.join(", ") || undefined,
               country: row.country ?? undefined,
+              latitude: row.latitude != null ? Number(row.latitude) : undefined,
+              longitude: row.longitude != null ? Number(row.longitude) : undefined,
               website,
               description: `${Array.isArray(row.matched_entry_ids) ? row.matched_entry_ids.length : 0} of ${targetEntryIds.length} tags matched`,
               match_strength: overlap >= 2.5 ? "strong" : overlap >= 1.4 ? "moderate" : "weak",

@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Zap, Database, Settings, ChevronLeft, ChevronRight, Plus,
-  FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon,
+  FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon, Bookmark,
 } from "lucide-react";
 import { useSessionContext, type SessionListItem } from "@/contexts/SessionContext";
 import { useProgrammeList } from "@/hooks/useProgramme";
@@ -91,6 +91,7 @@ const SidebarNav = () => {
   const navItems = [
     { to: "/pipeline", icon: Zap, label: "Pipeline" },
     { to: "/actors", icon: Database, label: "Actors" },
+    { to: "/saved-searches", icon: Bookmark, label: "Saved searches" },
     ...(isAdmin ? [{ to: "/admin", icon: Settings, label: "Admin" }] : []),
   ];
 

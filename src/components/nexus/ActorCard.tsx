@@ -1,4 +1,5 @@
-import { Check, Bookmark, Undo2, ExternalLink, ArrowRightLeft } from "lucide-react";
+import { useState } from "react";
+import { Check, Bookmark, Undo2, ExternalLink, ArrowRightLeft, ChevronDown, GitCompare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
@@ -11,7 +12,9 @@ interface ActorCardProps {
   onInclude: (roleId: string, actorId: string) => void;
   onSaveForLater: (roleId: string, actorId: string) => void;
   onUndo: (roleId: string, actorId: string) => void;
-  /** When true, hides include/save/undo action buttons (review-only view). */
+  /** AX3b — compare toggle */
+  isCompareSelected?: boolean;
+  onToggleCompare?: (actor: ActorCardData) => void;
   readOnly?: boolean;
 }
 
@@ -21,9 +24,93 @@ const strengthConfig = {
   weak: { label: "Weak", className: "bg-foreground-muted/10 text-foreground-muted border-foreground-muted/20" },
 };
 
-const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly = false }: ActorCardProps) => {
+// AX3b — tier-coloured score badge
+function scoreTone(s: number): string {
+  if (s >= 0.8) return "border-accent-teal/40 text-accent-teal bg-accent-teal/10";
+  if (s >= 0.5) return "border-warning/40 text-warning bg-warning/10";
+  return "border-foreground-muted/30 text-foreground-muted bg-foreground-muted/10";
+}
+
+interface AxisRow {
+  key: string;
+  label: string;
+  score: number;
+  weight: number;
+  contrib: number;
+  detail: string | null;
+}
+
+function buildAxisRows(breakdown: any): AxisRow[] {
+  if (!breakdown || typeof breakdown !== "object") return [];
+  const out: AxisRow[] = [];
+  const order = ["ontology", "geography", "outcome", "decay", "capacity", "certification", "group_rollup", "engagement"];
+  for (const key of order) {
+    const a = breakdown[key];
+    if (!a || typeof a !== "object") continue;
+    let detail: string | null = null;
+    if (key === "ontology") {
+      const m = Array.isArray(a.matched_tags) ? a.matched_tags.length : 0;
+      const i = Array.isArray(a.inherited_tags) ? a.inherited_tags.length : 0;
+      detail = `${m} matched${i > 0 ? ` · ${i} inherited` : ""}`;
+    } else if (key === "geography") {
+      detail = a.filter ?? (a.distance_km != null ? `${Math.round(a.distance_km)}km` : "no constraint");
+    } else if (key === "outcome") {
+      detail = `${a.outcome_count ?? 0} outcomes · mod ${a.modifier ?? "—"}`;
+    } else if (key === "decay") {
+      detail = a.verified_at ? `verified ${new Date(a.verified_at).toLocaleDateString()}` : "unverified";
+    } else if (key === "capacity") {
+      const sig = Array.isArray(a.matched_signals) ? a.matched_signals : [];
+      detail = sig.length > 0 ? sig.join("; ") : "no constraint";
+    } else if (key === "certification") {
+      const m = Array.isArray(a.matched) ? a.matched : [];
+      const miss = Array.isArray(a.missing) ? a.missing : [];
+      detail = m.length === 0 && miss.length === 0 ? "no constraint" : `matched ${m.join(", ") || "—"}${miss.length ? ` · missing ${miss.join(", ")}` : ""}`;
+    } else if (key === "group_rollup") {
+      detail = a.via_parent ? `via ${a.via_parent} (${a.inherited_count ?? 0} tags)` : null;
+      if (!detail) continue;
+    } else if (key === "engagement") {
+      continue;
+    }
+    out.push({
+      key,
+      label: key === "group_rollup" ? "Group rollup" : key.charAt(0).toUpperCase() + key.slice(1),
+      score: Number(a.score) || 0,
+      weight: Number(a.weight) || 0,
+      contrib: Number(a.contrib) || 0,
+      detail,
+    });
+  }
+  return out;
+}
+
+function topAxisChips(breakdown: any, max = 3): { label: string; key: string }[] {
+  const rows = buildAxisRows(breakdown)
+    .filter((r) => r.contrib > 0)
+    .sort((a, b) => b.contrib - a.contrib)
+    .slice(0, max);
+  return rows.map((r) => {
+    if (r.key === "ontology" && r.detail) return { key: r.key, label: r.detail.split(" ")[0] + " tags" };
+    if (r.key === "geography" && r.detail && r.detail !== "no constraint") return { key: r.key, label: r.detail };
+    if (r.key === "certification" && r.detail && r.detail !== "no constraint") {
+      const m = breakdown.certification?.matched;
+      if (Array.isArray(m) && m.length) return { key: r.key, label: m[0] };
+    }
+    if (r.key === "capacity" && r.detail && r.detail !== "no constraint") return { key: r.key, label: r.detail.split(" ")[0] };
+    return { key: r.key, label: r.label };
+  });
+}
+
+const ActorCard = ({
+  actor, roleId, onInclude, onSaveForLater, onUndo,
+  isCompareSelected, onToggleCompare, readOnly = false,
+}: ActorCardProps) => {
+  const [open, setOpen] = useState(false);
   const strength = strengthConfig[actor.match_strength] || strengthConfig.moderate;
   const hasDecision = actor.triage_decision !== undefined;
+  const breakdown: any = actor.relevance_breakdown ?? null;
+  const score = typeof actor.relevance_score === "number" ? actor.relevance_score : null;
+  const axisRows = buildAxisRows(breakdown);
+  const chips = topAxisChips(breakdown);
 
   return (
     <div className={cn(
@@ -33,28 +120,27 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
         "border-accent-teal/40 border-l-accent-teal bg-accent-teal/5 shadow-[0_0_0_1px_hsl(var(--accent-teal)/0.15)]",
       actor.triage_decision === "saved_for_later" &&
         "border-foreground-muted/30 border-l-foreground-muted/40 opacity-70",
+      isCompareSelected && "ring-2 ring-accent-blue/50",
     )}>
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="text-body font-medium text-foreground">{actor.name}</h4>
+            {score !== null && (
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] px-1.5 py-0 h-4 rounded-sharp font-mono", scoreTone(score))}
+                title={`Relevance ${score.toFixed(2)}`}
+              >
+                {score.toFixed(2)}
+              </Badge>
+            )}
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-4 rounded-sharp", strength.className)}>
               {strength.label}
             </Badge>
             {actor.cross_role && (
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-blue/40 text-accent-blue gap-1"
-                title={
-                  actor.cross_role_strengths
-                    ? `Cross-role score ${actor.cross_role_score?.toFixed(2) ?? "—"}\n` +
-                      actor.cross_role_strengths
-                        .map(s => `• ${s.role_name}: ${s.strength}`)
-                        .join("\n")
-                    : undefined
-                }
-              >
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-blue/40 text-accent-blue gap-1">
                 <ArrowRightLeft className="w-2.5 h-2.5" />
                 Multi-role
                 {typeof actor.cross_role_score === "number" && (
@@ -62,28 +148,8 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
                 )}
               </Badge>
             )}
-            {typeof actor.relevance_score === "number" && (
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 rounded-sharp border-accent-teal/30 text-accent-teal font-mono"
-                title={
-                  actor.relevance_breakdown
-                    ? `Relevance ${actor.relevance_score.toFixed(2)}\n` +
-                      `• overlap: ${actor.relevance_breakdown.overlap?.toFixed(2) ?? "—"}\n` +
-                      `• outcome: ${actor.relevance_breakdown.outcome?.toFixed(2) ?? "n/a"}\n` +
-                      `• decay: ${actor.relevance_breakdown.decay?.toFixed(2) ?? "—"}`
-                    : `Relevance ${actor.relevance_score.toFixed(2)}`
-                }
-              >
-                R {actor.relevance_score.toFixed(2)}
-              </Badge>
-            )}
             {actor.matched_verified_at && (
-              <VerifiedStatusBadge
-                size="sm"
-                verifiedAt={actor.matched_verified_at}
-                decaysAt={actor.matched_decays_at}
-              />
+              <VerifiedStatusBadge size="sm" verifiedAt={actor.matched_verified_at} decaysAt={actor.matched_decays_at} />
             )}
           </div>
           {(actor.location || actor.country) && (
@@ -92,20 +158,77 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
             </p>
           )}
         </div>
-        {actor.website && (
-          <a
-            href={actor.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground-muted hover:text-foreground-secondary transition-colors shrink-0"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {onToggleCompare && (
+            <button
+              type="button"
+              onClick={() => onToggleCompare(actor)}
+              className={cn(
+                "p-1 rounded transition-colors",
+                isCompareSelected
+                  ? "bg-accent-blue/15 text-accent-blue"
+                  : "text-foreground-muted hover:text-foreground-secondary hover:bg-elevated",
+              )}
+              title={isCompareSelected ? "Remove from compare" : "Add to compare"}
+            >
+              <GitCompare className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {actor.website && (
+            <a href={actor.website} target="_blank" rel="noopener noreferrer"
+               className="text-foreground-muted hover:text-foreground-secondary transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
       </div>
+
+      {/* AX3b — top axis highlight chips */}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map((c) => (
+            <span key={c.key} className="text-[10px] font-mono px-1.5 py-0.5 rounded-sharp bg-elevated text-foreground-secondary border border-border-subtle">
+              {c.label}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Description */}
       <p className="text-body-sm text-foreground-secondary">{actor.description}</p>
+
+      {/* AX3b — Why matched expander */}
+      {axisRows.length > 0 && (
+        <div className="border-t border-border-subtle pt-2">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-1 text-caption text-foreground-muted hover:text-foreground-secondary transition-colors"
+          >
+            <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
+            Why matched
+            {score !== null && <span className="font-mono ml-1">· total {score.toFixed(2)}</span>}
+          </button>
+          {open && (
+            <div className="mt-2 space-y-1.5">
+              {axisRows.sort((a, b) => b.contrib - a.contrib).map((r) => (
+                <div key={r.key} className="text-[11px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-foreground-secondary">{r.label}</span>
+                    <span className="font-mono text-foreground-muted">
+                      {r.score.toFixed(2)} × {r.weight.toFixed(2)} = {r.contrib.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="h-1 mt-0.5 bg-elevated rounded-sharp overflow-hidden">
+                    <div className="h-full bg-accent-teal/60" style={{ width: `${Math.min(100, r.score * 100)}%` }} />
+                  </div>
+                  {r.detail && <div className="text-foreground-muted mt-0.5">{r.detail}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Classification & Standards */}
       {(actor.classification_found || (actor.standards_found && actor.standards_found.length > 0)) && (
@@ -123,35 +246,26 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
         </div>
       )}
 
-      {/* Evidence snippets */}
       {actor.evidence_snippets.length > 0 && (
         <div className="space-y-1">
           {actor.evidence_snippets.slice(0, 2).map((snippet, i) => (
-            <p key={i} className="text-caption text-foreground-muted italic leading-relaxed">
-              "{snippet}"
-            </p>
+            <p key={i} className="text-caption text-foreground-muted italic leading-relaxed">"{snippet}"</p>
           ))}
         </div>
       )}
 
-      {/* Sources */}
       {actor.sources.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {actor.sources.slice(0, 3).map((src, i) => (
-            <a
-              key={i}
-              href={src.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-mono-xs font-mono text-foreground-muted hover:text-foreground-secondary transition-colors truncate max-w-[200px]"
-            >
+            <a key={i} href={src.url} target="_blank" rel="noopener noreferrer"
+               className="text-mono-xs font-mono text-foreground-muted hover:text-foreground-secondary transition-colors truncate max-w-[200px]">
               {new URL(src.url).hostname.replace(/^www\./, "")}
             </a>
           ))}
         </div>
       )}
 
-      {/* Action buttons — hidden in review-only mode; status is still shown */}
+      {/* Action buttons */}
       <div className="flex items-center gap-2 pt-1 border-t border-border-subtle">
         {readOnly ? (
           hasDecision && (
@@ -161,21 +275,13 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
           )
         ) : !hasDecision ? (
           <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onInclude(roleId, actor.id)}
-              className="gap-1.5 text-accent-teal border-accent-teal/30 hover:bg-accent-teal/10 h-7 text-xs"
-            >
+            <Button size="sm" variant="outline" onClick={() => onInclude(roleId, actor.id)}
+              className="gap-1.5 text-accent-teal border-accent-teal/30 hover:bg-accent-teal/10 h-7 text-xs">
               <Check className="w-3 h-3" />
               Include in Step 4
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onSaveForLater(roleId, actor.id)}
-              className="gap-1.5 text-foreground-muted hover:text-foreground-secondary h-7 text-xs"
-            >
+            <Button size="sm" variant="ghost" onClick={() => onSaveForLater(roleId, actor.id)}
+              className="gap-1.5 text-foreground-muted hover:text-foreground-secondary h-7 text-xs">
               <Bookmark className="w-3 h-3" />
               Save for later
             </Button>
@@ -185,10 +291,8 @@ const ActorCard = ({ actor, roleId, onInclude, onSaveForLater, onUndo, readOnly 
             <span className="text-mono-xs font-mono text-foreground-muted uppercase tracking-wider">
               {actor.triage_decision === "included" ? "✓ Included" : "⏳ Saved"}
             </span>
-            <button
-              onClick={() => onUndo(roleId, actor.id)}
-              className="flex items-center gap-1 text-caption text-foreground-muted hover:text-foreground-secondary transition-colors"
-            >
+            <button onClick={() => onUndo(roleId, actor.id)}
+              className="flex items-center gap-1 text-caption text-foreground-muted hover:text-foreground-secondary transition-colors">
               <Undo2 className="w-3 h-3" />
               Undo
             </button>

@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Loader2, Lock, Unlock, FlaskConical, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Loader2, Lock, Unlock, FlaskConical, Search, Bookmark, SlidersHorizontal, GitCompare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import StepContainer from "./StepContainer";
 import { SessionMapButton } from "./SessionMapButton";
 import RoleProgressBox from "./RoleProgressBox";
@@ -8,7 +9,12 @@ import ActorCard from "./ActorCard";
 import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import CoverageBanner from "./CoverageBanner";
-import type { useSearch } from "@/hooks/useSearch";
+import ConstraintPills from "./ConstraintPills";
+import CompareModal from "./CompareModal";
+import SaveSearchDialog from "./SaveSearchDialog";
+import EditConstraintsSlideOver from "./EditConstraintsSlideOver";
+import { useCompareSet } from "@/hooks/useCompareSet";
+import type { useSearch, ActorCardData } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
 
 const MOCK_INTERPRETATION: Interpretation = {
@@ -131,6 +137,13 @@ interface SearchStepProps {
 const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamStepNames, sessionId = null, onAddRoleFromCoverage }: SearchStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [editConstraintsOpen, setEditConstraintsOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const compareSet = useCompareSet();
+  // AX3b — local override so "Edit constraints" can re-run without mutating the locked Step 2 output.
+  const [constraintsOverride, setConstraintsOverride] = useState<any | null>(null);
+
   const handleUnlockClick = () => {
     if (downstreamStepNames.length > 0) setUnlockDialogOpen(true);
     else onUnlock();
@@ -158,9 +171,62 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
 
   const expandedResult = orderedRoles.find(r => r.role_id === expandedRoleId);
 
+  // AX3b — effective constraints used by header pills + Edit dialog.
+  const effectiveConstraints = useMemo(
+    () => constraintsOverride ?? interpretation?.constraints ?? {},
+    [constraintsOverride, interpretation],
+  );
+
+  const rerunWith = (nextConstraints: any) => {
+    if (!interpretation) return;
+    const nextInterp: Interpretation = { ...interpretation, constraints: nextConstraints } as any;
+    setConstraintsOverride(nextConstraints);
+    startSearch(nextInterp);
+    toast.success("Re-running with updated constraints");
+  };
+
+  const removePill = (key: string) => {
+    const next = JSON.parse(JSON.stringify(effectiveConstraints ?? {}));
+    if (key.startsWith("certifications.required:")) {
+      const v = key.split(":")[1];
+      next.certifications = next.certifications ?? {};
+      next.certifications.required = (next.certifications.required ?? []).filter((c: string) => c !== v);
+    } else if (key.startsWith("certifications.preferred:")) {
+      const v = key.split(":")[1];
+      next.certifications = next.certifications ?? {};
+      next.certifications.preferred = (next.certifications.preferred ?? []).filter((c: string) => c !== v);
+    } else {
+      const [a, b] = key.split(".");
+      if (a && b && next[a]) delete next[a][b];
+    }
+    rerunWith(next);
+  };
+
+  const compareInclude = (a: ActorCardData) => {
+    // Find the role this actor belongs to so includeActor knows where to apply.
+    for (const r of orderedRoles) {
+      if (r.actors.some((x) => x.id === a.id)) {
+        includeActor(r.role_id, a.id);
+        toast.success(`Included ${a.name}`);
+        return;
+      }
+    }
+  };
+  const compareSave = (a: ActorCardData) => {
+    for (const r of orderedRoles) {
+      if (r.actors.some((x) => x.id === a.id)) {
+        saveForLater(r.role_id, a.id);
+        toast.success(`Saved ${a.name}`);
+        return;
+      }
+    }
+  };
+
   const showDev =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("dev") === "step3";
+
+
 
   // Not started
   if (status === "not_started") {
@@ -360,6 +426,23 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
               onAddRole={onAddRoleFromCoverage}
             />
           )}
+
+          {/* AX3b — header toolbar: save / edit constraints / map */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <ConstraintPills constraints={effectiveConstraints} onRemove={removePill} />
+            <div className="flex items-center gap-1 ml-auto">
+              <Button variant="ghost" size="sm" onClick={() => setEditConstraintsOpen(true)} className="gap-1.5 text-foreground-muted hover:text-foreground h-7">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Edit constraints
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSaveOpen(true)} className="gap-1.5 text-foreground-muted hover:text-foreground h-7" disabled={!interpretation}>
+                <Bookmark className="w-3.5 h-3.5" />
+                Save this search
+              </Button>
+              <SessionMapButton variant="search" />
+            </div>
+          </div>
+
           {/* Role progress boxes */}
           <div className="flex gap-2 pb-2 w-full">
             {orderedRoles.map(result => (
@@ -417,7 +500,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
                             Commercial actors ({commercial.length})
                           </div>
                           {commercial.map(actor => (
-                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} isCompareSelected={compareSet.has(actor.id)} onToggleCompare={compareSet.toggle} />
                           ))}
                         </>
                       )}
@@ -427,7 +510,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
                             Reference actors ({reference.length})
                           </div>
                           {reference.map(actor => (
-                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} />
+                            <ActorCard key={actor.id} actor={actor} roleId={expandedResult.role_id} onInclude={includeActor} onSaveForLater={saveForLater} onUndo={undoTriage} isCompareSelected={compareSet.has(actor.id)} onToggleCompare={compareSet.toggle} />
                           ))}
                         </>
                       )}
@@ -469,7 +552,39 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
             </Button>
           </div>
         )}
+
+        {/* AX3b — sticky compare bar */}
+        {compareSet.items.length >= 2 && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2 rounded-card bg-elevated border border-accent-blue/40 shadow-lg">
+            <GitCompare className="w-4 h-4 text-accent-blue" />
+            <span className="text-body-sm text-foreground">
+              Comparing <span className="font-mono text-accent-blue">{compareSet.items.length}</span> of {compareSet.max} actors
+            </span>
+            <Button size="sm" onClick={() => setCompareOpen(true)}>Open compare</Button>
+            <Button size="sm" variant="ghost" onClick={compareSet.clear}>Clear</Button>
+          </div>
+        )}
       </div>
+
+      <CompareModal
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        items={compareSet.items}
+        onInclude={compareInclude}
+        onSave={compareSave}
+      />
+      <SaveSearchDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        needPayload={interpretation ? { ...interpretation, constraints: effectiveConstraints } : null}
+      />
+      <EditConstraintsSlideOver
+        open={editConstraintsOpen}
+        onOpenChange={setEditConstraintsOpen}
+        constraints={effectiveConstraints}
+        originalConstraints={interpretation?.constraints ?? {}}
+        onApply={rerunWith}
+      />
     </StepContainer>
   );
 };

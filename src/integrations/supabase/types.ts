@@ -1312,6 +1312,53 @@ export type Database = {
           },
         ]
       }
+      saved_searches: {
+        Row: {
+          axis_weights: Json | null
+          created_at: string
+          id: string
+          last_notified_at: string | null
+          name: string
+          need_payload: Json
+          programme_id: string | null
+          threshold: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          axis_weights?: Json | null
+          created_at?: string
+          id?: string
+          last_notified_at?: string | null
+          name: string
+          need_payload: Json
+          programme_id?: string | null
+          threshold?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          axis_weights?: Json | null
+          created_at?: string
+          id?: string
+          last_notified_at?: string | null
+          name?: string
+          need_payload?: Json
+          programme_id?: string | null
+          threshold?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_searches_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: false
+            referencedRelation: "programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_analytics: {
         Row: {
           actors_found: number | null
@@ -1995,6 +2042,10 @@ export type Database = {
           state: string
           verified_at: string
         }[]
+      }
+      fn_check_saved_search_hits: {
+        Args: { p_actor_id: string }
+        Returns: undefined
       }
       fn_check_strong_product_association: {
         Args: { _alt: string; _product_name: string; _url: string }
