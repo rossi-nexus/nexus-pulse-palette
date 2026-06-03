@@ -37,7 +37,7 @@ interface Props {
   onSaved: () => void;
 }
 
-type Step = "choose" | "loading" | "pick" | "confirm";
+type Step = "choose" | "needOrg" | "needWebsite" | "loading" | "pick" | "confirm";
 type DiscoverySource = "registry" | "auto_enrichment" | "manual";
 
 interface WebsiteCandidate extends AddressFields {
