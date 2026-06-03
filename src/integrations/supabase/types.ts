@@ -2123,32 +2123,19 @@ export type Database = {
         }
         Returns: number
       }
-      fn_compute_actor_relevance_score_v2:
-        | {
-            Args: {
-              p_actor_ids: string[]
-              p_constraints?: Json
-              p_weights?: Json
-            }
-            Returns: {
-              actor_id: string
-              breakdown: Json
-              total_score: number
-            }[]
-          }
-        | {
-            Args: {
-              p_actor_ids: string[]
-              p_constraints?: Json
-              p_user_id?: string
-              p_weights?: Json
-            }
-            Returns: {
-              actor_id: string
-              breakdown: Json
-              total_score: number
-            }[]
-          }
+      fn_compute_actor_relevance_score_v2: {
+        Args: {
+          p_actor_ids: string[]
+          p_constraints?: Json
+          p_user_id?: string
+          p_weights?: Json
+        }
+        Returns: {
+          actor_id: string
+          breakdown: Json
+          total_score: number
+        }[]
+      }
       fn_create_actor_hybrid: {
         Args: {
           p_country: string
