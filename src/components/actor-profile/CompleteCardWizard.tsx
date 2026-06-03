@@ -337,9 +337,9 @@ const CompleteCardWizard = ({
           </SheetTitle>
           <SheetDescription>
             {phase === "plan" &&
-              "Review what's missing. Uncheck anything you want to mark not applicable."}
+              "Pick any section to edit. Green = has content, amber = partial, grey = empty."}
             {phase === "walk" &&
-              `Step ${stepIdx + 1} of ${keptList.length} — ${currentStep?.cardLabel ?? ""}`}
+              `Editing — ${currentStep?.cardLabel ?? ""}`}
             {phase === "confirm" && "Done."}
           </SheetDescription>
         </SheetHeader>
@@ -363,92 +363,107 @@ const CompleteCardWizard = ({
                 Nothing to complete on this actor. 🎉
               </div>
             ) : (
-              <ul className="space-y-2">
-                {visibleSections.map((s) => {
-                  const isSkipped = skippedKeys.has(s.key);
-                  return (
-                    <li
-                      key={s.key}
-                      className={cn(
-                        "rounded-md border border-border bg-surface px-3 py-2",
-                        isSkipped && "opacity-60",
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={!!keep[s.key] && !isSkipped}
-                          disabled={isSkipped}
-                          onCheckedChange={(v) =>
-                            setKeep({ ...keep, [s.key]: !!v })
-                          }
-                          className="mt-1"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "text-sm font-medium text-foreground",
-                                isSkipped && "line-through",
-                              )}
-                            >
-                              {s.label}
-                            </span>
-                            <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
-                              {s.cardLabel} · {s.presence}
-                            </span>
-                          </div>
-                          <p className="text-xs text-foreground-muted mt-0.5">
-                            {s.helpText}
-                          </p>
-                          {isSkipped ? (
-                            <div className="flex items-center justify-between mt-2 text-xs">
-                              <span className="text-foreground-muted italic">
-                                Skipped: {
-                                  skipped.find((sk) => sk.section_key === s.key)?.reason ?? "no reason"
-                                }
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-xs"
-                                onClick={() => unskip(s.key)}
-                              >
-                                Un-skip
-                              </Button>
-                            </div>
-                          ) : !keep[s.key] ? (
-                            <Input
-                              placeholder="Why skip? (optional)"
-                              value={skipReason[s.key] ?? ""}
-                              onChange={(e) =>
-                                setSkipReason({
-                                  ...skipReason,
-                                  [s.key]: e.target.value,
-                                })
-                              }
-                              className="mt-2 h-7 text-xs"
-                            />
-                          ) : null}
+              (() => {
+                // Group sections by cardLabel so the user sees them as the same
+                // logical clusters that exist on the profile page.
+                const groups = new Map<string, SectionStatus[]>();
+                visibleSections.forEach((s) => {
+                  const arr = groups.get(s.cardLabel) ?? [];
+                  arr.push(s);
+                  groups.set(s.cardLabel, arr);
+                });
+                return (
+                  <div className="space-y-4">
+                    {Array.from(groups.entries()).map(([card, items]) => (
+                      <div key={card}>
+                        <div className="text-[10px] uppercase tracking-wider text-foreground-muted mb-1.5">
+                          {card}
                         </div>
+                        <ul className="space-y-1.5">
+                          {items.map((s) => {
+                            const isSkipped = skippedKeys.has(s.key);
+                            const dot =
+                              isSkipped
+                                ? "bg-foreground-muted"
+                                : s.presence === "present"
+                                  ? "bg-success"
+                                  : s.presence === "partial"
+                                    ? "bg-warning"
+                                    : "bg-foreground-muted/40";
+                            const presenceLabel = isSkipped
+                              ? "skipped"
+                              : s.presence === "present"
+                                ? "has content"
+                                : s.presence === "partial"
+                                  ? "partial"
+                                  : "empty";
+                            return (
+                              <li key={s.key}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const idx = visibleSections.findIndex((v) => v.key === s.key);
+                                    setStepIdx(Math.max(0, idx));
+                                    setPhase("walk");
+                                  }}
+                                  className={cn(
+                                    "w-full text-left rounded-md border border-border bg-surface hover:bg-elevated transition px-3 py-2 group",
+                                    isSkipped && "opacity-60",
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className={cn("w-2 h-2 rounded-full shrink-0", dot)} />
+                                    <span className={cn(
+                                      "text-sm font-medium text-foreground flex-1 min-w-0 truncate",
+                                      isSkipped && "line-through",
+                                    )}>
+                                      {s.label}
+                                    </span>
+                                    <span className="text-[10px] uppercase tracking-wider text-foreground-muted">
+                                      {presenceLabel}
+                                    </span>
+                                    <ChevronRight className="w-3 h-3 text-foreground-muted opacity-0 group-hover:opacity-100 transition" />
+                                  </div>
+                                  <p className="text-xs text-foreground-muted mt-0.5 pl-[18px]">
+                                    {s.helpText}
+                                  </p>
+                                  {isSkipped && (
+                                    <div className="flex items-center justify-between mt-1 pl-[18px] text-xs">
+                                      <span className="text-foreground-muted italic">
+                                        Reason: {
+                                          skipped.find((sk) => sk.section_key === s.key)?.reason ?? "—"
+                                        }
+                                      </span>
+                                      <span
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(e) => { e.stopPropagation(); void unskip(s.key); }}
+                                        className="text-foreground-secondary underline underline-offset-2 hover:text-foreground"
+                                      >
+                                        Un-skip
+                                      </span>
+                                    </div>
+                                  )}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                    ))}
+                  </div>
+                );
+              })()
             )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={beginWalk} disabled={busy}>
-                {busy && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                Start
-                <ChevronRight className="w-3 h-3 ml-1" />
+                Close
               </Button>
             </div>
           </div>
         )}
+
 
         {phase === "walk" && currentStep && (
           <div className="mt-4 space-y-4">
