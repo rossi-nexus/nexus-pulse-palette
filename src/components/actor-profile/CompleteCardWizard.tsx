@@ -1318,14 +1318,22 @@ const CATEGORY_MAP: Record<string, string> = {
 
 const OntologyEditor = ({
   actorId,
+  actorName,
+  website,
+  country,
   category,
   viewerId,
   onDone,
   onChanged,
 }: EditorProps & { category: string }) => {
+  const resolver = useWebsiteResolver(actorId, actorName, website);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<Array<{ id: string; raw_name: string }>>([]);
   const [busy, setBusy] = useState(false);
+  const [scraping, setScraping] = useState(false);
+  const [proposals, setProposals] = useState<
+    Array<{ entry_name: string; matched_entry_id: string | null; is_proposed_new: boolean; evidence: string; confidence: string }>
+  >([]);
   const [existing, setExisting] = useState<Array<{ id: string; ontology_entry_id: string; raw_name: string }>>([]);
   const ontologyType = CATEGORY_MAP[category];
 
@@ -1379,8 +1387,45 @@ const OntologyEditor = ({
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`Added "${entry.raw_name}"`);
+    setProposals((p) => p.filter((x) => x.matched_entry_id !== entry.id));
     await loadExisting();
     onChanged();
+  };
+
+  const scrape = async () => {
+    setScraping(true);
+    setProposals([]);
+    try {
+      let url = resolver.website;
+      if (!url) {
+        const refreshed = await resolver.refresh();
+        url = refreshed.website;
+      }
+      if (!url) {
+        toast.error("Add a website above first.");
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("enrich-from-url", {
+        body: {
+          url,
+          section_key: category,
+          actor_context: { actor_name: actorName, country: country ?? null },
+          existing_items: existing.map((e) => e.raw_name),
+        },
+      });
+      if (error) throw new Error((data as any)?.error ?? error.message);
+      const list = ((data as any)?.proposals ?? []) as any[];
+      if (list.length === 0) {
+        toast.error("Nothing new found on the website for this section.");
+      } else {
+        toast.success(`Found ${list.length} suggestion(s) — click to add`);
+      }
+      setProposals(list);
+    } catch (e: any) {
+      toast.error(`Scrape failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setScraping(false);
+    }
   };
 
   const remove = async (id: string) => {
@@ -1389,6 +1434,7 @@ const OntologyEditor = ({
     await loadExisting();
     onChanged();
   };
+
 
   return (
     <div className="space-y-3">
