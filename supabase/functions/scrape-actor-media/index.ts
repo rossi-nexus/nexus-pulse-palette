@@ -274,14 +274,64 @@ serve(async (req) => {
 
     const slotsToFill: Slot[] = SINGLE_SLOTS.filter((s) => !occupied.has(s));
 
-    const html = await fetchHtml(baseUrl.href);
+    // -------- candidates mode: return raw candidate URLs without saving --------
+    if (mode === "candidates") {
+      const html = await fetchHtml(baseUrl!.href);
+      if (!html) {
+        return json({ ok: true, candidates: { logo: [], hero: [] }, reason: "homepage_fetch_failed" });
+      }
+      return json({
+        ok: true,
+        candidates: {
+          logo: extractLogoCandidates(html, baseUrl!.href),
+          hero: extractHeroCandidates(html, baseUrl!.href),
+        },
+        occupied: Array.from(occupied),
+      });
+    }
+
+    // -------- ingest mode: download a user-chosen URL into a specific slot --------
+    if (mode === "ingest") {
+      const scrapedI: { slot: string; url: string; source_url: string }[] = [];
+      const skippedI: { slot: string; reason: string }[] = [];
+      const dl = await downloadImage(ingest_url_in!);
+      if (!dl) {
+        return json({ ok: false, error: "Could not download that image", scraped: [], skipped: [{ slot: ingest_slot!, reason: "download_failed" }] }, 400);
+      }
+      const ext = extFromContentType(dl.contentType) ?? "img";
+      const ts = Date.now();
+      const path = `${actor_id}/${ingest_slot}/picked-${ts}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supa.storage
+        .from("actor-media")
+        .upload(path, dl.bytes, { contentType: dl.contentType, upsert: false });
+      if (upErr) {
+        return json({ ok: false, error: `upload_failed: ${upErr.message}` }, 500);
+      }
+      const publicUrl = supa.storage.from("actor-media").getPublicUrl(path).data.publicUrl;
+      const { error: insErr } = await supa.from("actor_media").insert({
+        actor_id,
+        type: ingest_slot,
+        url: publicUrl,
+        original_url: ingest_url_in,
+        source: "user_picked",
+        uploaded_by: user!.id,
+      });
+      if (insErr) {
+        return json({ ok: false, error: `insert_failed: ${insErr.message}` }, 500);
+      }
+      scrapedI.push({ slot: ingest_slot!, url: publicUrl, source_url: ingest_url_in! });
+      return json({ ok: true, scraped: scrapedI, skipped: skippedI });
+    }
+
+    // -------- auto mode (legacy): scrape + ingest top candidate per slot --------
+    const html = await fetchHtml(baseUrl!.href);
     if (!html) {
       return json({ ok: true, scraped: [], skipped: slotsToFill, reason: "homepage_fetch_failed" });
     }
 
     const targets: { slot: Slot; url: string | null }[] = [];
     for (const slot of slotsToFill) {
-      const u = slot === "logo" ? extractLogo(html, baseUrl.href) : extractHero(html, baseUrl.href);
+      const u = slot === "logo" ? extractLogo(html, baseUrl!.href) : extractHero(html, baseUrl!.href);
       targets.push({ slot, url: u });
     }
 
