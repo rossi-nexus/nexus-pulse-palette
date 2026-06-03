@@ -213,7 +213,7 @@ export const AdminUtilitiesSection = () => {
   const runUtility = async (u: Utility) => {
     setRunningId(u.id);
     try {
-      if (u.id === "geocode_personal") {
+      if (u.id === "geocode_personal" || u.id === "geocode_verified") {
         await runGeocodeLoop(u);
         return;
       }
