@@ -343,7 +343,11 @@ export type Database = {
           created_at: string
           decays_at: string | null
           id: string
+          last_enriched_at: string | null
+          metadata: Json | null
+          name: string | null
           source: string
+          source_url: string | null
           type: string
           verified_at: string | null
           verifier_confidence: string | null
@@ -355,7 +359,11 @@ export type Database = {
           created_at?: string
           decays_at?: string | null
           id?: string
+          last_enriched_at?: string | null
+          metadata?: Json | null
+          name?: string | null
           source: string
+          source_url?: string | null
           type: string
           verified_at?: string | null
           verifier_confidence?: string | null
@@ -367,7 +375,11 @@ export type Database = {
           created_at?: string
           decays_at?: string | null
           id?: string
+          last_enriched_at?: string | null
+          metadata?: Json | null
+          name?: string | null
           source?: string
+          source_url?: string | null
           type?: string
           verified_at?: string | null
           verifier_confidence?: string | null

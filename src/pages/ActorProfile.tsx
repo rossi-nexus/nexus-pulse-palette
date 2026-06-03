@@ -75,7 +75,7 @@ import { ActorMiniMap } from "@/components/map/ActorMiniMap";
 import { ProfileEditToolbar } from "@/components/actor-profile/ProfileEditToolbar";
 import { ActorLogo, ActorHeroBanner } from "@/components/actor-profile/ActorMedia";
 import { MediaSlotEditor, type MediaSlotType, type ActorMediaRecord } from "@/components/actor-media/MediaSlotEditor";
-import { ImagePlus, Trash2 as MediaTrash2 } from "lucide-react";
+import { ImagePlus, Trash2 as MediaTrash2, Loader2, Sparkles } from "lucide-react";
 import { CapacityPanel } from "@/components/actor-profile/CapacityPanel";
 import { EditableText } from "@/components/ui/editable/EditableText";
 import { MergeActorsDialog } from "@/components/actor-profile/MergeActorsDialog";
@@ -513,6 +513,21 @@ const ActorProfile = () => {
       .eq("actor_id", id);
     if (data) setMedia(data as any);
   };
+  // V3 batch #4 — refresh descriptions after per-product enrichment.
+  const refreshDescriptions = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("actor_descriptions")
+      .select("*")
+      .eq("actor_id", id);
+    if (data) setDescriptions(data as any);
+  };
+  const handleProductEnriched = async () => {
+    await Promise.all([refreshMedia(), refreshDescriptions()]);
+  };
+  // V3 batch #4 — bulk "Enrich all products" runner.
+  const [enrichAllRunning, setEnrichAllRunning] = useState(false);
+  const [enrichAllProgress, setEnrichAllProgress] = useState({ done: 0, total: 0, failed: 0 });
   const handleMediaSaved = async () => {
     await refreshMedia();
   };
@@ -1930,36 +1945,101 @@ const ActorProfile = () => {
                 isPersonal ? (
                   <OntologyEntryList entries={personalOntologyEntries[key]} />
                 ) : source === "database" && key === "products" ? (
-                  <ProductCardGrid
-                    products={dbOntologyEntries.products.map((e) => ({
-                      entry_name: e.name,
-                      evidence: e.meta?.evidence ?? null,
-                      confidence: e.meta?.confidence ?? null,
-                      source_url: e.meta?.source_url ?? null,
-                    }))}
-                    descriptions={descriptions
-                      .filter((d: any) => d?.type === "product")
-                      .map((d: any) => ({ type: d.type, content: d.content }))}
-                    media={media
-                      .filter((m: any) => m.type === "product")
-                      .map((m: any) => ({
-                        id: m.id,
-                        type: m.type,
-                        url: m.url,
-                        crop_data: m.crop_data ?? null,
+                  <>
+                    {editingDbIdentity && dbOntologyEntries.products.length > 0 && (
+                      <div className="mb-3 flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={enrichAllRunning}
+                          onClick={async () => {
+                            if (!dbActor?.id) return;
+                            const list = dbOntologyEntries.products.map((e) => e.name);
+                            if (list.length === 0) return;
+                            if (
+                              !window.confirm(
+                                `Auto-enrich all ${list.length} products for ${name}? This scrapes the actor's website and calls the LLM once per product.`,
+                              )
+                            )
+                              return;
+                            setEnrichAllRunning(true);
+                            setEnrichAllProgress({ done: 0, total: list.length, failed: 0 });
+                            let done = 0;
+                            let failed = 0;
+                            for (const productName of list) {
+                              try {
+                                const { data, error } = await supabase.functions.invoke(
+                                  "enrich-product-page",
+                                  { body: { actor_id: dbActor.id, product_name: productName } },
+                                );
+                                if (error || !data?.found) failed += 1;
+                              } catch {
+                                failed += 1;
+                              }
+                              done += 1;
+                              setEnrichAllProgress({ done, total: list.length, failed });
+                            }
+                            await handleProductEnriched();
+                            setEnrichAllRunning(false);
+                            toast.success(
+                              `Enrich-all complete: ${done - failed} succeeded, ${failed} failed of ${list.length}`,
+                            );
+                          }}
+                        >
+                          {enrichAllRunning ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Enriching {enrichAllProgress.done}/{enrichAllProgress.total}
+                              {enrichAllProgress.failed > 0 && ` (${enrichAllProgress.failed} failed)`}
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              Enrich all products
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    <ProductCardGrid
+                      products={dbOntologyEntries.products.map((e) => ({
+                        entry_name: e.name,
+                        evidence: e.meta?.evidence ?? null,
+                        confidence: e.meta?.confidence ?? null,
+                        source_url: e.meta?.source_url ?? null,
                       }))}
-                    actorName={name}
-                    editable={editingDbIdentity}
-                    onAddImage={(productName) => openProductImageEditor(productName)}
-                    onReplaceImage={async (productName, mediaId) => {
-                      // Replace = delete existing, then open editor for new.
-                      const existing = media.find((m: any) => m.id === mediaId);
-                      if (existing) {
-                        await handleDeleteMedia(existing as any).catch(() => {});
-                      }
-                      openProductImageEditor(productName);
-                    }}
-                  />
+                      descriptions={descriptions
+                        .filter((d: any) => d?.type === "product")
+                        .map((d: any) => ({
+                          type: d.type,
+                          content: d.content,
+                          name: d.name ?? null,
+                          source_url: d.source_url ?? null,
+                          metadata: d.metadata ?? null,
+                        }))}
+                      media={media
+                        .filter((m: any) => m.type === "product" || m.type === "datasheet")
+                        .map((m: any) => ({
+                          id: m.id,
+                          type: m.type,
+                          url: m.url,
+                          crop_data: m.crop_data ?? null,
+                        }))}
+                      actorId={dbActor?.id}
+                      actorName={name}
+                      editable={editingDbIdentity}
+                      onEnriched={handleProductEnriched}
+                      onAddImage={(productName) => openProductImageEditor(productName)}
+                      onReplaceImage={async (productName, mediaId) => {
+                        // Replace = delete existing, then open editor for new.
+                        const existing = media.find((m: any) => m.id === mediaId);
+                        if (existing) {
+                          await handleDeleteMedia(existing as any).catch(() => {});
+                        }
+                        openProductImageEditor(productName);
+                      }}
+                    />
+                  </>
                 ) : source === "database" ? (
                   <OntologyEntryList entries={dbOntologyEntries[key]} />
                 ) : (
