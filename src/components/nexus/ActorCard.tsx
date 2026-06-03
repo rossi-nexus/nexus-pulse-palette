@@ -1,9 +1,18 @@
-import { useState } from "react";
-import { Check, Bookmark, Undo2, ExternalLink, ArrowRightLeft, ChevronDown, GitCompare } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Bookmark, Undo2, ExternalLink, ArrowRightLeft, ChevronDown, GitCompare, MoreHorizontal, Flag, Eye } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
+import { RecordOutcomeDialog } from "@/components/outcome/RecordOutcomeDialog";
 import { cn } from "@/lib/utils";
+import { useTrackInteraction } from "@/hooks/useTrackInteraction";
 import type { ActorCardData } from "@/hooks/useSearch";
 
 interface ActorCardProps {
@@ -16,6 +25,10 @@ interface ActorCardProps {
   isCompareSelected?: boolean;
   onToggleCompare?: (actor: ActorCardData) => void;
   readOnly?: boolean;
+  /** AX4 — session id for interaction tracking. */
+  sessionId?: string | null;
+  /** AX4 — called after an outcome is recorded so the row can re-score. */
+  onOutcomeRecorded?: (actorId: string) => void;
 }
 
 const strengthConfig = {
@@ -69,11 +82,19 @@ function buildAxisRows(breakdown: any): AxisRow[] {
       detail = a.via_parent ? `via ${a.via_parent} (${a.inherited_count ?? 0} tags)` : null;
       if (!detail) continue;
     } else if (key === "engagement") {
-      continue;
+      const n = a.interaction_count ?? 0;
+      if (n === 0 && (a.score ?? 0) === 0) continue;
+      const i = a.interactions || {};
+      const parts: string[] = [];
+      if (i.included) parts.push(`${i.included} included`);
+      if (i.saved_for_later) parts.push(`${i.saved_for_later} saved`);
+      if (i.profile_opened) parts.push(`${i.profile_opened} opened`);
+      if (i.result_viewed) parts.push(`${i.result_viewed} viewed`);
+      detail = parts.length ? parts.join(" · ") : `${n} interactions`;
     }
     out.push({
       key,
-      label: key === "group_rollup" ? "Group rollup" : key.charAt(0).toUpperCase() + key.slice(1),
+      label: key === "group_rollup" ? "Group rollup" : key === "engagement" ? "Your engagement" : key.charAt(0).toUpperCase() + key.slice(1),
       score: Number(a.score) || 0,
       weight: Number(a.weight) || 0,
       contrib: Number(a.contrib) || 0,
@@ -103,8 +124,14 @@ function topAxisChips(breakdown: any, max = 3): { label: string; key: string }[]
 const ActorCard = ({
   actor, roleId, onInclude, onSaveForLater, onUndo,
   isCompareSelected, onToggleCompare, readOnly = false,
+  sessionId = null, onOutcomeRecorded,
 }: ActorCardProps) => {
   const [open, setOpen] = useState(false);
+  const [outcomeOpen, setOutcomeOpen] = useState(false);
+  const track = useTrackInteraction(sessionId);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const viewedRef = useRef(false);
+
   const strength = strengthConfig[actor.match_strength] || strengthConfig.moderate;
   const hasDecision = actor.triage_decision !== undefined;
   const breakdown: any = actor.relevance_breakdown ?? null;
@@ -112,8 +139,47 @@ const ActorCard = ({
   const axisRows = buildAxisRows(breakdown);
   const chips = topAxisChips(breakdown);
 
+  const trackableId = actor.db_actor_id || actor.id;
+  const profileHref = actor.db_actor_id ? `/actors/${actor.db_actor_id}` : null;
+
+  // AX4 — result_viewed once per card per mount (which is effectively per-session
+  // since result lists are remounted on new searches).
+  useEffect(() => {
+    if (readOnly || !cardRef.current || viewedRef.current) return;
+    const el = cardRef.current;
+    const obs = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting && !viewedRef.current) {
+          viewedRef.current = true;
+          track(trackableId, "result_viewed", {
+            role_id: roleId,
+            total_score: score,
+          });
+          obs.disconnect();
+          break;
+        }
+      }
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackableId, readOnly]);
+
+  // AX4 — compared event when entering the compare set.
+  const prevCompare = useRef(isCompareSelected);
+  useEffect(() => {
+    if (!prevCompare.current && isCompareSelected) {
+      track(trackableId, "compared", { role_id: roleId });
+    }
+    prevCompare.current = isCompareSelected;
+  }, [isCompareSelected, trackableId, roleId, track]);
+
+  const handleProfileOpen = () => {
+    track(trackableId, "profile_opened", { role_id: roleId, total_score: score });
+  };
+
   return (
-    <div className={cn(
+    <div ref={cardRef} className={cn(
       "border rounded-card bg-surface p-4 space-y-3 transition-all border-l-4",
       !hasDecision && "border-border border-l-border",
       actor.triage_decision === "included" &&
@@ -126,7 +192,17 @@ const ActorCard = ({
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-body font-medium text-foreground">{actor.name}</h4>
+            {profileHref ? (
+              <Link
+                to={profileHref}
+                onClick={handleProfileOpen}
+                className="text-body font-medium text-foreground hover:text-accent-teal transition-colors"
+              >
+                {actor.name}
+              </Link>
+            ) : (
+              <h4 className="text-body font-medium text-foreground">{actor.name}</h4>
+            )}
             {score !== null && (
               <Badge
                 variant="outline"
@@ -179,6 +255,31 @@ const ActorCard = ({
                className="text-foreground-muted hover:text-foreground-secondary transition-colors">
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
+          )}
+          {!readOnly && actor.db_actor_id && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="p-1 rounded text-foreground-muted hover:text-foreground-secondary hover:bg-elevated transition-colors"
+                  title="More actions"
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {profileHref && (
+                  <DropdownMenuItem asChild>
+                    <Link to={profileHref} onClick={handleProfileOpen} className="gap-2">
+                      <Eye className="w-3.5 h-3.5" /> Open profile
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => setOutcomeOpen(true)} className="gap-2">
+                  <Flag className="w-3.5 h-3.5" /> Record outcome…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -299,6 +400,17 @@ const ActorCard = ({
           </div>
         )}
       </div>
+
+      {/* AX4 — Record outcome dialog */}
+      {!readOnly && actor.db_actor_id && (
+        <RecordOutcomeDialog
+          open={outcomeOpen}
+          onOpenChange={setOutcomeOpen}
+          actorId={actor.db_actor_id}
+          actorName={actor.name}
+          onRecorded={() => onOutcomeRecorded?.(actor.id)}
+        />
+      )}
     </div>
   );
 };
