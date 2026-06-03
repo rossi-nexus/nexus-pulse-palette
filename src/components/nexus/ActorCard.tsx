@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import VerifiedStatusBadge from "@/components/nexus/VerifiedStatusBadge";
 import { RecordOutcomeDialog } from "@/components/outcome/RecordOutcomeDialog";
+import HelpHint from "@/components/ui/HelpHint";
 import { cn } from "@/lib/utils";
 import { useTrackInteraction } from "@/hooks/useTrackInteraction";
 import type { ActorCardData } from "@/hooks/useSearch";
@@ -301,33 +302,40 @@ const ActorCard = ({
       {/* AX3b — Why matched expander */}
       {axisRows.length > 0 && (
         <div className="border-t border-border-subtle pt-2">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex items-center gap-1 text-caption text-foreground-muted hover:text-foreground-secondary transition-colors"
-          >
-            <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
-            Why matched
-            {score !== null && <span className="font-mono ml-1">· total {score.toFixed(2)}</span>}
-          </button>
-          {open && (
-            <div className="mt-2 space-y-1.5">
-              {axisRows.sort((a, b) => b.contrib - a.contrib).map((r) => (
-                <div key={r.key} className="text-[11px]">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-foreground-secondary">{r.label}</span>
-                    <span className="font-mono text-foreground-muted">
-                      {r.score.toFixed(2)} × {r.weight.toFixed(2)} = {r.contrib.toFixed(3)}
-                    </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="flex items-center gap-1 text-caption text-foreground-muted hover:text-foreground-secondary transition-colors"
+            >
+              <ChevronDown className={cn("w-3 h-3 transition-transform duration-200", open && "rotate-180")} />
+              Why matched
+              {score !== null && <span className="font-mono ml-1">· total {score.toFixed(2)}</span>}
+            </button>
+            <HelpHint>
+              Each axis contributes <span className="font-mono">score × weight</span> to the total. Adjust weights in Settings → Ranking preferences to change how axes are balanced.
+            </HelpHint>
+          </div>
+          <div className={cn("grid transition-all duration-200 ease-out", open ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0")}>
+            <div className="overflow-hidden">
+              <div className="space-y-1.5">
+                {axisRows.sort((a, b) => b.contrib - a.contrib).map((r) => (
+                  <div key={r.key} className="text-[11px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-foreground-secondary">{r.label}</span>
+                      <span className="font-mono text-foreground-muted">
+                        {r.score.toFixed(2)} × {r.weight.toFixed(2)} = {r.contrib.toFixed(3)}
+                      </span>
+                    </div>
+                    <div className="h-1 mt-0.5 bg-elevated rounded-sharp overflow-hidden">
+                      <div className="h-full bg-accent-teal/60 transition-all duration-300" style={{ width: `${Math.min(100, r.score * 100)}%` }} />
+                    </div>
+                    {r.detail && <div className="text-foreground-muted mt-0.5">{r.detail}</div>}
                   </div>
-                  <div className="h-1 mt-0.5 bg-elevated rounded-sharp overflow-hidden">
-                    <div className="h-full bg-accent-teal/60" style={{ width: `${Math.min(100, r.score * 100)}%` }} />
-                  </div>
-                  {r.detail && <div className="text-foreground-muted mt-0.5">{r.detail}</div>}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 

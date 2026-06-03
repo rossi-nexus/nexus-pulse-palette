@@ -13,6 +13,7 @@ import ConstraintPills from "./ConstraintPills";
 import CompareModal from "./CompareModal";
 import SaveSearchDialog from "./SaveSearchDialog";
 import EditConstraintsSlideOver from "./EditConstraintsSlideOver";
+import AxisOnboardingTour from "./AxisOnboardingTour";
 import { useCompareSet } from "@/hooks/useCompareSet";
 import type { useSearch, ActorCardData } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
@@ -586,6 +587,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
         originalConstraints={interpretation?.constraints ?? {}}
         onApply={rerunWith}
       />
+      <AxisOnboardingTour />
     </StepContainer>
   );
 };
