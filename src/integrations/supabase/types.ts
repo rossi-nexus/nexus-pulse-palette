@@ -2009,6 +2009,14 @@ export type Database = {
         }
         Returns: number
       }
+      fn_compute_actor_relevance_score_v2: {
+        Args: { p_actor_ids: string[]; p_constraints?: Json; p_weights?: Json }
+        Returns: {
+          actor_id: string
+          breakdown: Json
+          total_score: number
+        }[]
+      }
       fn_create_actor_hybrid: {
         Args: {
           p_country: string
@@ -2134,13 +2142,19 @@ export type Database = {
         Returns: string
       }
       fn_rank_actors_by_ontology_overlap: {
-        Args: { p_entry_ids: string[]; p_limit?: number }
+        Args: {
+          p_countries?: string[]
+          p_entry_ids: string[]
+          p_limit?: number
+        }
         Returns: {
           actor_id: string
           city: string
           country: string
           decays_at: string
+          latitude: number
           legal_name: string
+          longitude: number
           matched_entry_ids: string[]
           overlap_count: number
           region: string

@@ -52,7 +52,9 @@ export interface ActorCardData {
     overlap?: number;
     outcome?: number;
     decay?: number;
-  };
+    // AX3a — v2 axis breakdown (jsonb passthrough). AX3b renders.
+    [axis: string]: any;
+  } | null;
   /** P11 — per-role weighted match strength used by cross-role ranking. */
   cross_role_score?: number;
   /** P11 — per-role match-strength inputs feeding cross_role_score. */
@@ -270,50 +272,55 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
       // --- DB branch ------------------------------------------------------
       if ((mode === "db" || mode === "both") && targetEntryIds.length > 0) {
         try {
+          const constraintCountries: string[] | undefined =
+            (interpretation.constraints as any)?.geography?.countries;
+          const pCountries =
+            Array.isArray(constraintCountries) && constraintCountries.length > 0
+              ? constraintCountries.map((c: string) => c.toUpperCase())
+              : null;
+
           const { data, error: rpcErr } = await (supabase.rpc as any)(
             "fn_rank_actors_by_ontology_overlap",
-            { p_entry_ids: targetEntryIds, p_limit: 20 },
+            { p_entry_ids: targetEntryIds, p_limit: 20, p_countries: pCountries },
           );
           if (rpcErr) throw rpcErr;
           const rawRows: any[] = data || [];
-          // P11 — compute composite relevance score per candidate; sort by it descending.
-          const scored = await Promise.all(
-            rawRows.map(async (row: any) => {
-              let relevance: number | null = null;
-              try {
-                const { data: scoreData } = await (supabase.rpc as any)(
-                  "fn_compute_actor_relevance_score",
-                  {
-                    p_actor_id: row.actor_id,
-                    p_role_id: null,
-                    p_ontology_entry_ids: targetEntryIds,
-                  },
-                );
-                const n = typeof scoreData === "number" ? scoreData : parseFloat(scoreData);
-                relevance = Number.isFinite(n) ? n : null;
-              } catch {
-                relevance = null;
-              }
-              return { row, relevance };
-            }),
-          );
-          scored.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0));
-          dbActors = scored.map(({ row, relevance }) => {
+
+          // AX3a: single v2 RPC call per role, scoring all actor_ids at once (kills N+1).
+          const actorIds = rawRows.map((r: any) => r.actor_id);
+          const constraintsPayload: Record<string, unknown> = {
+            ontology_entry_ids: targetEntryIds,
+            geography: {
+              ...(pCountries ? { countries: pCountries } : {}),
+            },
+            capacity: (interpretation.constraints as any)?.capacity ?? {},
+            certifications: (interpretation.constraints as any)?.certifications ??
+              (interpretation.constraints as any)?.standards ?? {},
+          };
+
+          let scoresById = new Map<string, { total: number; breakdown: any }>();
+          if (actorIds.length > 0) {
+            const { data: scoreRows, error: scoreErr } = await (supabase.rpc as any)(
+              "fn_compute_actor_relevance_score_v2",
+              {
+                p_actor_ids: actorIds,
+                p_constraints: constraintsPayload,
+                p_weights: null,
+              },
+            );
+            if (scoreErr) throw scoreErr;
+            for (const s of (scoreRows || []) as any[]) {
+              scoresById.set(s.actor_id, { total: Number(s.total_score), breakdown: s.breakdown });
+            }
+          }
+
+          const built = rawRows.map((row: any) => {
             const website: string | undefined = Array.isArray(row.websites) && row.websites.length > 0
               ? row.websites[0]
               : undefined;
             const locationBits = [row.city, row.region, row.country].filter(Boolean);
             const overlap = Number(row.overlap_count) || 0;
-            // Local breakdown estimate for hover-explain (mirrors RPC tuning constants).
-            const decayEstimate = !row.verified_at
-              ? 0.8
-              : row.decays_at && new Date(row.decays_at) < new Date()
-                ? 0.6
-                : row.decays_at && new Date(row.decays_at).getTime() < Date.now() + 30 * 86400_000
-                  ? 0.85
-                  : new Date(row.verified_at).getTime() > Date.now() - 90 * 86400_000
-                    ? 1.15
-                    : 1.0;
+            const score = scoresById.get(row.actor_id);
             return {
               id: `db:${row.actor_id}`,
               name: row.legal_name,
@@ -332,14 +339,12 @@ export function useSearch({ sessionId }: UseSearchProps = { sessionId: null }) {
               ontology_overlap_count: overlap,
               matched_verified_at: row.verified_at,
               matched_decays_at: row.decays_at,
-              relevance_score: relevance,
-              relevance_breakdown: {
-                overlap: Math.min(1, 0.3 + overlap / Math.max(1, targetEntryIds.length)),
-                outcome: undefined, // computed server-side; unknown locally
-                decay: decayEstimate,
-              },
+              relevance_score: score?.total ?? null,
+              relevance_breakdown: score?.breakdown ?? null,
             } as ActorCardData;
           });
+          built.sort((a, b) => (b.relevance_score ?? 0) - (a.relevance_score ?? 0));
+          dbActors = built;
         } catch (err: any) {
           const msg = err?.message ?? String(err);
           errMsg = errMsg ? `${errMsg}; db: ${msg}` : `db: ${msg}`;

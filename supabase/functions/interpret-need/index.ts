@@ -81,6 +81,20 @@ When the user's need mentions operational deadlines, mobilization timelines, or 
 **Geography — Nordic context:**
 When the user mentions "Nordic" in a defence/security/preparedness context, default to Norway (NO), Sweden (SE), Finland (FI), and Denmark (DK). Only include Iceland (IS) if the user explicitly mentions Iceland or if the context clearly requires it (e.g., North Atlantic maritime operations, GIUK gap).
 
+**Capacity (team size, mobilization):**
+When the user mentions team size, headcount, "X people", or capacity ("we need a supplier with at least 20 engineers"), populate capacity.min_team_size with the integer. When the user mentions response/mobilization time, convert to days and populate capacity.max_mobilization_days (e.g. "must mobilize within 1 week" → 7). Set capacity.confidence based on how directly the user stated it.
+
+**Certifications:**
+When the user mentions specific standards or certifications ("ISO 9001 required", "AQAP 2110 preferred", "NS-EN ISO 27001"), populate certifications.required and certifications.preferred with the standard names exactly. Distinguish required vs preferred from the user's wording. Set certifications.confidence.
+
+**Language, urgency, budget:**
+- Populate language.required when the user states a delivery or working language requirement.
+- Populate urgency.level (low/medium/high/critical) and rationale based on time pressure cues in the text.
+- Populate budget.max_eur (convert from currency_original to EUR rough estimate if not EUR) when a budget cap is mentioned.
+
+**Inference paths:**
+For every constraint axis you populate (especially capacity, certifications, urgency, budget, language, geography, security_classification), add an entry to inference_paths keyed by the axis name, with a short rationale citing the source phrase. Example: { "capacity": "User said 'at least 20 engineers' → min_team_size=20" }. This drives the user-facing 'Why constrained?' explanations downstream.
+
 ### SUMMARY-TO-ROLE MAPPING
 For each summary point, include a "covered_by_role_indices" array containing the 0-based positional indices of roles (from the roles array you generate) that address or contribute to that summary point. A summary point may be covered by multiple roles. Every summary point should ideally be covered by at least one role. If a summary point genuinely has no covering role, that indicates a potential gap — still include the field with an empty array.
 `;
@@ -200,6 +214,9 @@ const TOOL_SCHEMA = {
                 min_value: { type: "number" },
                 max_value: { type: "number" },
                 unit: { type: "string" },
+                min_team_size: { type: ["integer", "null"], description: "Minimum headcount the actor must have." },
+                max_mobilization_days: { type: ["integer", "null"], description: "Maximum mobilization/response time in days." },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
               },
             },
             standards: {
@@ -207,6 +224,38 @@ const TOOL_SCHEMA = {
               properties: {
                 required: { type: "array", items: { type: "string" } },
                 preferred: { type: "array", items: { type: "string" } },
+              },
+            },
+            certifications: {
+              type: "object",
+              description: "Structured certification requirements used by the ranking engine.",
+              properties: {
+                required: { type: "array", items: { type: "string" }, description: "Must-have certifications (e.g. ['ISO 9001', 'AQAP 2110'])." },
+                preferred: { type: "array", items: { type: "string" }, description: "Nice-to-have certifications." },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            language: {
+              type: "object",
+              properties: {
+                required: { type: "array", items: { type: "string" }, description: "ISO 639-1 codes or language names required for delivery." },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            urgency: {
+              type: "object",
+              properties: {
+                level: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                rationale: { type: "string" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            budget: {
+              type: "object",
+              properties: {
+                max_eur: { type: ["integer", "null"] },
+                currency_original: { type: "string" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
               },
             },
             contract_duration: {
@@ -219,6 +268,11 @@ const TOOL_SCHEMA = {
               },
             },
             search_context: { type: "string" },
+            inference_paths: {
+              type: "object",
+              description: "Per-axis explanation of why a constraint was inferred. Keys are axis names (e.g. 'capacity', 'certifications', 'urgency'); values are short rationale strings citing the source phrase.",
+              additionalProperties: { type: "string" },
+            },
           },
         },
         clarification_points: {
