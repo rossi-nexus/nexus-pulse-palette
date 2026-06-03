@@ -77,6 +77,42 @@ export const AdminUtilitiesSection = () => {
 
   const pending = UTILITIES.find((u) => u.id === pendingId) ?? null;
 
+  const extractErrorMessage = async (error: any, kind: "rpc" | "function"): Promise<string> => {
+    if (!error) return "Unknown error";
+    // RPC errors: PostgrestError { message, code, details, hint }
+    if (kind === "rpc") {
+      const parts = [
+        error.message,
+        error.code ? `(code ${error.code})` : null,
+        error.details,
+        error.hint ? `hint: ${error.hint}` : null,
+      ].filter(Boolean);
+      return parts.join(" — ") || "Unknown RPC error";
+    }
+    // Edge function errors: FunctionsHttpError exposes context.response (Response)
+    // FunctionsFetchError means the request never reached the function (404/network)
+    const ctx = (error as any).context;
+    if (ctx && typeof ctx === "object") {
+      try {
+        if (typeof ctx.json === "function") {
+          const body = await ctx.json();
+          const inner = body?.error || body?.message || JSON.stringify(body);
+          return `${error.message ?? "Function error"} — ${inner}`;
+        }
+        if (typeof ctx.text === "function") {
+          const txt = await ctx.text();
+          if (txt) return `${error.message ?? "Function error"} — ${txt}`;
+        }
+        if (ctx.status) {
+          return `${error.message ?? "Function error"} (HTTP ${ctx.status})`;
+        }
+      } catch {
+        // fall through
+      }
+    }
+    return error.message ?? "Unknown error";
+  };
+
   const runUtility = async (u: Utility) => {
     setRunningId(u.id);
     try {
@@ -92,7 +128,9 @@ export const AdminUtilitiesSection = () => {
         error = res.error;
       }
       if (error) {
-        toast.error(`${u.label} failed: ${error.message ?? "Unknown error"}`);
+        const msg = await extractErrorMessage(error, u.kind);
+        console.error(`[admin-utility] ${u.id} failed`, { kind: u.kind, target: u.target, error });
+        toast.error(`${u.label} failed: ${msg}`);
         return;
       }
       if (u.kind === "rpc") {
@@ -100,7 +138,13 @@ export const AdminUtilitiesSection = () => {
         if (typeof data === "number") count = data;
         else if (Array.isArray(data) && data.length > 0) {
           const v = data[0];
-          count = typeof v === "number" ? v : Number(v) || 0;
+          if (typeof v === "number") count = v;
+          else if (v && typeof v === "object") {
+            // RETURNS TABLE(...) — count rows or pick the first numeric column
+            count = data.length;
+          } else {
+            count = Number(v) || 0;
+          }
         } else if (data != null) {
           count = Number(data) || 0;
         }
@@ -109,6 +153,7 @@ export const AdminUtilitiesSection = () => {
         toast.success(u.successFmt(data));
       }
     } catch (e: any) {
+      console.error(`[admin-utility] ${u.id} threw`, e);
       toast.error(`${u.label} failed: ${e?.message ?? "Unknown error"}`);
     } finally {
       setRunningId(null);
