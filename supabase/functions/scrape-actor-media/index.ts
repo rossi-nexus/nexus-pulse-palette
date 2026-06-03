@@ -63,72 +63,76 @@ function resolveUrl(href: string, base: string): string | null {
   try { return new URL(href, base).href; } catch { return null; }
 }
 
-function extractLogo(html: string, baseUrl: string): string | null {
-  const linkTags = matchAll(html, /<link\b[^>]*>/gi);
-  const pickByRel = (relPattern: RegExp): string | null => {
-    for (const t of linkTags) {
-      const rel = attr(t, "rel") ?? "";
-      if (relPattern.test(rel)) {
-        const href = attr(t, "href");
-        if (href) return href;
-      }
-    }
-    return null;
+function extractLogoCandidates(html: string, baseUrl: string): string[] {
+  const out: string[] = [];
+  const push = (u: string | null | undefined) => {
+    if (!u) return;
+    const r = resolveUrl(u, baseUrl);
+    if (r && !out.includes(r)) out.push(r);
   };
-  const candidates: (string | null)[] = [
-    pickByRel(/apple-touch-icon-precomposed/i),
-    pickByRel(/apple-touch-icon/i),
-  ];
+  const linkTags = matchAll(html, /<link\b[^>]*>/gi);
+  for (const t of linkTags) {
+    const rel = (attr(t, "rel") ?? "").toLowerCase();
+    if (/apple-touch-icon/.test(rel) || /\bicon\b/.test(rel)) push(attr(t, "href"));
+  }
   const metaTags = matchAll(html, /<meta\b[^>]*>/gi);
   for (const t of metaTags) {
     const prop = (attr(t, "property") ?? attr(t, "name") ?? "").toLowerCase();
-    if (prop === "og:logo") candidates.push(attr(t, "content"));
+    if (prop === "og:logo" || prop === "og:image") push(attr(t, "content"));
   }
-  candidates.push(pickByRel(/^(shortcut\s+)?icon$/i) ?? pickByRel(/\bicon\b/i));
   const imgTags = matchAll(html, /<img\b[^>]*>/gi);
   for (const t of imgTags) {
     const cls = attr(t, "class") ?? "";
     const id = attr(t, "id") ?? "";
     const alt = attr(t, "alt") ?? "";
-    if (/logo/i.test(cls) || /logo/i.test(id) || /logo/i.test(alt)) {
-      const src = attr(t, "src");
-      if (src) { candidates.push(src); break; }
-    }
+    const src = attr(t, "src");
+    if (!src) continue;
+    if (/logo/i.test(cls) || /logo/i.test(id) || /logo/i.test(alt)) push(src);
   }
-  candidates.push("/favicon.ico");
-  for (const c of candidates) {
-    if (!c) continue;
-    const resolved = resolveUrl(c, baseUrl);
-    if (resolved) return resolved;
-  }
-  return null;
+  push("/favicon.ico");
+  return out.slice(0, 12);
 }
 
-function extractHero(html: string, baseUrl: string): string | null {
+function extractHeroCandidates(html: string, baseUrl: string): string[] {
+  const out: string[] = [];
+  const push = (u: string | null | undefined) => {
+    if (!u) return;
+    const r = resolveUrl(u, baseUrl);
+    if (r && !out.includes(r)) out.push(r);
+  };
   const metaTags = matchAll(html, /<meta\b[^>]*>/gi);
   for (const t of metaTags) {
     const prop = (attr(t, "property") ?? attr(t, "name") ?? "").toLowerCase();
     if (prop === "og:image" || prop === "og:image:url" || prop === "twitter:image") {
-      const c = attr(t, "content");
-      if (c) {
-        const r = resolveUrl(c, baseUrl);
-        if (r) return r;
-      }
+      push(attr(t, "content"));
     }
   }
   const imgTags = matchAll(html, /<img\b[^>]*>/gi);
   for (const t of imgTags) {
     const widthStr = attr(t, "width");
     const w = widthStr ? parseInt(widthStr, 10) : NaN;
-    if (Number.isFinite(w) && w >= 800) {
+    const src = attr(t, "src");
+    if (!src) continue;
+    if (Number.isFinite(w) && w >= 600) push(src);
+  }
+  // Fallback: include any reasonably sized-looking img if we got none.
+  if (out.length === 0) {
+    for (const t of imgTags) {
       const src = attr(t, "src");
-      if (src) {
-        const r = resolveUrl(src, baseUrl);
-        if (r) return r;
-      }
+      if (!src) continue;
+      if (/\.(png|jpe?g|webp)(\?|$)/i.test(src)) push(src);
+      if (out.length >= 8) break;
     }
   }
-  return null;
+  return out.slice(0, 12);
+}
+
+function extractLogo(html: string, baseUrl: string): string | null {
+  return extractLogoCandidates(html, baseUrl)[0] ?? null;
+}
+
+function extractHero(html: string, baseUrl: string): string | null {
+  return extractHeroCandidates(html, baseUrl)[0] ?? null;
 }
 
 interface ProductCandidate {
