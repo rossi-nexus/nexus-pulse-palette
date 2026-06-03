@@ -755,5 +755,9 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
     lock,
     unlock,
     reset,
+    rescoreActor,
+    resolvedWeights,
+    track,
+
   };
 }
