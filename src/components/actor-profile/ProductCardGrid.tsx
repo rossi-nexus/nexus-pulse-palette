@@ -9,9 +9,10 @@
  * never show empty cards.
  */
 import { useMemo, useState } from "react";
-import { ExternalLink, Info } from "lucide-react";
+import { ExternalLink, Info, ImagePlus, Replace } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export interface ProductTag {
@@ -38,6 +39,10 @@ interface Props {
   descriptions: ProductDescriptionRow[];
   media: ProductMediaRow[];
   actorName: string;
+  /** V3 batch #3 Area 2 — when true, show per-card add/replace image buttons. */
+  editable?: boolean;
+  onAddImage?: (productName: string) => void;
+  onReplaceImage?: (productName: string, mediaId: string) => void;
 }
 
 function hostnameOf(u: string): string {
