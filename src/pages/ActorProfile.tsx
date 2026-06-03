@@ -1493,8 +1493,12 @@ const ActorProfile = () => {
       partial: boolean,
       helpText: string,
     ) => {
-      if (missing) out.push({ key, label, cardLabel, presence: "missing", helpText });
-      else if (partial) out.push({ key, label, cardLabel, presence: "partial", helpText });
+      const presence: SectionStatus["presence"] = missing
+        ? "missing"
+        : partial
+          ? "partial"
+          : "present";
+      out.push({ key, label, cardLabel, presence, helpText });
     };
     // Identity / address
     push("address", "Address", "Identity & Registry", !addressComposed, false,
