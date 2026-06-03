@@ -1309,8 +1309,129 @@ const ActorProfile = () => {
       actorType,
   );
 
-  // ---------- Render ----------
-  return (
+  // ---------- V3 Batch A — presence + trust per macro-card ----------
+  const anyStale = React.useMemo(() => {
+    const rows: Array<{ verified_at?: string | null; decays_at?: string | null }> = [
+      ...(dbActor ? [{ verified_at: dbActor.verified_at, decays_at: dbActor.decays_at }] : []),
+      ...classifications,
+      ...standards,
+      ...customers,
+      ...capacityRows,
+      ...contacts,
+    ];
+    const now = Date.now();
+    return rows.some((r) =>
+      r?.verified_at && r?.decays_at && new Date(r.decays_at).getTime() < now,
+    );
+  }, [dbActor, classifications, standards, customers, capacityRows, contacts]);
+
+  const dbVerified = source === "database" && Boolean(dbActor?.verified_at);
+  const trustForDb = (rowsAny: any[]): TrustBand => {
+    if (rowsAny.some((r: any) => r?.verified_at && r?.decays_at && new Date(r.decays_at).getTime() < Date.now())) return "stale";
+    if (rowsAny.some((r: any) => r?.verified_at)) return "verified";
+    if (source === "personal") return "user";
+    return "auto";
+  };
+
+  // Card 1 — Identity & Registry
+  const presenceIdentity: PresenceState = anyStale && dbVerified
+    ? "stale"
+    : !name
+      ? "missing"
+      : name && (orgNumber || website) && addressComposed
+        ? "complete"
+        : "partial";
+  const trustIdentity: TrustBand = dbVerified ? (anyStale ? "stale" : "verified") : (source === "personal" ? "user" : "auto");
+
+  // Card 2 — What They Do
+  const wtdCounts = (["capabilities", "competences", "domains", "products", "services"] as const)
+    .map((k) => ontology[k]?.length ?? 0);
+  const presenceWhatTheyDo: PresenceState = wtdCounts.every((n) => n > 0)
+    ? "complete"
+    : wtdCounts.some((n) => n > 0)
+      ? "partial"
+      : "missing";
+  const trustWhatTheyDo: TrustBand = trustForDb([
+    ...(personalOntologyEntries?.capabilities ?? []),
+    ...(dbOntologyEntries?.capabilities ?? []),
+  ]);
+
+  // Card 3 — Credentials
+  const credCounts = { cap: capacityRows.length, cls: classifications.length, std: standards.length, cust: customers.length };
+  const presenceCredentials: PresenceState = credCounts.cap > 0 && (credCounts.cls + credCounts.std > 0)
+    ? "complete"
+    : credCounts.cap > 0 || credCounts.cls + credCounts.std > 0
+      ? "partial"
+      : "missing";
+  const trustCredentials: TrustBand = trustForDb([...classifications, ...standards, ...customers, ...capacityRows]);
+
+  // Card 4 — People & Relationships
+  const presencePeople: PresenceState = contacts.length > 0 ? "complete" : "missing";
+  const trustPeople: TrustBand = trustForDb(contacts);
+
+  // Card 5 — Provenance & Outcomes
+  const presenceProvenance: PresenceState = dbActor?.source && actorOutcomes.length > 0
+    ? "complete"
+    : dbActor?.source || personal?.source_step
+      ? "partial"
+      : "missing";
+  const trustProvenance: TrustBand = "neutral";
+
+  // Card 6 — My Collection
+  const hasPersonalContent = Boolean(
+    (personal?.notes && personal.notes.trim()) ||
+      (personal?.tags && personal.tags.length > 0),
+  );
+  const presenceCollection: PresenceState = hasPersonalContent ? "complete" : "missing";
+  const trustCollection: TrustBand = "user";
+
+  // Linked personal actor (DB-side Card 6 CTA).
+  const [linkedPersonalId, setLinkedPersonalId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (source !== "database" || !dbActor?.id || !user?.id) {
+      setLinkedPersonalId(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("user_personal_actors")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("matched_main_db_actor_id", dbActor.id)
+        .maybeSingle();
+      if (!cancelled) setLinkedPersonalId(data?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [source, dbActor?.id, user?.id]);
+
+  const handleAddToCollection = async () => {
+    if (!user?.id || !dbActor) return;
+    if (linkedPersonalId) {
+      navigate(`/actors/${linkedPersonalId}`);
+      return;
+    }
+    const { data: created, error } = await supabase
+      .from("user_personal_actors")
+      .insert({
+        user_id: user.id,
+        actor_name: dbActor.legal_name,
+        country: dbActor.country,
+        actor_website: dbActor.websites?.[0] ?? null,
+        matched_main_db_actor_id: dbActor.id,
+        match_timestamp: new Date().toISOString(),
+        status: "personal",
+      })
+      .select("id")
+      .single();
+    if (error) {
+      toast.error(`Could not add to collection: ${error.message}`);
+      return;
+    }
+    toast.success("Added to your collection");
+    navigate(`/actors/${created.id}`);
+  };
+
     <div className="h-full overflow-auto bg-background">
       <div className="max-w-4xl mx-auto p-6 lg:p-8">
         {/* Back */}
