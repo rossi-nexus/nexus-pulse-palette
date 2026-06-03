@@ -773,7 +773,7 @@ const ActorProfile = () => {
       if (cancelled) return;
       const { data } = await supabase
         .from("actor_media")
-        .select("id, type, url, original_url, crop_data")
+        .select("id, type, url, original_url, crop_data, source")
         .eq("actor_id", id);
       if (cancelled) return;
       if (data) setMedia(data as any);
