@@ -519,6 +519,9 @@ serve(async (req) => {
       const key = c.name.trim().toLowerCase();
       if (seen.has(key)) { skipped++; continue; }
       seen.add(key);
+      // V3 Batch B item 4 — write LinkedIn into the canonical linkedin_url
+      // column. Keep legacy `linkedin` column populated too for backwards-compat
+      // until Card 4 is fully migrated.
       const { error: insErr } = await supa.from("actor_contacts").insert({
         actor_id,
         name: c.name,
@@ -526,6 +529,7 @@ serve(async (req) => {
         email: c.email,
         phone: c.phone,
         linkedin: c.linkedin,
+        linkedin_url: c.linkedin,
         source: "auto_scrape",
       });
       if (insErr) {
