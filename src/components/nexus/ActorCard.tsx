@@ -206,8 +206,9 @@ const ActorCard = ({
             )}
             {score !== null && (
               <Badge
+                key={score.toFixed(2)}
                 variant="outline"
-                className={cn("text-[10px] px-1.5 py-0 h-4 rounded-sharp font-mono", scoreTone(score))}
+                className={cn("text-[10px] px-1.5 py-0 h-4 rounded-sharp font-mono transition-colors duration-300 animate-fade-in", scoreTone(score))}
                 title={`Relevance ${score.toFixed(2)}`}
               >
                 {score.toFixed(2)}
