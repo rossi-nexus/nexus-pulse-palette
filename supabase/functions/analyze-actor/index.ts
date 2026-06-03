@@ -297,6 +297,7 @@ function normalizeAnalysis(raw: any): any {
   a.products = Array.isArray(raw?.products) ? raw.products : [];
   a.services = Array.isArray(raw?.services) ? raw.services : [];
   a.standards = Array.isArray(raw?.standards) ? raw.standards : [];
+  a.capacity = Array.isArray(raw?.capacity) ? raw.capacity : [];
   a.customerHistory = Array.isArray(raw?.customerHistory) ? raw.customerHistory : [];
   a.analysisSources = Array.isArray(raw?.analysisSources) ? raw.analysisSources : [];
 
