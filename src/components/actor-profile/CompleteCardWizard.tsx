@@ -1464,6 +1464,59 @@ const OntologyEditor = ({
         </div>
       )}
 
+      <WebsiteResolverPanel resolver={resolver} />
+
+      <div>
+        <Button
+          onClick={scrape}
+          disabled={scraping || !resolver.website}
+          variant="outline"
+          size="sm"
+        >
+          {scraping ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Sparkles className="w-3 h-3 mr-1" />
+          )}
+          Scrape {category} from website
+        </Button>
+        {proposals.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <div className="text-xs text-foreground-muted">
+              Click a suggestion to add it.
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {proposals.map((p, i) => {
+                const isMatched = !!p.matched_entry_id;
+                const matchedEntry = isMatched
+                  ? { id: p.matched_entry_id!, raw_name: p.entry_name }
+                  : null;
+                return (
+                  <button
+                    key={`${p.entry_name}-${i}`}
+                    type="button"
+                    disabled={busy || !isMatched}
+                    onClick={() => matchedEntry && pick(matchedEntry)}
+                    title={
+                      isMatched
+                        ? `${p.evidence} (confidence: ${p.confidence})`
+                        : `New concept "${p.entry_name}" — admin must add it to the ontology first`
+                    }
+                    className="inline-flex items-center gap-1 rounded-full bg-surface border border-border px-2 py-0.5 text-xs text-foreground hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {p.entry_name}
+                    {!isMatched && (
+                      <span className="text-[10px] text-foreground-muted">· new</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+
       <Label className="text-xs text-foreground-muted">
         Find a {category.replace(/s$/, "")} to add
       </Label>
