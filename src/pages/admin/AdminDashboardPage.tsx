@@ -3,6 +3,7 @@ import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/analytics/StatCard";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
+import { AdminUtilitiesSection } from "@/components/admin/AdminUtilitiesSection";
 
 const Row = ({ label, value }: { label: string; value: number | string }) => (
   <div className="flex items-center justify-between bg-surface border border-border rounded-md px-3 py-2">
