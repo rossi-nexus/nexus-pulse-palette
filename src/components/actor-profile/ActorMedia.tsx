@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import ProvenanceBadge, { type ProvenanceData } from "@/components/actor-profile/ProvenanceBadge";
 
 export interface ActorMediaRow {
   id: string;
   type: string;
   url: string;
+  source?: string | null;
+  verified_at?: string | null;
+  verifier_id?: string | null;
+  decays_at?: string | null;
+  confidence?: string | null;
+  crop_data?: any;
 }
 
 const PALETTE = [
@@ -22,23 +29,38 @@ function hashIndex(str: string, n: number): number {
   return Math.abs(h) % n;
 }
 
+/** Small absolute-positioned provenance badge for the bottom-right of media. */
+function MediaProvenanceOverlay({ data }: { data?: ProvenanceData | null }) {
+  if (!data) return null;
+  return (
+    <div className="absolute bottom-1.5 right-1.5 z-10">
+      <ProvenanceBadge {...data} size="dot" />
+    </div>
+  );
+}
+
 export function ActorLogo({
   name,
   url,
   size = 72,
+  provenance,
 }: {
   name: string;
   url?: string | null;
   size?: number;
+  provenance?: ProvenanceData | null;
 }) {
   if (url) {
     return (
-      <img
-        src={url}
-        alt={`${name} logo`}
-        style={{ width: size, height: size }}
-        className="rounded-md object-cover bg-elevated border border-border shrink-0"
-      />
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <img
+          src={url}
+          alt={`${name} logo`}
+          style={{ width: size, height: size }}
+          className="rounded-md object-cover bg-elevated border border-border"
+        />
+        <MediaProvenanceOverlay data={provenance} />
+      </div>
     );
   }
   const initial = (name.trim()[0] ?? "?").toUpperCase();
@@ -56,11 +78,20 @@ export function ActorLogo({
   );
 }
 
-export function ActorHeroBanner({ url, alt }: { url: string; alt: string }) {
+export function ActorHeroBanner({
+  url,
+  alt,
+  provenance,
+}: {
+  url: string;
+  alt: string;
+  provenance?: ProvenanceData | null;
+}) {
   return (
     <div className="relative w-full h-[240px] mb-4 rounded-lg overflow-hidden border border-border">
       <img src={url} alt={alt} className="w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent pointer-events-none" />
+      <MediaProvenanceOverlay data={provenance} />
     </div>
   );
 }
@@ -78,18 +109,27 @@ export function ProductGallery({
     <>
       <div className="grid grid-cols-3 gap-2 mb-4">
         {images.map((m, i) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setOpenIdx(i)}
-            className="group aspect-square overflow-hidden rounded-md border border-border bg-elevated hover:border-border-accent transition-colors"
-          >
-            <img
-              src={m.url}
-              alt={`${actorName} product ${i + 1}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          <div key={m.id} className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenIdx(i)}
+              className="group aspect-square w-full overflow-hidden rounded-md border border-border bg-elevated hover:border-border-accent transition-colors"
+            >
+              <img
+                src={m.url}
+                alt={`${actorName} product ${i + 1}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              />
+            </button>
+            <MediaProvenanceOverlay
+              data={{
+                source: m.source ?? null,
+                verified_at: m.verified_at ?? null,
+                verifier_id: m.verifier_id ?? null,
+                decays_at: m.decays_at ?? null,
+              }}
             />
-          </button>
+          </div>
         ))}
       </div>
       <Dialog open={openIdx !== null} onOpenChange={(v) => !v && setOpenIdx(null)}>
