@@ -242,11 +242,10 @@ serve(async (req) => {
       .maybeSingle();
     if (actorErr || !actorRow) return json({ error: "Actor not found" }, 404);
 
-    const { data: isAdminData } = await supa.rpc("is_admin", { _user_id: user.id });
-    const isAdmin = isAdminData === true;
-    if (!isAdmin && actorRow.verifier_id !== user.id) {
-      return json({ error: "Forbidden" }, 403);
-    }
+    // Any authenticated user can trigger scrape — same gate as manual
+    // actor_media insert in the wizard. Wizard UI restricts who sees the
+    // trigger; this function trusts that and just requires an auth'd caller.
+
 
     const { data: existing } = await supa
       .from("actor_media")
