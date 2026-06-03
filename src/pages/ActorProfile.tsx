@@ -485,8 +485,22 @@ const ActorProfile = () => {
   // Part 2 / Prompt 2: registry refresh dialog for the DB-side edit toolbar.
   const [registryRefreshOpen, setRegistryRefreshOpen] = useState(false);
   // P3: media slot editor state
-  const [mediaEditor, setMediaEditor] = useState<{ slot: MediaSlotType } | null>(null);
+  // V3 batch #3 Area 2 — extended with linkedProductName + replaceMediaId
+  // so per-product "Add image" / "Replace image" share the same editor.
+  const [mediaEditor, setMediaEditor] = useState<{
+    slot: MediaSlotType;
+    linkedProductName?: string;
+    replaceMediaId?: string;
+    defaultQuery?: string;
+  } | null>(null);
   const openMediaEditor = (slot: MediaSlotType) => setMediaEditor({ slot });
+  const openProductImageEditor = (productName: string, replaceMediaId?: string) =>
+    setMediaEditor({
+      slot: "product",
+      linkedProductName: productName,
+      replaceMediaId,
+      defaultQuery: `${name} ${productName}`.trim(),
+    });
   // Continuation Area 3: media polling for freshly onboarded actors.
   const [mediaPolling, setMediaPolling] = useState(false);
   const [mediaPollTimedOut, setMediaPollTimedOut] = useState(false);
