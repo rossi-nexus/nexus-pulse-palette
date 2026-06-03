@@ -23,6 +23,8 @@ export interface ActorCardData {
   name: string;
   location?: string;
   country?: string;
+  latitude?: number;
+  longitude?: number;
   website?: string;
   description: string;
   match_strength: "strong" | "moderate" | "weak";
