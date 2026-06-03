@@ -74,12 +74,14 @@ const UTILITIES: Utility[] = [
 export const AdminUtilitiesSection = () => {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
+  // Live progress text for the geocoding loop — it's the only utility that
+  // processes one row per call and needs inline progress feedback.
+  const [geocodeProgress, setGeocodeProgress] = useState<string | null>(null);
 
   const pending = UTILITIES.find((u) => u.id === pendingId) ?? null;
 
   const extractErrorMessage = async (error: any, kind: "rpc" | "function"): Promise<string> => {
     if (!error) return "Unknown error";
-    // RPC errors: PostgrestError { message, code, details, hint }
     if (kind === "rpc") {
       const parts = [
         error.message,
@@ -89,8 +91,6 @@ export const AdminUtilitiesSection = () => {
       ].filter(Boolean);
       return parts.join(" — ") || "Unknown RPC error";
     }
-    // Edge function errors: FunctionsHttpError exposes context.response (Response)
-    // FunctionsFetchError means the request never reached the function (404/network)
     const ctx = (error as any).context;
     if (ctx && typeof ctx === "object") {
       try {
@@ -113,9 +113,53 @@ export const AdminUtilitiesSection = () => {
     return error.message ?? "Unknown error";
   };
 
+  // Special-case loop runner for the geocoding RPC, which now processes at most
+  // one actor per call and returns {processed_count, remaining_count,
+  // total_count, processed_actor_id, processed_actor_name}. Loops client-side
+  // to avoid hitting the database statement timeout (audit §D2 / fix 1).
+  const runGeocodeLoop = async (u: Utility) => {
+    setGeocodeProgress("Counting candidates…");
+    let totalKnown = 0;
+    let totalProcessed = 0;
+    for (let i = 0; i < 500; i++) {
+      const { data, error } = await (supabase.rpc as any)(u.target);
+      if (error) {
+        const msg = await extractErrorMessage(error, "rpc");
+        console.error(`[admin-utility] ${u.id} loop failed`, error);
+        toast.error(`${u.label} failed: ${msg}`);
+        setGeocodeProgress(null);
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      const processed = Number(row?.processed_count ?? 0);
+      const remaining = Number(row?.remaining_count ?? 0);
+      const total = Number(row?.total_count ?? 0);
+      if (totalKnown === 0) totalKnown = total;
+      totalProcessed += processed;
+      if (processed === 0 && remaining === 0) break;
+      setGeocodeProgress(
+        `Geocoding ${totalProcessed} of ${totalKnown || totalProcessed + remaining} actors…`,
+      );
+      if (remaining === 0) break;
+      // Brief breather between rows so the geocode-actor HTTP work has time
+      // to land and we never hot-loop the database.
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    if (totalProcessed === 0) {
+      toast.success("No actors needed geocoding.");
+    } else {
+      toast.success(`Geocoded ${totalProcessed} actor${totalProcessed === 1 ? "" : "s"}.`);
+    }
+    setGeocodeProgress(null);
+  };
+
   const runUtility = async (u: Utility) => {
     setRunningId(u.id);
     try {
+      if (u.id === "geocode_personal") {
+        await runGeocodeLoop(u);
+        return;
+      }
       let data: any = null;
       let error: any = null;
       if (u.kind === "rpc") {
@@ -140,7 +184,6 @@ export const AdminUtilitiesSection = () => {
           const v = data[0];
           if (typeof v === "number") count = v;
           else if (v && typeof v === "object") {
-            // RETURNS TABLE(...) — count rows or pick the first numeric column
             count = data.length;
           } else {
             count = Number(v) || 0;
@@ -183,6 +226,9 @@ export const AdminUtilitiesSection = () => {
             >
               {runningId === u.id ? "Running…" : "Run"}
             </Button>
+            {u.id === "geocode_personal" && runningId === u.id && geocodeProgress && (
+              <p className="text-caption text-foreground-muted">{geocodeProgress}</p>
+            )}
           </div>
         ))}
       </div>
