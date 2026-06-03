@@ -650,6 +650,64 @@ ${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.s
 
     const analysis = normalizeAnalysis(analysisRaw);
 
+    // AX2 persistence — write capacity + standards to satellite tables when
+    // a target verified-actor id is provided. Service-role required because
+    // those tables are admin-write via RLS; fn_persist_actor_enrichment is
+    // SECURITY DEFINER and accepts service-role callers (auth.uid() NULL).
+    let persistResult: { capacity_inserted: number; standards_inserted: number } | null = null;
+    let persistError: string | null = null;
+    if (persistToActorId && (analysis.capacity?.length || analysis.standards?.length)) {
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!serviceRoleKey) {
+        persistError = "SUPABASE_SERVICE_ROLE_KEY not configured — persistence skipped.";
+        console.warn(persistError);
+      } else {
+        try {
+          const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+          const capacityRows = (analysis.capacity ?? []).map((c: any) => ({
+            attribute_type: c.attributeType,
+            value_text: c.valueText,
+            value_min: typeof c.valueMin === "number" ? c.valueMin : null,
+            value_max: typeof c.valueMax === "number" ? c.valueMax : null,
+            unit: c.unit ?? null,
+            evidence: c.evidence ?? null,
+            source_url: c.sourceUrl ?? null,
+          }));
+          const standardRows = (analysis.standards ?? []).map((s: any) => ({
+            standard_name: s.standardName,
+            standard_number: s.standardNumber ?? null,
+            certifying_body: s.certifyingBody ?? null,
+            valid_from: s.validFrom ?? null,
+            valid_to: s.validTo ?? null,
+            evidence: s.evidence ?? null,
+            source_url: s.sourceUrl ?? null,
+          }));
+          const { data: persistData, error: persistErr } = await supabaseAdmin.rpc(
+            "fn_persist_actor_enrichment",
+            {
+              p_actor_id: persistToActorId,
+              p_capacity: capacityRows,
+              p_standards: standardRows,
+              p_source_url: actor.website ?? null,
+            },
+          );
+          if (persistErr) {
+            persistError = persistErr.message ?? String(persistErr);
+            console.error("fn_persist_actor_enrichment failed:", persistErr);
+          } else {
+            const row = Array.isArray(persistData) ? persistData[0] : persistData;
+            persistResult = {
+              capacity_inserted: Number(row?.capacity_inserted ?? 0),
+              standards_inserted: Number(row?.standards_inserted ?? 0),
+            };
+          }
+        } catch (e) {
+          persistError = (e as Error).message ?? "unknown persist error";
+          console.error("Persist call threw:", e);
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       actor_id: actor.id,
       role_id: role.id,
@@ -658,6 +716,8 @@ ${gatheredResults.map((r, i) => `[${i + 1}] "${r.title}" — ${r.url}\n    ${r.s
       sources_gathered: gatheredResults.length,
       serper_partial_failure: serperFailed,
       analysis_mode: mode,
+      persist_result: persistResult,
+      persist_error: persistError,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("analyze-actor error:", e);
