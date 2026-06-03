@@ -1954,7 +1954,18 @@ const ActorProfile = () => {
                   )}
                   <IdentityRow label="Org number" value={orgNumber} />
                   <IdentityRow label="Country" value={country} />
-                  <IdentityRow label="Address" value={addressComposed} />
+                  <div>
+                    <IdentityRow label="Address" value={addressComposed} />
+                    {!addressComposed && canEditDb && (
+                      <button
+                        type="button"
+                        onClick={() => setAddressDialogOpen(true)}
+                        className="text-xs text-accent-teal hover:underline inline-flex items-center gap-1 mt-1"
+                      >
+                        <MapPin className="w-3 h-3" /> Add address
+                      </button>
+                    )}
+                  </div>
                   {actorType && (
                     <IdentityRow label="Type" value={TYPE_LABEL[actorType] ?? actorType} />
                   )}
