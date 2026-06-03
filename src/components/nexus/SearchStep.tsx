@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Loader2, Lock, Unlock, FlaskConical, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Loader2, Lock, Unlock, FlaskConical, Search, Bookmark, SlidersHorizontal, GitCompare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import StepContainer from "./StepContainer";
 import { SessionMapButton } from "./SessionMapButton";
 import RoleProgressBox from "./RoleProgressBox";
@@ -8,7 +9,12 @@ import ActorCard from "./ActorCard";
 import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
 import CoverageBanner from "./CoverageBanner";
-import type { useSearch } from "@/hooks/useSearch";
+import ConstraintPills from "./ConstraintPills";
+import CompareModal from "./CompareModal";
+import SaveSearchDialog from "./SaveSearchDialog";
+import EditConstraintsSlideOver from "./EditConstraintsSlideOver";
+import { useCompareSet } from "@/hooks/useCompareSet";
+import type { useSearch, ActorCardData } from "@/hooks/useSearch";
 import type { Interpretation } from "@/types/interpretation";
 
 const MOCK_INTERPRETATION: Interpretation = {
