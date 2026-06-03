@@ -80,12 +80,14 @@ export const ProfileEditToolbar = ({
       {onReverify && (
         <Button size="sm" variant="outline" onClick={onReverify}>
           <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Re-verify
+          <span className="ml-1.5 text-[10px] text-foreground-muted">(Admin)</span>
         </Button>
       )}
       <TooltipProvider delayDuration={150}>
         {onMerge ? (
           <Button size="sm" variant="outline" onClick={onMerge}>
             <GitMerge className="w-3.5 h-3.5 mr-1.5" /> Merge
+            <span className="ml-1.5 text-[10px] text-foreground-muted">(Admin)</span>
           </Button>
         ) : (
           <Tooltip>
