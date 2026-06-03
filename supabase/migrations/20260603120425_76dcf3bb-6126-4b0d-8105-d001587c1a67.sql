@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.fn_compute_actor_relevance_score_v2(uuid[], jsonb, jsonb);

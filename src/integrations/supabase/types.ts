@@ -1578,6 +1578,51 @@ export type Database = {
           },
         ]
       }
+      user_actor_interactions: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          interaction_type: string
+          metadata: Json | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          interaction_type: string
+          metadata?: Json | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          interaction_type?: string
+          metadata?: Json | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_actor_interactions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "actors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_actor_interactions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "search_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_attributes: {
         Row: {
           expires_at: string | null
@@ -1772,6 +1817,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          default_axis_weights: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          default_axis_weights?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          default_axis_weights?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       users: {
         Row: {
@@ -2061,7 +2124,12 @@ export type Database = {
         Returns: number
       }
       fn_compute_actor_relevance_score_v2: {
-        Args: { p_actor_ids: string[]; p_constraints?: Json; p_weights?: Json }
+        Args: {
+          p_actor_ids: string[]
+          p_constraints?: Json
+          p_user_id?: string
+          p_weights?: Json
+        }
         Returns: {
           actor_id: string
           breakdown: Json

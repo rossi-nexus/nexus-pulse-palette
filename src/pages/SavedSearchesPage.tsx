@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Play, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { resolveAxisWeights, useUserPreferences } from "@/hooks/useUserPreferences";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "never";
@@ -19,10 +21,12 @@ function timeAgo(iso: string | null): string {
 
 const SavedSearchesPage = () => {
   const { rows, loading, remove } = useSavedSearches();
+  const { user } = useAuth();
+  const { weights: userDefaults } = useUserPreferences();
   const [running, setRunning] = useState<string | null>(null);
   const [runResults, setRunResults] = useState<Record<string, any[]>>({});
 
-  const runNow = async (id: string, payload: any) => {
+  const runNow = async (id: string, payload: any, override: any | null) => {
     setRunning(id);
     try {
       const entryIds: string[] = [];
@@ -48,10 +52,12 @@ const SavedSearchesPage = () => {
         toast("No matches");
         return;
       }
+      const resolved = resolveAxisWeights(override, userDefaults);
       const { data: scoreRows, error: scoreErr } = await (supabase.rpc as any)("fn_compute_actor_relevance_score_v2", {
         p_actor_ids: actorIds,
         p_constraints: { ontology_entry_ids: uniq, ...(payload?.constraints ?? {}) },
-        p_weights: null,
+        p_weights: resolved,
+        p_user_id: user?.id ?? null,
       });
       if (scoreErr) throw scoreErr;
       const byId = new Map<string, any>((scoreRows ?? []).map((s: any) => [s.actor_id as string, s]));
@@ -89,7 +95,7 @@ const SavedSearchesPage = () => {
                 </p>
               </div>
               <div className="flex gap-1.5">
-                <Button size="sm" variant="outline" onClick={() => runNow(r.id, r.need_payload)} disabled={running === r.id}>
+                <Button size="sm" variant="outline" onClick={() => runNow(r.id, r.need_payload, r.axis_weights ?? null)} disabled={running === r.id}>
                   <Play className="w-3 h-3 mr-1" /> {running === r.id ? "Running…" : "Run now"}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={async () => { try { await remove(r.id); toast.success("Deleted"); } catch (e: any) { toast.error(e?.message); } }}>
