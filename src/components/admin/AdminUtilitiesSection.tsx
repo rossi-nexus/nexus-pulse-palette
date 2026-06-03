@@ -119,7 +119,7 @@ export const AdminUtilitiesSection = () => {
   return (
     <section className="space-y-3">
       <h2 className="text-h2 text-foreground">Admin utilities</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {UTILITIES.map((u) => (
           <div
             key={u.id}
