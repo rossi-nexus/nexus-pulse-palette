@@ -237,3 +237,14 @@
 .leaflet-control-attribution a {
   color: hsl(var(--accent-teal)) !important;
 }
+
+/* Keep Leaflet panes/controls below shadcn overlays (Sheet/Dialog use z-50) */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+.leaflet-container {
+  z-index: 0;
+}
+
