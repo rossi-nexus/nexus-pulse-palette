@@ -392,6 +392,97 @@ Submit only via the submit_product_enrichment tool.`;
   };
 }
 
+/**
+ * V3 Batch C §4 — discovery-miss brand fallback.
+ * Parses the actor's homepage for outbound links to external domains that
+ * appear in a product-mention context, plus already-stored orphan media
+ * source pages on external domains. Returns up to 5 unique suggestions.
+ */
+async function collectReferencedBrandUrls(
+  baseUrl: string,
+  productName: string,
+  admin: ReturnType<typeof createClient>,
+  actorId: string,
+): Promise<Array<{ domain: string; anchor_text?: string; mention_context?: string }>> {
+  const out: Array<{ domain: string; anchor_text?: string; mention_context?: string }> = [];
+  const seen = new Set<string>();
+  let baseHost = "";
+  try {
+    baseHost = new URL(baseUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return out;
+  }
+  const productLc = productName.toLowerCase();
+  const tokens = productLc.split(/\s+/).filter((t) => t.length >= 3);
+
+  // 1) Scrape homepage anchors.
+  try {
+    const r = await fetchWithTimeout(baseUrl);
+    if (r.ok) {
+      const html = await r.text();
+      const anchorRe = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      let m: RegExpExecArray | null;
+      while ((m = anchorRe.exec(html)) !== null) {
+        const href = m[1];
+        const anchorText = m[2].replace(/<[^>]+>/g, "").trim().slice(0, 80);
+        let host = "";
+        try {
+          host = new URL(href, baseUrl).hostname.replace(/^www\./, "");
+        } catch {
+          continue;
+        }
+        if (!host || host === baseHost || seen.has(host)) continue;
+        // Skip social / analytics / known non-brand domains.
+        if (/^(facebook|twitter|x|linkedin|youtube|instagram|google|googletagmanager|maps|wikipedia|cookiebot)\./i.test(host)) continue;
+        // Pull a small text window around the anchor to test product mentions.
+        const idx = m.index;
+        const window = html.slice(Math.max(0, idx - 200), idx + m[0].length + 200);
+        const windowText = window.replace(/<[^>]+>/g, " ").toLowerCase();
+        const mentioned =
+          windowText.includes(productLc) ||
+          (tokens.length > 0 && tokens.every((t) => windowText.includes(t)));
+        if (!mentioned && anchorText.length === 0) continue;
+        seen.add(host);
+        out.push({
+          domain: host,
+          anchor_text: anchorText || undefined,
+          mention_context: mentioned ? "homepage link near product mention" : "homepage outbound link",
+        });
+        if (out.length >= 8) break;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // 2) Stored orphan media with external source_page.
+  try {
+    const { data: orphans } = await admin
+      .from("actor_media")
+      .select("crop_data")
+      .eq("actor_id", actorId)
+      .eq("type", "product")
+      .is("crop_data->>linked_product_name", null)
+      .limit(50);
+    for (const o of (orphans ?? []) as any[]) {
+      const sp = o?.crop_data?.source_page;
+      if (!sp) continue;
+      try {
+        const host = new URL(sp).hostname.replace(/^www\./, "");
+        if (!host || host === baseHost || seen.has(host)) continue;
+        seen.add(host);
+        out.push({ domain: host, mention_context: "previously-scraped orphan media source" });
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return out.slice(0, 5);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
