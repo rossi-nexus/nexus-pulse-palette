@@ -265,40 +265,8 @@ const CompleteCardWizard = ({
     [sections, showSkipped, skipped],
   );
 
-  const keptList = visibleSections.filter((s) => keep[s.key]);
-  const currentStep = keptList[stepIdx] ?? null;
-
-  // ---------- Plan → Walk ----------
-  const beginWalk = async () => {
-    setBusy(true);
-    // Persist skip rows for any visible section the editor unchecked.
-    const toSkip = visibleSections.filter(
-      (s) => !keep[s.key] && !skippedKeys.has(s.key),
-    );
-    if (toSkip.length > 0) {
-      const rows = toSkip.map((s) => ({
-        actor_id: actorId,
-        section_key: s.key,
-        reason: skipReason[s.key]?.trim() || null,
-        skipped_by: viewerId,
-      }));
-      const { error } = await supabase.from("actor_section_skips").insert(rows);
-      if (error) {
-        toast.error(`Could not persist skips: ${error.message}`);
-        setBusy(false);
-        return;
-      }
-      setStats((s) => ({ ...s, skipped: s.skipped + rows.length }));
-    }
-    setBusy(false);
-    if (keptList.length === 0) {
-      setPhase("confirm");
-      onChanged();
-      return;
-    }
-    setPhase("walk");
-    setStepIdx(0);
-  };
+  // Free-jump model: stepIdx now indexes directly into visibleSections.
+  const currentStep = visibleSections[stepIdx] ?? null;
 
   // ---------- Un-skip ----------
   const unskip = async (key: string) => {
@@ -315,15 +283,19 @@ const CompleteCardWizard = ({
     onChanged();
   };
 
-  const advance = (added: boolean) => {
-    if (added) setStats((s) => ({ ...s, added: s.added + 1 }));
-    if (stepIdx + 1 >= keptList.length) {
-      setPhase("confirm");
-      onChanged();
-    } else {
-      setStepIdx((i) => i + 1);
-    }
+  // From an editor's "Done" button: return to the overview so the user can
+  // pick another section. They are never forced into a linear sequence.
+  const returnToPlan = () => {
+    setPhase("plan");
+    onChanged();
   };
+
+  const goToNeighbor = (delta: number) => {
+    const next = stepIdx + delta;
+    if (next < 0 || next >= visibleSections.length) return;
+    setStepIdx(next);
+  };
+
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
