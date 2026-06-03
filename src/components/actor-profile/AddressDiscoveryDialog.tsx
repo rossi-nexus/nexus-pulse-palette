@@ -375,9 +375,13 @@ const AddressDiscoveryDialog = ({
               onChange={(e) => setWebsiteInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submitWebsiteInput()}
             />
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="ghost" onClick={() => setStep("choose")}>
                 <ArrowLeft className="w-3 h-3 mr-1" /> Back
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={findWebsiteAutomatically}>
+                {busy ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                Find automatically
               </Button>
               <Button disabled={busy} onClick={submitWebsiteInput}>
                 Scan website
