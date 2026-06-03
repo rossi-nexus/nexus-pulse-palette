@@ -80,21 +80,34 @@ export const AdminUtilitiesSection = () => {
   const runUtility = async (u: Utility) => {
     setRunningId(u.id);
     try {
-      const { data, error } = await (supabase.rpc as any)(u.rpc);
+      let data: any = null;
+      let error: any = null;
+      if (u.kind === "rpc") {
+        const res = await (supabase.rpc as any)(u.target);
+        data = res.data;
+        error = res.error;
+      } else {
+        const res = await supabase.functions.invoke(u.target, { body: {} });
+        data = res.data;
+        error = res.error;
+      }
       if (error) {
-        toast.error(`${u.label} failed: ${error.message}`);
+        toast.error(`${u.label} failed: ${error.message ?? "Unknown error"}`);
         return;
       }
-      // RPCs may return a bare integer, a single row, or an array. Coerce.
-      let count: number | null = null;
-      if (typeof data === "number") count = data;
-      else if (Array.isArray(data) && data.length > 0) {
-        const v = data[0];
-        count = typeof v === "number" ? v : Number(v) || 0;
-      } else if (data != null) {
-        count = Number(data) || 0;
+      if (u.kind === "rpc") {
+        let count: number | null = null;
+        if (typeof data === "number") count = data;
+        else if (Array.isArray(data) && data.length > 0) {
+          const v = data[0];
+          count = typeof v === "number" ? v : Number(v) || 0;
+        } else if (data != null) {
+          count = Number(data) || 0;
+        }
+        toast.success(u.successFmt(count));
+      } else {
+        toast.success(u.successFmt(data));
       }
-      toast.success(u.successFmt(count));
     } catch (e: any) {
       toast.error(`${u.label} failed: ${e?.message ?? "Unknown error"}`);
     } finally {
