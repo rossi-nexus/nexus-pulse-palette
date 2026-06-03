@@ -556,6 +556,8 @@ const SectionEditor = (props: EditorProps) => {
 };
 
 // ---- Address ----
+// Uses the existing dialog but does NOT auto-advance — the user can re-open
+// the dialog, edit, and only moves on when they click "Done — next step".
 const AddressEditor = ({
   actorId,
   actorName,
@@ -565,31 +567,106 @@ const AddressEditor = ({
   onDone,
   onChanged,
 }: EditorProps) => {
-  const [open, setOpen] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(true);
+  const [current, setCurrent] = useState<{
+    street_address: string | null;
+    city: string | null;
+    region: string | null;
+    postal_code: string | null;
+    country: string | null;
+  } | null>(null);
+
+  const loadCurrent = async () => {
+    const { data } = await supabase
+      .from("actors")
+      .select("street_address, city, region, postal_code, country")
+      .eq("id", actorId)
+      .maybeSingle();
+    setCurrent(data ?? null);
+  };
+  useEffect(() => {
+    void loadCurrent();
+  }, [actorId]);
+
+  const hasAddress =
+    !!current?.street_address || !!current?.city || !!current?.postal_code;
+
   return (
-    <AddressDiscoveryDialog
-      open={open}
-      onClose={() => setOpen(false)}
-      actorId={actorId}
-      actorName={actorName}
-      orgNumber={orgNumber}
-      website={website}
-      country={country}
-      onSaved={() => {
-        onChanged();
-        onDone();
-      }}
-    />
+    <div className="space-y-3">
+      {/* Current saved address */}
+      <div className="rounded-md border border-border bg-surface px-3 py-2">
+        <div className="text-xs text-foreground-muted mb-1">Currently saved</div>
+        {hasAddress ? (
+          <div className="text-sm text-foreground">
+            {current?.street_address && <div>{current.street_address}</div>}
+            <div>
+              {[current?.postal_code, current?.city].filter(Boolean).join(" ")}
+              {current?.region ? `, ${current.region}` : ""}
+            </div>
+            {current?.country && (
+              <div className="text-xs text-foreground-muted">{current.country}</div>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-foreground-muted italic">No address saved yet.</div>
+        )}
+      </div>
+
+      <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+        <Search className="w-3 h-3 mr-1" />
+        {hasAddress ? "Change address" : "Find or enter address"}
+      </Button>
+
+      <AddressDiscoveryDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        actorId={actorId}
+        actorName={actorName}
+        orgNumber={orgNumber}
+        website={website}
+        country={country}
+        onSaved={() => {
+          onChanged();
+          void loadCurrent();
+          setDialogOpen(false);
+        }}
+      />
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button onClick={onDone} size="sm">
+          Done — next step
+          <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
+      </div>
+    </div>
   );
 };
 
 // ---- Description ----
+// Save as we go, show existing descriptions, support AI generate + manual,
+// don't auto-advance.
 const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onChanged }: EditorProps) => {
   const resolver = useWebsiteResolver(actorId, actorName, website);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generatedSource, setGeneratedSource] = useState<string | null>(null);
+  const [existing, setExisting] = useState<
+    Array<{ id: string; content: string; source: string; source_url: string | null }>
+  >([]);
+
+  const loadExisting = async () => {
+    const { data } = await supabase
+      .from("actor_descriptions")
+      .select("id, content, source, source_url")
+      .eq("actor_id", actorId)
+      .eq("type", "summary")
+      .order("created_at", { ascending: false });
+    setExisting((data ?? []) as any);
+  };
+  useEffect(() => {
+    void loadExisting();
+  }, [actorId]);
 
   const generate = async () => {
     setGenerating(true);
@@ -605,18 +682,9 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
       }
       const { data, error } = await supabase.functions.invoke(
         "generate-actor-summary",
-        {
-          body: {
-            actor_id: actorId,
-            website_url,
-            actor_name: actorName,
-          },
-        },
+        { body: { actor_id: actorId, website_url, actor_name: actorName } },
       );
-      if (error) {
-        const detail = (data as any)?.error ?? error.message;
-        throw new Error(detail);
-      }
+      if (error) throw new Error((data as any)?.error ?? error.message);
       const summary = (data as any)?.summary;
       if (!summary) throw new Error("No summary returned");
       setText(summary);
@@ -650,14 +718,54 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
       return;
     }
     toast.success("Description saved");
+    setText("");
+    setGeneratedSource(null);
+    await loadExisting();
     onChanged();
-    onDone();
   };
+
+  const remove = async (id: string) => {
+    const { error } = await supabase.from("actor_descriptions").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await loadExisting();
+    onChanged();
+  };
+
   return (
     <div className="space-y-3">
       <WebsiteResolverPanel resolver={resolver} />
+
+      {existing.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs text-foreground-muted">Currently saved</div>
+          {existing.map((d) => (
+            <div
+              key={d.id}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm relative group"
+            >
+              <div className="text-foreground whitespace-pre-wrap">{d.content}</div>
+              <div className="text-[10px] uppercase tracking-wider text-foreground-muted mt-1">
+                {d.source}
+                {d.source_url ? ` — ${d.source_url}` : ""}
+              </div>
+              <button
+                type="button"
+                onClick={() => remove(d.id)}
+                className="absolute top-1.5 right-1.5 p-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
+                aria-label="Remove"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
-        <Label className="text-xs text-foreground-muted">Summary</Label>
+        <Label className="text-xs text-foreground-muted">Add a summary</Label>
         <Button
           type="button"
           variant="outline"
@@ -687,10 +795,17 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
           Draft generated from {generatedSource}. Edit before saving.
         </p>
       )}
-      <Button onClick={save} disabled={busy || generating}>
+      <Button onClick={save} disabled={busy || generating || !text.trim()} size="sm">
         {busy && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
         Save description
       </Button>
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button onClick={onDone} size="sm">
+          Done — next step
+          <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 };
