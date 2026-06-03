@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import { REGISTRIES, type RegistryId } from "@/config/registries";
 
+const registryName = (id: RegistryId | undefined): string =>
+  id ? REGISTRIES.find((r) => r.id === id)?.name ?? id : "registry";
+
 interface FormData {
   legal_name: string;
   org_number: string;
