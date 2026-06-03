@@ -248,17 +248,7 @@ const OrphanMediaPage = () => {
           </p>
         </header>
 
-        {selected.size > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-surface">
-            <span className="text-xs text-foreground">{selected.size} selected</span>
-            <Button size="sm" variant="outline" onClick={bulkMarkNotProduct}>
-              Mark not-product
-            </Button>
-            <Button size="sm" variant="destructive" onClick={bulkDelete}>
-              <Trash2 className="w-3 h-3 mr-1" /> Delete
-            </Button>
-          </div>
-        )}
+        {/* Bulk action toolbar is now floating; see bottom of the page. */}
 
         {loading ? (
           <p className="text-foreground-muted text-sm">Loading…</p>
