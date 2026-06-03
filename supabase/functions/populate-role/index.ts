@@ -10,6 +10,8 @@ const corsHeaders = {
 
 const SYSTEM_PROMPT = `You are populating the search targets for a SINGLE role added manually by the user in æXs NEXUS, a discovery platform for defence, security, infrastructure, and dual-use technology.
 
+LANGUAGE: All output MUST be in English. Translate any non-English source to clear professional English. Proper nouns stay as-is.
+
 The user has already gone through interpretation and now wants to add an additional role to broaden or refine the search. Your job is to:
 
 1. Write a 1-2 sentence role description (what type of actor this role represents).

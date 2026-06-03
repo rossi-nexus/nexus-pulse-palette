@@ -9,6 +9,8 @@ const corsHeaders = {
 
 const ANALYSIS_PROMPT = `You are a defence & security industry analyst performing a detailed capability assessment of a specific company.
 
+LANGUAGE: All output (descriptions, summaries, evidence, role/title text) MUST be in English. If source material is in another language (e.g. Norwegian, Swedish, Danish, Finnish), translate to clear professional English. Do not echo source-language phrases unless they are proper nouns — company names, product brand names, person names, and place names stay as-is. Translate role/title words (e.g. "Daglig leder"→"CEO", "Operasjonssjef"→"Operations Manager", "Salgssjef"→"Sales Manager", "Styreleder"→"Chairman").
+
 You are given:
 1. The company's name, website, and description
 2. Web search results about this company (URLs, titles, snippets)

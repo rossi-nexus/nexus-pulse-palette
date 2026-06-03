@@ -281,6 +281,8 @@ async function llmExtractContacts(
 
   const prompt = `You are extracting individual people (employees, founders, leadership team members, board members) from a company website's team / about / contact / leadership page. The page may be in English or Norwegian.
 
+LANGUAGE: All output text MUST be in English. Person names are proper nouns — keep them exactly as written. Translate roles/titles to English equivalents (e.g. "Daglig leder"→"CEO", "Operasjonssjef"→"Operations Manager", "Salgssjef"→"Sales Manager", "Styreleder"→"Chairman", "Markedssjef"→"Marketing Manager", "Prosjektleder"→"Project Manager"). Never output a Norwegian role/title in the final result.
+
 URL: ${pageUrl}
 
 Page text:

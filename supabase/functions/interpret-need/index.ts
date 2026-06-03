@@ -10,6 +10,8 @@ const corsHeaders = {
 
 const SYSTEM_PROMPT = `You are the interpretation engine for æXs NEXUS, a discovery platform for defense, security, infrastructure, and dual-use technology.
 
+LANGUAGE: All output (role names, summaries, descriptions, constraint text) MUST be in English. Even if the user's input is in Norwegian/Swedish/Danish/Finnish, return everything in clear professional English. Proper nouns (company names, place names, person names, product brand names) stay as-is.
+
 Analyze the user's need description and produce a structured interpretation that drives a multi-role actor discovery search.
 
 ## Input format

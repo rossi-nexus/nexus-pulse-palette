@@ -96,6 +96,8 @@ function buildPrompt(args: {
     args.existingItems.length > 0 ? args.existingItems.join(", ") : "(none)";
   return `You are extracting ${cfg.description} from a company document for the NEXUS discovery platform.
 
+LANGUAGE: All output (entry names, evidence, descriptions) MUST be in English. If the document is in another language (e.g. Norwegian, Swedish, Danish, Finnish), translate to clear professional English. Proper nouns (company, product brand, person, place names) stay as-is.
+
 Company: ${args.actorName}
 ${args.actorDescription ? `Description: ${args.actorDescription}\n` : ""}${args.country ? `Country: ${args.country}\n` : ""}Source document: ${args.sourceDescription}
 
