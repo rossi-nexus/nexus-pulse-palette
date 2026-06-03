@@ -1310,7 +1310,7 @@ const ActorProfile = () => {
   );
 
   // ---------- V3 Batch A — presence + trust per macro-card ----------
-  const anyStale = React.useMemo(() => {
+  const anyStale = useMemo(() => {
     const rows: Array<{ verified_at?: string | null; decays_at?: string | null }> = [
       ...(dbActor ? [{ verified_at: dbActor.verified_at, decays_at: dbActor.decays_at }] : []),
       ...classifications,
@@ -1386,8 +1386,8 @@ const ActorProfile = () => {
   const trustCollection: TrustBand = "user";
 
   // Linked personal actor (DB-side Card 6 CTA).
-  const [linkedPersonalId, setLinkedPersonalId] = React.useState<string | null>(null);
-  React.useEffect(() => {
+  const [linkedPersonalId, setLinkedPersonalId] = useState<string | null>(null);
+  useEffect(() => {
     if (source !== "database" || !dbActor?.id || !user?.id) {
       setLinkedPersonalId(null);
       return;
