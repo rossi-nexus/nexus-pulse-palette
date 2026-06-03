@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { productSlug } from "@/lib/productSlug";
+import ProvenanceBadge from "@/components/actor-profile/ProvenanceBadge";
 
 export interface ProductTag {
   entry_name: string;
