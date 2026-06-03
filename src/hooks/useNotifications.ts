@@ -8,6 +8,7 @@ const IN_SCOPE_EVENT_TYPES = [
   "reject_suggestion",
   "onboard_verified_actor",
   "record_outcome",
+  "saved_search_hit",
 ] as const;
 
 const POLL_INTERVAL_MS = 60_000;
