@@ -189,41 +189,89 @@ async function discoverProductUrl(
   return ranked[0].url;
 }
 
-interface ImageHit { url: string; alt: string }
+interface ImageHit { url: string; alt: string; width?: number; height?: number }
+
+// Deny-list: filenames that are almost never genuine product imagery.
+// Defensive widening (audit batch 2026-06-03) — adds flag/partner/badge/award.
+const IMAGE_DENY_RE =
+  /(favicon|logo|sprite|tracker|pixel|icon[-_/]|flag[-_]|country[-_]flag|partner|badge|award|placeholder|spacer|banner[-_]ad)/i;
 
 function extractImages(html: string, pageUrl: string): ImageHit[] {
   const seen = new Set<string>();
   const out: ImageHit[] = [];
-  // <img src>
   const imgRe = /<img\b[^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = imgRe.exec(html)) !== null) {
     const tag = m[0];
     const src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1] ?? "";
     const alt = /\balt\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1] ?? "";
+    const wAttr = parseInt(/\bwidth\s*=\s*["']?(\d+)/i.exec(tag)?.[1] ?? "0", 10);
+    const hAttr = parseInt(/\bheight\s*=\s*["']?(\d+)/i.exec(tag)?.[1] ?? "0", 10);
     if (!src) continue;
     let full = "";
     try { full = new URL(src, pageUrl).href; } catch { continue; }
     if (seen.has(full)) continue;
-    // Filter pixel-trackers / icons / logos by filename.
-    if (/(favicon|logo|sprite|tracker|pixel|icon[-_/])/i.test(full)) continue;
-    // Filter inline data URIs and tiny SVGs that look like icons.
+    if (IMAGE_DENY_RE.test(full)) continue;
     if (full.startsWith("data:")) continue;
+    // Drop tiny declared sizes (flags/icons routinely render at <120px).
+    if ((wAttr > 0 && wAttr < 120) || (hAttr > 0 && hAttr < 120)) continue;
+    // Drop SVG country flags by filename hint.
+    if (/\.svg(\?|$)/i.test(full) && /(flag|country|\bnor\b|\bswe\b|\bfin\b|\bdnk\b|\busa\b|\bgbr\b)/i.test(full)) continue;
     seen.add(full);
-    out.push({ url: full, alt });
+    out.push({ url: full, alt, width: wAttr || undefined, height: hAttr || undefined });
     if (out.length >= MAX_IMAGES * 2) break;
   }
-  // Open Graph image
   const og = /<meta\b[^>]*property\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']+)["']/i.exec(html)?.[1]
     ?? /<meta\b[^>]*name\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']+)["']/i.exec(html)?.[1]
     ?? "";
   if (og) {
     try {
       const full = new URL(og, pageUrl).href;
-      if (!seen.has(full)) { seen.add(full); out.unshift({ url: full, alt: "" }); }
+      if (!seen.has(full) && !IMAGE_DENY_RE.test(full)) {
+        seen.add(full);
+        out.unshift({ url: full, alt: "og:image" });
+      }
     } catch { /* skip */ }
   }
   return out.slice(0, MAX_IMAGES);
+}
+
+/**
+ * Defensive association scorer (audit batch — 2026-06-03).
+ * Returns linked=true only if there is an EXPLICIT signal tying this image
+ * to the product being processed. Images that fail are still persisted but
+ * stored as orphan (linked_product_name=null) so a human reviewer — not the
+ * scraper — decides where they belong.
+ *
+ * This is the inline fix called out in the audit prompt (1d): the previous
+ * behaviour force-linked every surviving image to whichever product the
+ * function happened to be processing, causing flag SVGs and partner-brand
+ * assets to be assigned to "C4ISR System" on Equipnor.
+ */
+function hasStrongProductAssociation(
+  img: ImageHit,
+  productName: string,
+): { linked: boolean; reason: string } {
+  const slug = normalize(productName);
+  const tokens = slug.split("-").filter((t) => t.length >= 3);
+  const alt = (img.alt ?? "").toLowerCase();
+  const file = img.url.toLowerCase();
+  if (alt === "og:image" && (file.includes(slug) || tokens.some((t) => file.includes(t)))) {
+    return { linked: true, reason: "og:image with token match" };
+  }
+  if (slug.length >= 4 && file.includes(slug)) {
+    return { linked: true, reason: "filename contains product slug" };
+  }
+  if (alt.length > 0 && (alt.includes(productName.toLowerCase()) || (tokens.length > 0 && tokens.every((t) => alt.includes(t))))) {
+    return { linked: true, reason: "alt text matches product name" };
+  }
+  if (tokens.length >= 2) {
+    const hits = tokens.filter((t) => file.includes(t)).length;
+    if (hits >= Math.ceil(tokens.length * 0.75)) {
+      return { linked: true, reason: "filename token majority match" };
+    }
+  }
+  return { linked: false, reason: "no explicit product-association signal" };
 }
 
 function extractDatasheetLinks(html: string, pageUrl: string): string[] {
