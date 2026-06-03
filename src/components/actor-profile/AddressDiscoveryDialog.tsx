@@ -226,6 +226,33 @@ const AddressDiscoveryDialog = ({
     await runWebsiteLookup(trimmed);
   };
 
+  const findWebsiteAutomatically = async () => {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("find-actor-website", {
+        body: { actor_name: actorName, country },
+      });
+      if (error) {
+        const detail = (data as any)?.error ?? error.message;
+        throw new Error(detail);
+      }
+      const top = (data as any)?.website as string | null;
+      if (!top) {
+        toast.error("No website found via web search. Paste one below.");
+        return;
+      }
+      setWebsiteInput(top);
+      await supabase.from("actors").update({ websites: [top] }).eq("id", actorId);
+      toast.success(`Website set to ${new URL(top).hostname}`);
+      await runWebsiteLookup(top);
+    } catch (e: any) {
+      toast.error(`Find website failed: ${e?.message ?? "unknown"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   const enterManually = () => {
     setSource("manual");
     setSourceLabel("Entered manually");
