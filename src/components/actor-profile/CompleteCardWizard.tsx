@@ -690,7 +690,7 @@ const AddressEditor = ({
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -858,7 +858,7 @@ const DescriptionEditor = ({ actorId, actorName, website, viewerId, onDone, onCh
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1139,7 +1139,7 @@ const MediaEditor = ({
       {/* Explicit advance */}
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm" variant="default">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1294,7 +1294,7 @@ const ContactsEditor = ({ actorId, actorName, website, viewerId, onDone, onChang
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1543,7 +1543,7 @@ const OntologyEditor = ({
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
@@ -1634,7 +1634,7 @@ const AliasEditor = ({ actorId, viewerId, onDone, onChanged }: EditorProps) => {
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button onClick={onDone} size="sm">
-          Done — next step
+          Done — back to overview
           <ChevronRight className="w-3 h-3 ml-1" />
         </Button>
       </div>
