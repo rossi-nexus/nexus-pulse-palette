@@ -289,10 +289,12 @@ ${pageText}
 """
 
 Rules:
-- Only return real named individuals.
-- Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are not individuals.
-- Skip a contact if the only information is a name with NO title, email, phone, or LinkedIn. (Name alone is too noisy.)
-- Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef" count as titles.
+- Return ALL named people you find on the page, even if some fields are missing.
+- A name + role is sufficient — do NOT require email or phone to include a person.
+- Look for structured team cards (heading with name, sub-heading with title, bio in prose, contact icons for email/phone/LinkedIn). WordPress/Avada and similar themes commonly use this layout.
+- Capture: full name (not initials), title/role if present, email (from mailto: links or visible text), phone (from tel: links or visible text), linkedin URL if present.
+- Skip generic mailboxes (info@, contact@, sales@, post@, kontakt@) — those are NOT individuals.
+- Norwegian titles like "Daglig leder", "Styreleder", "Salgssjef", "Head of …", "CEO", "CTO" all count as titles.
 - Maximum 20 contacts.
 - linkedin must be a full URL (https://...).
 - If nothing qualifies, return an empty array.
