@@ -314,63 +314,78 @@ ${(() => {
     }
 
     // === Step B — Web Search via Serper ===
-    const constraintCountry = constraints?.geography?.countries?.[0]?.toLowerCase() || "no";
+    // AX pre-AX2 Fix 3 — multi-country handling (Option A: iterate per country,
+    // dedupe + merge). Chosen over Option B (concatenated `location` string)
+    // because the security/defence/preparedness sector treats per-country
+    // markets as genuinely distinct (regulation, language, classification,
+    // suppliers). Per-country gl= queries return materially different result
+    // sets that a single concatenated location call would lose. Trade-off:
+    // N× Serper calls per query. We accept that cost for precision; rate-limit
+    // accounting is already per-call below.
+    const rawCountries = (constraints?.geography?.countries ?? [])
+      .map((c: string) => (c ?? "").toLowerCase().trim())
+      .filter(Boolean);
+    const constraintCountries: string[] = rawCountries.length > 0 ? rawCountries : ["no"];
     const allResults: any[] = [];
     const seenDomains = new Set<string>();
     let serperRateLimited = false;       // any 429
     let serperHardFailures = 0;          // 5xx or network error
-    const serperAttempted = queries.length;
+    const serperAttempted = queries.length * constraintCountries.length;
 
     for (const query of queries) {
-      try {
-        const searchResp = await fetch("https://google.serper.dev/search", {
-          method: "POST",
-          headers: {
-            "X-API-KEY": serperApiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            q: query,
-            gl: constraintCountry,
-            num: 10,
-          }),
-        });
+      for (const gl of constraintCountries) {
+        try {
+          const searchResp = await fetch("https://google.serper.dev/search", {
+            method: "POST",
+            headers: {
+              "X-API-KEY": serperApiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              q: query,
+              gl,
+              num: 10,
+            }),
+          });
 
-        if (searchResp.status === 429) {
-          serperRateLimited = true;
-          await searchResp.text().catch(() => "");
-          console.error(`Serper rate limit (429) for query "${query}"`);
-          continue;
-        }
-        if (!searchResp.ok) {
-          serperHardFailures += 1;
-          await searchResp.text().catch(() => "");
-          console.error(`Serper error for query "${query}":`, searchResp.status);
-          continue;
-        }
-
-        const searchData = await searchResp.json();
-        for (const result of searchData.organic || []) {
-          try {
-            const domain = new URL(result.link).hostname.replace(/^www\./, "");
-            if (!seenDomains.has(domain)) {
-              seenDomains.add(domain);
-              allResults.push({
-                url: result.link,
-                title: result.title,
-                snippet: result.snippet,
-                domain,
-              });
-            }
-          } catch {
-            // Skip invalid URLs
+          if (searchResp.status === 429) {
+            serperRateLimited = true;
+            await searchResp.text().catch(() => "");
+            console.error(`Serper rate limit (429) for query "${query}" gl="${gl}"`);
+            continue;
           }
+          if (!searchResp.ok) {
+            serperHardFailures += 1;
+            await searchResp.text().catch(() => "");
+            console.error(`Serper error for query "${query}" gl="${gl}":`, searchResp.status);
+            continue;
+          }
+
+          const searchData = await searchResp.json();
+          for (const result of searchData.organic || []) {
+            try {
+              const domain = new URL(result.link).hostname.replace(/^www\./, "");
+              if (!seenDomains.has(domain)) {
+                seenDomains.add(domain);
+                allResults.push({
+                  url: result.link,
+                  title: result.title,
+                  snippet: result.snippet,
+                  domain,
+                  source_country: gl,
+                });
+              }
+            } catch {
+              // Skip invalid URLs
+            }
+          }
+        } catch (e) {
+          serperHardFailures += 1;
+          console.error(`Search failed for query "${query}" gl="${gl}":`, e);
         }
-      } catch (e) {
-        serperHardFailures += 1;
-        console.error(`Search failed for query "${query}":`, e);
       }
     }
+
 
     // If we got nothing AND every Serper query failed upstream, propagate the
     // failure instead of silently returning "0 actors" (P24).
