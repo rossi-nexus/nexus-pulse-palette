@@ -23,6 +23,8 @@ interface Utility {
   target: string; // rpc name or function name
   confirm: string;
   successFmt: (data: any) => string;
+  // When true, pass the raw RPC response straight to successFmt (no count extraction).
+  rawData?: boolean;
 }
 
 const UTILITIES: Utility[] = [
@@ -68,6 +70,36 @@ const UTILITIES: Utility[] = [
       d
         ? `Translated: ${d.personal_actors_updated ?? 0} actors, ${d.personal_descriptions_translated ?? 0} descriptions, ${d.personal_fields_translated ?? 0} analysis fields, ${d.evidence_translated ?? 0} evidence, ${d.roles_translated ?? 0} roles${d.errors ? ` · ${d.errors} errors` : ""}`
         : "Translation complete",
+  },
+  {
+    id: "backfill_provenance",
+    label: "Backfill provenance labels",
+    subtext:
+      "Assigns source labels to legacy rows where source is unknown. Reads from existing data; does not modify content. Safe to re-run.",
+    kind: "rpc",
+    target: "fn_backfill_provenance_labels",
+    confirm: "Backfill provenance labels for all rows with unknown source?",
+    rawData: true,
+    successFmt: (d: any) => {
+      const r = Array.isArray(d) ? d[0] : d;
+      if (!r) return "Provenance backfill complete";
+      return `Provenance backfilled — descriptions: ${r.descriptions_updated ?? 0}, media: ${r.media_updated ?? 0}, contacts: ${r.contacts_updated ?? 0}, tags: ${r.tags_updated ?? 0} (total ${r.total_processed ?? 0})`;
+    },
+  },
+  {
+    id: "reprocess_auto_enrichment_media",
+    label: "Reprocess auto-enrichment media",
+    subtext:
+      "Re-checks legacy auto-enrichment media against the current product-association rules. Orphans any image that no longer meets the rules (e.g., flag SVGs, partner brand assets). Original images are preserved — only the product linkage is cleared.",
+    kind: "rpc",
+    target: "fn_reprocess_auto_enrichment_media",
+    confirm: "Re-check all auto-enrichment media against current rules?",
+    rawData: true,
+    successFmt: (d: any) => {
+      const r = Array.isArray(d) ? d[0] : d;
+      if (!r) return "Reprocess complete";
+      return `Reprocessed — inspected: ${r.rows_inspected ?? 0}, orphaned: ${r.rows_orphaned ?? 0}, kept linked: ${r.rows_kept_linked ?? 0}`;
+    },
   },
 ];
 
@@ -178,20 +210,24 @@ export const AdminUtilitiesSection = () => {
         return;
       }
       if (u.kind === "rpc") {
-        let count: number | null = null;
-        if (typeof data === "number") count = data;
-        else if (Array.isArray(data) && data.length > 0) {
-          const v = data[0];
-          if (typeof v === "number") count = v;
-          else if (v && typeof v === "object") {
-            count = data.length;
-          } else {
-            count = Number(v) || 0;
+        if (u.rawData) {
+          toast.success(u.successFmt(data));
+        } else {
+          let count: number | null = null;
+          if (typeof data === "number") count = data;
+          else if (Array.isArray(data) && data.length > 0) {
+            const v = data[0];
+            if (typeof v === "number") count = v;
+            else if (v && typeof v === "object") {
+              count = data.length;
+            } else {
+              count = Number(v) || 0;
+            }
+          } else if (data != null) {
+            count = Number(data) || 0;
           }
-        } else if (data != null) {
-          count = Number(data) || 0;
+          toast.success(u.successFmt(count));
         }
-        toast.success(u.successFmt(count));
       } else {
         toast.success(u.successFmt(data));
       }

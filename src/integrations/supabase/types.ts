@@ -1952,6 +1952,16 @@ export type Database = {
           tags_updated: number
         }[]
       }
+      fn_backfill_provenance_labels: {
+        Args: never
+        Returns: {
+          contacts_updated: number
+          descriptions_updated: number
+          media_updated: number
+          tags_updated: number
+          total_processed: number
+        }[]
+      }
       fn_can_write_actor_media: {
         Args: { _actor_id: string }
         Returns: boolean
@@ -1965,6 +1975,10 @@ export type Database = {
           state: string
           verified_at: string
         }[]
+      }
+      fn_check_strong_product_association: {
+        Args: { _alt: string; _product_name: string; _url: string }
+        Returns: boolean
       }
       fn_cleanup_old_drafts: { Args: never; Returns: number }
       fn_compute_actor_relevance_score: {
@@ -2112,6 +2126,14 @@ export type Database = {
         Args: { p_programme_id?: string; p_queue_id: string; p_reason?: string }
         Returns: string
       }
+      fn_reprocess_auto_enrichment_media: {
+        Args: never
+        Returns: {
+          rows_inspected: number
+          rows_kept_linked: number
+          rows_orphaned: number
+        }[]
+      }
       fn_resolve_description_type: {
         Args: { p_mapped_entry_id: string; p_proposed_category_id: string }
         Returns: string
@@ -2128,6 +2150,7 @@ export type Database = {
         Args: { p_actor_id: string; p_reason?: string; p_updates: Json }
         Returns: string
       }
+      fn_url_host: { Args: { _url: string }; Returns: string }
       fn_user_has_attr: {
         Args: { _key: string; _uid: string; _value?: string }
         Returns: boolean
