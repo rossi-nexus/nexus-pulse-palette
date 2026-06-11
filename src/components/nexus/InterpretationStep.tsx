@@ -45,6 +45,8 @@ const InterpretationStep = ({
   sessionId,
   onUnlock,
   downstreamStepNames,
+  axisAcceptedChanges = [],
+  onRevertAxisChange,
 }: InterpretationStepProps) => {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [reviewExpanded, setReviewExpanded] = useState(false);
