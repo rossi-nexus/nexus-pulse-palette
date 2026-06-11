@@ -378,7 +378,16 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
         <ResizableHandle className="w-px bg-transparent hover:bg-border-accent/30 transition-colors data-[resize-handle-active]:bg-border-accent/50" />
 
         <ResizablePanel defaultSize={25} minSize={15} maxSize={50}>
-          <AxisSidebar clarificationPoints={stepA2.clarificationPoints} />
+          <AxisSidebarConnected
+            sessionId={sessionId}
+            stepA1Status={stepA1.status}
+            stepA1ContextText={stepA1.contextText}
+            stepA1Attachments={stepA1.attachments}
+            stepA2Status={stepA2.status}
+            interpretation={stepA2.interpretation}
+            clarificationPoints={stepA2.clarificationPoints}
+            applyAxisChange={stepA2.applyAxisChange}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
