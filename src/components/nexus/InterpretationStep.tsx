@@ -32,6 +32,9 @@ interface InterpretationStepProps {
   onUnlock: () => void;
   /** Names of downstream steps with data — populates the confirmation dialog. */
   downstreamStepNames: string[];
+  /** SX-04 — accepted Axis changes affecting constraints; surface inline edited indicator + revert. */
+  axisAcceptedChanges?: AxisAcceptedChange[];
+  onRevertAxisChange?: (change: AxisAcceptedChange) => void;
 }
 
 const InterpretationStep = ({
