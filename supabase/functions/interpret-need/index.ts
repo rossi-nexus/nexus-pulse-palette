@@ -413,7 +413,12 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { need_description } = await req.json();
+    const reqBody = await req.json();
+    const need_description = reqBody?.need_description;
+    // SX-04 — caller-supplied A1 Axis clarifications: [{question, answer}].
+    const axis_clarifications: Array<{ question: string; answer: string }> = Array.isArray(reqBody?.axis_clarifications)
+      ? reqBody.axis_clarifications
+      : [];
     if (!need_description) {
       return new Response(JSON.stringify({ error: "Missing need_description" }), {
         status: 400,
@@ -481,6 +486,13 @@ serve(async (req) => {
     let combinedInput = `USER CONTEXT:\n${contextText}`;
     for (const et of extractedTexts) {
       combinedInput += `\n\n${et}`;
+    }
+    // SX-04 — Axis clarifications block. Treated as AUTHORITATIVE user intent.
+    if (axis_clarifications.length > 0) {
+      const lines = axis_clarifications
+        .map((c) => `Q: ${String(c.question || "").trim()}\nA: ${String(c.answer || "").trim()}`)
+        .join("\n");
+      combinedInput += `\n\nAXIS CLARIFICATIONS (treat as authoritative user intent — use these to disambiguate the need, populate constraints, and shape role scope):\n${lines}`;
     }
 
     if (contextText === "(No context text provided)" && extractedTexts.length === 0) {

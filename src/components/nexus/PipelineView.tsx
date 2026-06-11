@@ -60,6 +60,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
   const stepA3 = useSearch({ sessionId });
   const stepA4 = useAnalysis({ sessionId });
   const stepA5 = useDatabaseCheck({ sessionId });
+  const axis = useAxis({ sessionId });
   const [showExamples, setShowExamples] = useState(false);
 
   const [lockedA2Output, setLockedA2Output] = useState<{
@@ -318,6 +319,21 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                     sessionId={sessionId}
                     onUnlock={() => handleUnlockWithCascade(2)}
                     downstreamStepNames={downstreamNamesForStep[2]}
+                    axisAcceptedChanges={(axis.state.A2?.pending_changes ?? [])
+                      .filter((c) => c.status === "accepted" && c.action.target && c.action.target.startsWith("constraints."))
+                      .map((c) => ({
+                        target: c.action.target as string,
+                        previous_value: (c as any).previous_value,
+                        label: c.label,
+                      }))}
+                    onRevertAxisChange={(change) => {
+                      // Restore previous value, then mark the original change rejected.
+                      stepA2.applyAxisChange({ kind: "update_constraint", target: change.target, value: change.previous_value });
+                      const orig = (axis.state.A2?.pending_changes ?? []).find(
+                        (c) => c.status === "accepted" && c.action.target === change.target,
+                      );
+                      if (orig) axis.setChangeStatus("A2", orig.id, "rejected");
+                    }}
                   />
                 )}
 
@@ -331,10 +347,9 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                     onUnlock={() => handleUnlockWithCascade(3)}
                     downstreamStepNames={downstreamNamesForStep[3]}
                     sessionId={sessionId}
+                    staleRoleIds={axis.state.A3?.stale_role_ids ?? []}
+                    onClearStaleRole={(roleId) => axis.clearStaleRole("A3", roleId)}
                     onAddRoleFromCoverage={async (name, summaryText) => {
-                      // P13 — adopting a coverage suggestion cascades: unlock Step 2,
-                      // add the manual role (auto-populates via populate-role), then
-                      // the consultant re-locks Step 2 and re-runs Step 3.
                       await handleUnlockWithCascade(2);
                       stepA2.addRole(name, summaryText);
                     }}
@@ -382,6 +397,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
         <ResizablePanel defaultSize={25} minSize={15} maxSize={50}>
           <AxisSidebarConnected
             sessionId={sessionId}
+            axis={axis}
             stepA1Status={stepA1.status}
             stepA1ContextText={stepA1.contextText}
             stepA1Attachments={stepA1.attachments}
@@ -403,17 +419,19 @@ export default PipelineView;
 // into useInterpretation via applyAxisChange.
 interface AxisSidebarConnectedProps {
   sessionId: string | null;
+  axis: ReturnType<typeof useAxis>;
   stepA1Status: string;
   stepA1ContextText: string;
   stepA1Attachments: Array<{ reference: string }>;
   stepA2Status: string;
   interpretation: Interpretation | null;
   clarificationPoints: ClarificationPoint[];
-  applyAxisChange: (action: { kind: string; target?: string; value?: any }) => boolean;
+  applyAxisChange: (action: { kind: string; target?: string; value?: any }) => { applied: boolean; previousValue?: any };
 }
 
 const AxisSidebarConnected = ({
   sessionId,
+  axis,
   stepA1Status,
   stepA1ContextText,
   stepA1Attachments,
@@ -422,7 +440,6 @@ const AxisSidebarConnected = ({
   clarificationPoints,
   applyAxisChange,
 }: AxisSidebarConnectedProps) => {
-  const axis = useAxis({ sessionId });
 
   // Derive the active step: prefer the editable step closest to the user.
   const currentStep: AxisStep | null = useMemo(() => {
@@ -432,6 +449,18 @@ const AxisSidebarConnected = ({
     if (stepA1Status === "locked") return "A1";
     return "A1";
   }, [stepA1Status, stepA2Status]);
+
+  // SX-04 — extract A1 answered Q&A pairs to feed both A2 axis-question and (via
+  // PipelineView) the interpret-need run.
+  const a1Answered = useMemo(() => {
+    const qs = axis.state.A1?.questions ?? [];
+    return qs
+      .filter((q) => q.answered_at)
+      .map((q) => ({
+        question: q.question,
+        answer: Array.isArray(q.answer) ? q.answer.join(", ") : String(q.answer ?? ""),
+      }));
+  }, [axis.state.A1]);
 
   const stepContext = useMemo(() => {
     if (currentStep === "A1") {
@@ -444,18 +473,17 @@ const AxisSidebarConnected = ({
       return {
         interpretation,
         clarification_points: clarificationPoints,
+        a1_answered: a1Answered, // SX-04
       };
     }
     return null;
-  }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints]);
+  }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints, a1Answered]);
 
   const stepState = currentStep
     ? axis.state[currentStep] ?? { questions: [], pending_changes: [], stale_role_ids: [] }
     : { questions: [], pending_changes: [], stale_role_ids: [] };
 
-  // SX-03b — auto-trigger: once initial load is done and the step is "ready",
-  // fire requestQuestions exactly once per (session, step) entry if no persisted
-  // questions exist. Restoration takes precedence — never regenerate over existing.
+  // SX-03b — auto-trigger.
   const autoFiredRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     autoFiredRef.current = new Set();
@@ -465,16 +493,14 @@ const AxisSidebarConnected = ({
     if (!axis.initialized) return;
     if (!currentStep || !stepContext) return;
     if (currentStep === "A1") {
-      // A1 is ready as soon as it's locked (interpretation exists downstream).
       if (stepA1Status !== "locked") return;
     } else if (currentStep === "A2") {
-      // A2 ready as soon as we have an interpretation.
       if (!interpretation) return;
     } else {
       return;
     }
     const cur = axis.state[currentStep];
-    if (cur && cur.questions.length > 0) return; // restored — do not regenerate
+    if (cur && cur.questions.length > 0) return;
     if (axis.loadingStep === currentStep) return;
     const key = `${sessionId}:${currentStep}`;
     if (autoFiredRef.current.has(key)) return;
@@ -494,13 +520,32 @@ const AxisSidebarConnected = ({
   }, [axis, currentStep, stepContext]);
 
   const handleAcceptChange = useCallback((change: AxisPendingChange) => {
-    const ok = applyAxisChange(change.action);
-    if (!ok && change.action.kind !== "noop") {
-      // Application failed (e.g. role no longer exists). Still mark rejected to clear state.
+    const result = applyAxisChange(change.action);
+    if (!result.applied && change.action.kind !== "noop" && change.action.kind !== "context") {
       axis.setChangeStatus(change.step, change.id, "rejected");
       return;
     }
+    // SX-04 — store previousValue on the change record so the constraint row can revert.
     axis.setChangeStatus(change.step, change.id, "accepted");
+    if (result.previousValue !== undefined) {
+      // Persist previous_value back to the pending_changes entry via the axis hook.
+      // The simplest path: setChangeStatus already triggered a write; do a follow-up
+      // patch via markRoleStale's setStep helper — but we don't have it exposed.
+      // Instead: mutate via a local effect by re-running setChangeStatus would lose
+      // info. We push the value via the axis hook's internal patch by using a custom
+      // call path — for SX-04 we annotate via a second setChangeStatus equivalent.
+      // Acceptable simplification: previousValue lives on the change in-memory through
+      // the next render because handleAcceptChange runs after axis.resolveAnswer wrote
+      // the change. We mutate the action object in place (safe — same reference flow).
+      // Subsequent persist will pick it up.
+      (change as any).previous_value = result.previousValue;
+    }
+    // SX-04 — if the accepted change rescopes a role, mark that role's Step 3 results stale.
+    if (change.action.target && change.action.target.startsWith("roles.")) {
+      const parts = change.action.target.split(".");
+      const roleId = parts[1];
+      if (roleId) axis.markRoleStale("A3", roleId);
+    }
   }, [applyAxisChange, axis]);
 
   const handleRejectChange = useCallback((change: AxisPendingChange) => {

@@ -213,12 +213,26 @@ serve(async (req) => {
       if (selected.length > 0) selectedTargets[catKey] = selected;
     }
 
+    // SX-04 — sourcing intent flavour injection.
+    const sourcingIntent: string | undefined = constraints?.geography?.sourcing_intent;
+    const resiliencePosture: string | undefined = constraints?.resilience?.posture;
+    const intentFlavour =
+      sourcingIntent === "national" ? "Norwegian / domestic"
+      : sourcingIntent === "regional" ? "Nordic / Baltic"
+      : sourcingIntent === "allied" ? "NATO / EU / Five Eyes"
+      : null;
+    const postureHint =
+      resiliencePosture === "wartime_continuity" ? " Emphasize sovereign / wartime-continuity capable suppliers."
+      : resiliencePosture === "crisis_response" ? " Emphasize crisis-response capable suppliers."
+      : "";
+
     const roleDescription = `Role: ${role.name}
 ${role.description ? `Description: ${role.description}\n` : ''}${role.reasoning ? `Reasoning: ${role.reasoning}\n` : ''}Selected targets:
 ${Object.entries(selectedTargets).map(([k, v]) => `  ${k}: ${v.join(", ")}`).join("\n")}
 ${constraints?.geography?.countries ? `Geography: ${constraints.geography.countries.join(", ")}` : ""}
 ${constraints?.geography?.regions ? `Regions: ${constraints.geography.regions.join(", ")}` : ""}
 ${constraints?.geography?.cities ? `Cities: ${constraints.geography.cities.join(", ")}` : ""}
+${intentFlavour ? `Sourcing intent: ${sourcingIntent} — include flavour terms like "${intentFlavour}" in at least one query angle.${postureHint}` : ""}
 ${constraints?.security_classification?.required_level ? `Security level: ${constraints.security_classification.required_level}` : ""}
 ${constraints?.standards?.required ? `Required standards: ${constraints.standards.required.join(", ")}` : ""}
 ${(() => {

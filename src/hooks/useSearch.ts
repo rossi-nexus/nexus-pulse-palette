@@ -5,6 +5,7 @@ import type { Interpretation, Constraints } from "@/types/interpretation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserPreferences, resolveAxisWeights, type AxisWeights } from "@/hooks/useUserPreferences";
 import { useTrackInteraction } from "@/hooks/useTrackInteraction";
+import { resolveIntentCountries, type SourcingIntent } from "@/config/regionSets";
 
 export type SearchStatus = "not_started" | "searching" | "reviewing" | "locked";
 type RoleStatus = "waiting" | "searching" | "complete" | "error";
@@ -83,6 +84,10 @@ export interface RoleSearchResult {
   search_mode: RoleSearchMode | "ai_only";
   processing_time_ms?: number;
   error?: string;
+  /** SX-04 — web/DB actors excluded by sourcing intent hard filter (countries not in allowed set). */
+  excluded_by_sourcing?: number;
+  /** SX-04 — the sourcing intent under which this role was searched. */
+  sourcing_intent?: SourcingIntent | null;
 }
 
 interface UseSearchProps {
@@ -199,11 +204,20 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
         .map((s: any) => s.entryId)
         .filter((id: any): id is string => typeof id === "string" && id.length > 0);
 
+      // SX-04 — Sourcing intent → expanded country set for both DB pre-filter
+      // and web post-filter. Null means "no hard filter" (unrestricted/absent).
+      const sourcingIntent: SourcingIntent | undefined =
+        (interpretation.constraints as any)?.geography?.sourcing_intent;
+      const declaredCountries: string[] | undefined =
+        (interpretation.constraints as any)?.geography?.countries;
+      const intentCountries = resolveIntentCountries(sourcingIntent ?? null, declaredCountries);
+
       let webActors: ActorCardData[] = [];
       let dbActors: ActorCardData[] = [];
       let queriesUsed: string[] = [];
       let processingTimeMs: number | undefined;
       let errMsg: string | undefined;
+      let excludedBySourcing = 0;
 
       // --- Web branch -----------------------------------------------------
       if (mode === "web" || mode === "both") {
@@ -235,7 +249,14 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
                 service_types: buildTargets(role.targets.serviceTypes),
               },
             },
-            constraints: interpretation.constraints,
+            constraints: {
+              ...interpretation.constraints,
+              // SX-04 — make sure sourcing_intent travels with constraints.
+              geography: {
+                ...((interpretation.constraints as any)?.geography ?? {}),
+                ...(sourcingIntent ? { sourcing_intent: sourcingIntent } : {}),
+              },
+            },
             // B3 fix: pass the real session id instead of the literal "current".
             session_id: sessionId ?? null,
           };
@@ -281,6 +302,19 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
             source: "web" as const,
             db_actor_id: null,
           }));
+
+          // SX-04 — Post-filter web results by sourcing intent. Out-of-scope actors
+          // are excluded but counted so the UI can surface "N excluded by sourcing
+          // constraint" rather than silently dropping them.
+          if (intentCountries && intentCountries.length > 0) {
+            const allowed = new Set(intentCountries.map((c) => c.toUpperCase()));
+            const before = webActors.length;
+            webActors = webActors.filter((a) => {
+              const c = (a.country || "").toUpperCase().trim();
+              return c && allowed.has(c);
+            });
+            excludedBySourcing += before - webActors.length;
+          }
         } catch (err: any) {
           errMsg = err?.message ?? String(err);
         }
@@ -289,12 +323,15 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       // --- DB branch ------------------------------------------------------
       if ((mode === "db" || mode === "both") && targetEntryIds.length > 0) {
         try {
-          const constraintCountries: string[] | undefined =
-            (interpretation.constraints as any)?.geography?.countries;
-          const pCountries =
-            Array.isArray(constraintCountries) && constraintCountries.length > 0
-              ? constraintCountries.map((c: string) => c.toUpperCase())
-              : null;
+          // SX-04 — DB pre-filter uses intent-expanded countries when intent is set,
+          // otherwise falls back to user-declared countries (legacy behaviour).
+          const declared = (interpretation.constraints as any)?.geography?.countries;
+          const pCountries: string[] | null =
+            intentCountries && intentCountries.length > 0
+              ? intentCountries
+              : (Array.isArray(declared) && declared.length > 0
+                  ? declared.map((c: string) => c.toUpperCase())
+                  : null);
 
           const { data, error: rpcErr } = await (supabase.rpc as any)(
             "fn_rank_actors_by_ontology_overlap",
@@ -309,7 +346,9 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
             ontology_entry_ids: targetEntryIds,
             geography: {
               ...(pCountries ? { countries: pCountries } : {}),
+              ...(sourcingIntent ? { sourcing_intent: sourcingIntent } : {}),
             },
+            resilience: (interpretation.constraints as any)?.resilience ?? {},
             capacity: (interpretation.constraints as any)?.capacity ?? {},
             certifications: (interpretation.constraints as any)?.certifications ??
               (interpretation.constraints as any)?.standards ?? {},
@@ -365,6 +404,10 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
           });
           built.sort((a, b) => (b.relevance_score ?? 0) - (a.relevance_score ?? 0));
           dbActors = built;
+          // SX-04 — DB rows that came back with an exclusion-by-sourcing breakdown
+          // are counted (the v2 RPC marks excluded actors as total_score=0 + breakdown.excluded_by_sourcing_constraint).
+          const excludedDb = Array.from(scoresById.values()).filter((s: any) => s.breakdown?.excluded_by_sourcing_constraint).length;
+          excludedBySourcing += excludedDb;
         } catch (err: any) {
           const msg = err?.message ?? String(err);
           errMsg = errMsg ? `${errMsg}; db: ${msg}` : `db: ${msg}`;
@@ -400,6 +443,8 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
           search_mode: mode,
           processing_time_ms: processingTimeMs,
           error: errMsg,
+          excluded_by_sourcing: excludedBySourcing,
+          sourcing_intent: sourcingIntent ?? null,
         });
         return next;
       });
@@ -478,6 +523,41 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
 
     setStatus("reviewing");
   }, [sessionId, roleSearchModes, resolvedWeights, user?.id]);
+
+  /**
+   * SX-04 — Re-run search for a single role while preserving every other role's
+   * existing results and triage decisions. Used when an Axis change rescopes a
+   * role after Step 3 has already produced results.
+   */
+  const rerunRole = useCallback(async (roleId: string, interpretation: Interpretation) => {
+    const role = interpretation.roles.find((r) => r.id === roleId && r.status === "accepted");
+    if (!role) return;
+    const singleRoleInterp: Interpretation = {
+      ...interpretation,
+      roles: [role],
+    } as Interpretation;
+    // Snapshot the existing roleResults for OTHER roles so they survive the run.
+    const preserved = new Map<string, RoleSearchResult>();
+    setRoleResults((prev) => {
+      for (const [rid, r] of prev) {
+        if (rid !== roleId) preserved.set(rid, r);
+      }
+      return prev;
+    });
+    // Run the single-role search through the same pipeline, then restore others.
+    setStatus("searching");
+    await startSearch(singleRoleInterp);
+    setRoleResults((prev) => {
+      const next = new Map<string, RoleSearchResult>();
+      // Other roles first (preserving original ordering & state).
+      for (const [rid, r] of preserved) next.set(rid, r);
+      // Then the newly-searched role (whatever startSearch produced).
+      const fresh = prev.get(roleId);
+      if (fresh) next.set(roleId, fresh);
+      return next;
+    });
+    setStatus("reviewing");
+  }, [startSearch]);
 
   // Triage actions
   const includeActor = useCallback((roleId: string, actorId: string) => {
@@ -756,6 +836,7 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
     unlock,
     reset,
     rescoreActor,
+    rerunRole,
     resolvedWeights,
     track,
 

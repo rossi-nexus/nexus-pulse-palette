@@ -59,7 +59,10 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     return () => { cancelled = true; };
   }, [sessionId]);
 
-  const runInterpretation = useCallback(async (needDescription: NeedDescription) => {
+  const runInterpretation = useCallback(async (
+    needDescription: NeedDescription,
+    axisClarifications: Array<{ question: string; answer: string }> = [],
+  ) => {
     setStatus("processing");
     setError(null);
 
@@ -89,7 +92,10 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
             Authorization: `Bearer ${token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ need_description: needDescription }),
+          body: JSON.stringify({
+            need_description: needDescription,
+            axis_clarifications: axisClarifications,
+          }),
         }
       );
 
@@ -352,13 +358,29 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     });
   }, []);
 
-  // SX-03 — apply an Axis tracked change against the interpretation.
-  // Supports dotted constraint paths ("constraints.geography.sourcing_intent")
-  // and role field paths ("roles.<role_id>.<field>"). Returns true on success.
-  const applyAxisChange = useCallback((action: { kind: string; target?: string; value?: any }): boolean => {
-    if (!action.target) return false;
+  // SX-03 / SX-04 — apply an Axis tracked change against the interpretation.
+  // Supports dotted constraint paths ("constraints.geography.sourcing_intent"),
+  // role field paths ("roles.<role_id>.<field>"), and "context" kind (A1 answers
+  // that record but don't mutate the interpretation tree).
+  // Returns { applied, previousValue } so callers can stash a revert snapshot.
+  const applyAxisChange = useCallback((action: { kind: string; target?: string; value?: any }): { applied: boolean; previousValue?: any } => {
+    if (action.kind === "context" || action.kind === "noop") {
+      return { applied: true };
+    }
+    if (!action.target) return { applied: false };
     const path = action.target.split(".");
+    let previousValue: any = undefined;
     if (path[0] === "constraints") {
+      // Snapshot prev value from current state.
+      const snap = interpretationRef.current;
+      if (snap) {
+        let cur: any = snap;
+        for (const key of path) {
+          if (cur == null) { cur = undefined; break; }
+          cur = cur[key];
+        }
+        previousValue = cur;
+      }
       setInterpretation(prev => {
         if (!prev) return prev;
         const next: any = { ...prev, constraints: { ...prev.constraints } };
@@ -371,11 +393,23 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
         cur[path[path.length - 1]] = action.value;
         return next;
       });
-      return true;
+      return { applied: true, previousValue };
     }
     if (path[0] === "roles" && path.length >= 3) {
       const roleId = path[1];
       const segments = path.slice(2);
+      const snap = interpretationRef.current;
+      if (snap) {
+        const role = snap.roles.find(r => r.id === roleId);
+        if (role) {
+          let cur: any = role;
+          for (const key of segments) {
+            if (cur == null) { cur = undefined; break; }
+            cur = cur[key];
+          }
+          previousValue = cur;
+        }
+      }
       setInterpretation(prev => {
         if (!prev) return prev;
         return {
@@ -394,9 +428,9 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
           }),
         };
       });
-      return true;
+      return { applied: true, previousValue };
     }
-    return false;
+    return { applied: false };
   }, []);
 
   // SX-02 — effect chain accept/reject (tracked-change semantics)

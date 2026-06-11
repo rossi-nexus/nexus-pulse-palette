@@ -10,6 +10,7 @@ export type AxisActionKind =
   | "rescope_role"
   | "rerun_role"
   | "set_effect_chain"
+  | "context"
   | "noop";
 
 /** A concrete change Axis proposes. `target` is a dotted path into the interpretation/role tree. */
@@ -64,6 +65,8 @@ export interface AxisPendingChange {
   message?: string;
   question_id?: string;
   created_at: string;
+  /** SX-04 — snapshot of the constraint value before the change was accepted. Enables revert. */
+  previous_value?: unknown;
 }
 
 /** Axis state persisted into session_step_states.locked_output (additive JSONB key). */

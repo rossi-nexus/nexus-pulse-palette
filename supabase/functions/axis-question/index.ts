@@ -115,10 +115,15 @@ serve(async (req) => {
     } else {
       const interp = step_context?.interpretation ?? {};
       const cps = step_context?.clarification_points ?? [];
+      // SX-04 — A1 answered questions feed forward. Tell the model not to re-ask.
+      const a1Answered: Array<{ question: string; answer: string }> = step_context?.a1_answered ?? [];
+      const a1Block = a1Answered.length > 0
+        ? `\n\nALREADY ANSWERED IN STEP 1 (do NOT re-ask anything from this list — treat as authoritative user intent):\n${a1Answered.map((a) => `- Q: ${a.question}\n  A: ${a.answer}`).join("\n")}`
+        : "";
       const summary = (interp.summary || []).map((s: any) => `- ${s.text}`).join("\n");
       const roles = (interp.roles || []).map((r: any) => `- ${r.name}: ${r.description || r.reasoning || ""}`).join("\n");
       const constraints = JSON.stringify(interp.constraints || {}, null, 2);
-      userMessage = `STEP: A2 (interpretation review).\n\nSUMMARY:\n${summary}\n\nROLES:\n${roles}\n\nCONSTRAINTS:\n${constraints}\n\nEXISTING CLARIFICATION POINTS:\n${cps.map((c: any) => `- ${c.question} (${c.context})`).join("\n") || "(none)"}`;
+      userMessage = `STEP: A2 (interpretation review).${a1Block}\n\nSUMMARY:\n${summary}\n\nROLES:\n${roles}\n\nCONSTRAINTS:\n${constraints}\n\nEXISTING CLARIFICATION POINTS:\n${cps.map((c: any) => `- ${c.question} (${c.context})`).join("\n") || "(none)"}`;
     }
 
     let questions: any[] = [];
