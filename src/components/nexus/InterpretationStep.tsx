@@ -77,7 +77,7 @@ const InterpretationStep = ({
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("dev") === "step2";
 
-  const runFromStep1 = () => {
+  const runFromStep1 = async () => {
     const need: NeedDescription = {
       id: crypto.randomUUID(),
       session_id: sessionId ?? "anonymous",
@@ -85,7 +85,31 @@ const InterpretationStep = ({
       locked_at: new Date().toISOString(),
       ...(contextText.trim() ? { context_text: contextText.trim() } : {}),
     };
-    runInterpretation(need);
+    // SX-04 — pull answered A1 Axis questions from session_step_states and feed
+    // them forward as authoritative AXIS CLARIFICATIONS.
+    let axisClarifications: Array<{ question: string; answer: string }> = [];
+    if (sessionId) {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data } = await supabase
+          .from("session_step_states")
+          .select("locked_output")
+          .eq("session_id", sessionId)
+          .eq("step", "A1")
+          .maybeSingle();
+        const axisA1 = (data?.locked_output as any)?.axis?.A1;
+        const qs: any[] = Array.isArray(axisA1?.questions) ? axisA1.questions : [];
+        axisClarifications = qs
+          .filter((q) => q.answered_at && q.answer !== undefined && q.answer !== null && q.answer !== "")
+          .map((q) => ({
+            question: String(q.question || ""),
+            answer: Array.isArray(q.answer) ? q.answer.join(", ") : String(q.answer),
+          }));
+      } catch (e) {
+        console.warn("[SX-04] Failed to load A1 axis clarifications:", e);
+      }
+    }
+    runInterpretation(need, axisClarifications);
   };
 
   // Not started
