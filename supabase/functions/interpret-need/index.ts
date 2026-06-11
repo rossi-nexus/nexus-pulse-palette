@@ -92,8 +92,23 @@ When the user mentions specific standards or certifications ("ISO 9001 required"
 - Populate urgency.level (low/medium/high/critical) and rationale based on time pressure cues in the text.
 - Populate budget.max_eur (convert from currency_original to EUR rough estimate if not EUR) when a budget cap is mentioned.
 
+**Sourcing Intent (SX-02):**
+The user's geographic *intent* is distinct from the physical country list. Populate geography.sourcing_intent with one of: "local" (sub-national / same region), "national" (domestic sourcing required for sovereignty), "regional" (e.g. Nordic, Baltic, EU), "allied" (NATO / EU / Five Eyes / political alignment), or "unrestricted" (default — global, lowest-cost or best-fit wins).
+Trigger phrases include: "sovereign", "domestic", "Norwegian-only", "norske leverandører", "nasjonal", "suverenitet", "allied partners", "NATO suppliers", "Nordic preferred", "wherever best". Default to "unrestricted" when the user does not constrain the scope. Always populate geography.sourcing_intent_rationale with a short citation of the source phrase. Do NOT auto-set sourcing_intent based on resilience posture — extract it independently from the user's own words.
+
+**Resilience Posture (SX-02):**
+Populate constraints.resilience.posture with one of: "steady_state" (default — peacetime procurement), "crisis_response" (pandemic, natural disaster, civil emergency), or "wartime_continuity" (armed conflict, sustained disruption, "must remain operational in wartime").
+Trigger phrases include: "crisis", "war", "wartime", "preparedness", "totalforsvar", "beredskap", "Total Defence", "must survive disruption", "in conflict", "during armed conflict". Default to "steady_state" when unspecified. When the user names specific disruption scenarios (e.g. "GNSS jamming", "Suez closure", "pandemic"), populate constraints.resilience.scenarios with each as a string. Set constraints.resilience.confidence based on how directly stated.
+
+**Value-Chain Sensitivity (SX-02):**
+Populate constraints.value_chain when the user expresses concern about supply-chain robustness, chokepoints, or dependencies. Set value_chain.sensitive=true and add structured tags to value_chain.chokepoint_concerns from this enum: "single_source", "foreign_dependency", "transport_chokepoint", "energy", "telecom", "raw_materials".
+Trigger phrases include: "supply chain", "single-source risk", "chokepoint", "foreign dependency", "rare earths", "GNSS resilience", "critical minerals". Also: when search_context = "supply_chain_analysis", default value_chain.sensitive=true. Free-form context goes in value_chain.notes. Set value_chain.confidence based on directness.
+
+**Effect Chain (SX-02 — conditional):**
+ONLY when the need is structurally sequential (e.g. sense → communicate → fuse → decide → act), propose at most ONE effect chain via the top-level effect_chains array. Each node has { role_index (0-based positional index into the roles array), stage (short label like "sense"/"decide"/"act"), stage_index (0-based order in the chain) }. Set the chain's confidence ("high"/"medium"/"low") based on how clearly the user's words imply an ordered effect. For flat market-mapping queries (e.g. "find me radar vendors in Norway"), emit no chain — leave effect_chains empty or omitted.
+
 **Inference paths:**
-For every constraint axis you populate (especially capacity, certifications, urgency, budget, language, geography, security_classification), add an entry to inference_paths keyed by the axis name, with a short rationale citing the source phrase. Example: { "capacity": "User said 'at least 20 engineers' → min_team_size=20" }. This drives the user-facing 'Why constrained?' explanations downstream.
+For every constraint axis you populate (especially capacity, certifications, urgency, budget, language, geography, security_classification, sourcing_intent, resilience, value_chain), add an entry to inference_paths keyed by the axis name, with a short rationale citing the source phrase. Example: { "sourcing_intent": "User said 'norske leverandører' → national" }. This drives the user-facing 'Why constrained?' explanations downstream.
 
 ### SUMMARY-TO-ROLE MAPPING
 For each summary point, include a "covered_by_role_indices" array containing the 0-based positional indices of roles (from the roles array you generate) that address or contribute to that summary point. A summary point may be covered by multiple roles. Every summary point should ideally be covered by at least one role. If a summary point genuinely has no covering role, that indicates a potential gap — still include the field with an empty array.
