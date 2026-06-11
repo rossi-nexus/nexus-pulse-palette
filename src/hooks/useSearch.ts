@@ -249,7 +249,14 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
                 service_types: buildTargets(role.targets.serviceTypes),
               },
             },
-            constraints: interpretation.constraints,
+            constraints: {
+              ...interpretation.constraints,
+              // SX-04 — make sure sourcing_intent travels with constraints.
+              geography: {
+                ...((interpretation.constraints as any)?.geography ?? {}),
+                ...(sourcingIntent ? { sourcing_intent: sourcingIntent } : {}),
+              },
+            },
             // B3 fix: pass the real session id instead of the literal "current".
             session_id: sessionId ?? null,
           };
