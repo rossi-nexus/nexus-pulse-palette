@@ -105,6 +105,26 @@ serve(async (req) => {
     const kind = question?.answer_kind ?? "free_text";
     const action = question?.proposed_action ?? { kind: "noop" };
 
+    // SX-04 — A1 answers are CONTEXT, not constraint writes. Record them as `context`
+    // entries so they feed forward into interpret-need without producing dangling
+    // pre-interpretation constraint updates that have no landing zone.
+    if (step === "A1") {
+      const answerStr = typeof answer === "string" ? answer : Array.isArray(answer) ? answer.join(", ") : String(answer);
+      const qText = String(question?.question ?? "").trim();
+      const label = qText ? `Q: ${qText.length > 60 ? qText.slice(0, 57) + "…" : qText} → ${answerStr}` : `Answered: ${answerStr}`;
+      return new Response(
+        JSON.stringify({
+          changes: [{
+            kind: "context",
+            target: undefined,
+            value: { question: qText, answer: answerStr },
+            label,
+          }],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Deterministic resolution for choice/boolean with bound action.
     if (kind === "single_choice" || kind === "boolean") {
       if (action.kind === "update_constraint" && action.target) {
