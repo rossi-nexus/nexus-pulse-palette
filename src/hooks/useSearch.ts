@@ -436,6 +436,8 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
           search_mode: mode,
           processing_time_ms: processingTimeMs,
           error: errMsg,
+          excluded_by_sourcing: excludedBySourcing,
+          sourcing_intent: sourcingIntent ?? null,
         });
         return next;
       });
