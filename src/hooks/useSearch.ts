@@ -84,6 +84,10 @@ export interface RoleSearchResult {
   search_mode: RoleSearchMode | "ai_only";
   processing_time_ms?: number;
   error?: string;
+  /** SX-04 — web/DB actors excluded by sourcing intent hard filter (countries not in allowed set). */
+  excluded_by_sourcing?: number;
+  /** SX-04 — the sourcing intent under which this role was searched. */
+  sourcing_intent?: SourcingIntent | null;
 }
 
 interface UseSearchProps {
