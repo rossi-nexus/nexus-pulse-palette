@@ -82,12 +82,18 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
       case "standards": return !!constraints.standards;
       case "contract_duration": return !!constraints.contract_duration;
       case "search_context": return constraints.search_context !== undefined;
+      case "sourcing_intent": return !!constraints.geography?.sourcing_intent;
+      case "resilience": return !!constraints.resilience;
+      case "value_chain": return !!constraints.value_chain;
       default: return false;
     }
   };
 
   const addableTypes = [
     { key: "geography", label: "Geography" },
+    { key: "sourcing_intent", label: "Sourcing intent" },
+    { key: "resilience", label: "Resilience posture" },
+    { key: "value_chain", label: "Value chain" },
     { key: "company_size", label: "Company Size" },
     { key: "security_classification", label: "Security Classification" },
     { key: "readiness", label: "Readiness" },
@@ -98,6 +104,12 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
   ].filter(t => !hasConstraint(t.key));
 
   const addConstraint = (type: string) => {
+    if (type === "sourcing_intent") {
+      // Sourcing intent lives inside geography; ensure geography exists too.
+      onUpdate("geography", { ...(constraints.geography || { countries: [], regions: [], cities: [] }), sourcing_intent: "unrestricted" });
+      setShowAddMenu(false);
+      return;
+    }
     const defaults: Record<string, any> = {
       geography: { countries: [], regions: [], cities: [] },
       company_size: "any",
@@ -107,10 +119,13 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
       standards: { required: [], preferred: [] },
       contract_duration: { duration: "" },
       search_context: "partner_search",
+      resilience: { posture: "steady_state", scenarios: [] },
+      value_chain: { sensitive: true, chokepoint_concerns: [], notes: "" },
     };
     onUpdate(type, defaults[type]);
     setShowAddMenu(false);
   };
+
 
   return (
     <div className="space-y-3">
