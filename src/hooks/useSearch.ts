@@ -397,6 +397,10 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
           });
           built.sort((a, b) => (b.relevance_score ?? 0) - (a.relevance_score ?? 0));
           dbActors = built;
+          // SX-04 — DB rows that came back with an exclusion-by-sourcing breakdown
+          // are counted (the v2 RPC marks excluded actors as total_score=0 + breakdown.excluded_by_sourcing_constraint).
+          const excludedDb = Array.from(scoresById.values()).filter((s: any) => s.breakdown?.excluded_by_sourcing_constraint).length;
+          excludedBySourcing += excludedDb;
         } catch (err: any) {
           const msg = err?.message ?? String(err);
           errMsg = errMsg ? `${errMsg}; db: ${msg}` : `db: ${msg}`;
