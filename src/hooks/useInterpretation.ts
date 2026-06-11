@@ -500,9 +500,12 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     reorderRoles,
     toggleSelection,
     updateConstraint,
+    acceptEffectChain,
+    rejectEffectChain,
     acceptAllPending,
     lock,
     unlock,
     reset,
   };
 }
+
