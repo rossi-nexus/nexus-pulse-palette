@@ -1,12 +1,37 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { Constraints } from "@/types/interpretation";
+import type { Constraints, SourcingIntent, ResiliencePosture, ChokepointConcern } from "@/types/interpretation";
 import { TagInput } from "@/components/nexus/TagInput";
 
 interface ConstraintsSectionProps {
   constraints: Constraints;
   onUpdate: (type: string, value: any) => void;
 }
+
+// SX-02 — option labels for new dimensions.
+const SOURCING_INTENT_OPTIONS: { value: SourcingIntent; label: string }[] = [
+  { value: "unrestricted", label: "Unrestricted — global, best-fit wins" },
+  { value: "local", label: "Local — sub-national / same region" },
+  { value: "national", label: "National — domestic sourcing required (sovereignty)" },
+  { value: "regional", label: "Regional — e.g. Nordic, Baltic, EU" },
+  { value: "allied", label: "Allied — NATO / EU / Five Eyes alignment" },
+];
+
+const RESILIENCE_POSTURE_OPTIONS: { value: ResiliencePosture; label: string }[] = [
+  { value: "steady_state", label: "Steady-state (peacetime procurement)" },
+  { value: "crisis_response", label: "Crisis response (pandemic, disaster, civil emergency)" },
+  { value: "wartime_continuity", label: "Wartime continuity (armed conflict, sustained disruption)" },
+];
+
+const CHOKEPOINT_OPTIONS: { value: ChokepointConcern; label: string }[] = [
+  { value: "single_source", label: "Single source" },
+  { value: "foreign_dependency", label: "Foreign dependency" },
+  { value: "transport_chokepoint", label: "Transport chokepoint" },
+  { value: "energy", label: "Energy" },
+  { value: "telecom", label: "Telecom" },
+  { value: "raw_materials", label: "Raw materials" },
+];
+
 
 const COUNTRY_NAMES: Record<string, string> = {
   NO: "Norway", SE: "Sweden", FI: "Finland", DK: "Denmark", US: "United States",
