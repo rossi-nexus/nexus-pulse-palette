@@ -45,12 +45,51 @@ export interface RoleTargets {
   serviceTypes: OntologySelection[];
 }
 
+/** SX-02 — sourcing scope intent. Independent of physical country list. */
+export type SourcingIntent =
+  | "local"
+  | "national"
+  | "regional"
+  | "allied"
+  | "unrestricted";
+
 export interface GeographicConstraint {
   countries?: string[];
   regions?: string[];
   cities?: string[];
   maxDistanceKm?: number;
   referencePoint?: string;
+  /** SX-02 — default "unrestricted" when absent. */
+  sourcing_intent?: SourcingIntent;
+  sourcing_intent_rationale?: string;
+}
+
+/** SX-02 — operational posture the interpretation should be evaluated against. */
+export type ResiliencePosture =
+  | "steady_state"
+  | "crisis_response"
+  | "wartime_continuity";
+
+export interface ResilienceConstraint {
+  posture?: ResiliencePosture;
+  scenarios?: string[];
+  confidence?: "high" | "medium" | "low";
+}
+
+/** SX-02 — value-chain sensitivity seam. Consumed by SX-04 reasoning engine. */
+export type ChokepointConcern =
+  | "single_source"
+  | "foreign_dependency"
+  | "transport_chokepoint"
+  | "energy"
+  | "telecom"
+  | "raw_materials";
+
+export interface ValueChainConstraint {
+  sensitive?: boolean;
+  chokepoint_concerns?: ChokepointConcern[];
+  notes?: string;
+  confidence?: "high" | "medium" | "low";
 }
 
 export interface ClassificationConstraint {
