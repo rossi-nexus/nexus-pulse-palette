@@ -216,6 +216,15 @@ const InterpretationStep = ({
             onAdd={addSummaryPoint}
           />
 
+          {interpretation.effect_chains && interpretation.effect_chains.length > 0 && (
+            <EffectChainStrip
+              chains={interpretation.effect_chains}
+              roles={interpretation.roles}
+              onAccept={acceptEffectChain}
+              onReject={rejectEffectChain}
+            />
+          )}
+
           <RolesSection
             roles={interpretation.roles}
             onEdit={editRoleName}
@@ -226,6 +235,7 @@ const InterpretationStep = ({
             populatingRoleIds={populatingRoleIds}
             populationFailedRoleIds={populationFailedRoleIds}
           />
+
 
           <ConstraintsSection
             constraints={interpretation.constraints}
