@@ -1,12 +1,37 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { Constraints } from "@/types/interpretation";
+import type { Constraints, SourcingIntent, ResiliencePosture, ChokepointConcern } from "@/types/interpretation";
 import { TagInput } from "@/components/nexus/TagInput";
 
 interface ConstraintsSectionProps {
   constraints: Constraints;
   onUpdate: (type: string, value: any) => void;
 }
+
+// SX-02 — option labels for new dimensions.
+const SOURCING_INTENT_OPTIONS: { value: SourcingIntent; label: string }[] = [
+  { value: "unrestricted", label: "Unrestricted — global, best-fit wins" },
+  { value: "local", label: "Local — sub-national / same region" },
+  { value: "national", label: "National — domestic sourcing required (sovereignty)" },
+  { value: "regional", label: "Regional — e.g. Nordic, Baltic, EU" },
+  { value: "allied", label: "Allied — NATO / EU / Five Eyes alignment" },
+];
+
+const RESILIENCE_POSTURE_OPTIONS: { value: ResiliencePosture; label: string }[] = [
+  { value: "steady_state", label: "Steady-state (peacetime procurement)" },
+  { value: "crisis_response", label: "Crisis response (pandemic, disaster, civil emergency)" },
+  { value: "wartime_continuity", label: "Wartime continuity (armed conflict, sustained disruption)" },
+];
+
+const CHOKEPOINT_OPTIONS: { value: ChokepointConcern; label: string }[] = [
+  { value: "single_source", label: "Single source" },
+  { value: "foreign_dependency", label: "Foreign dependency" },
+  { value: "transport_chokepoint", label: "Transport chokepoint" },
+  { value: "energy", label: "Energy" },
+  { value: "telecom", label: "Telecom" },
+  { value: "raw_materials", label: "Raw materials" },
+];
+
 
 const COUNTRY_NAMES: Record<string, string> = {
   NO: "Norway", SE: "Sweden", FI: "Finland", DK: "Denmark", US: "United States",
@@ -57,12 +82,18 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
       case "standards": return !!constraints.standards;
       case "contract_duration": return !!constraints.contract_duration;
       case "search_context": return constraints.search_context !== undefined;
+      case "sourcing_intent": return !!constraints.geography?.sourcing_intent;
+      case "resilience": return !!constraints.resilience;
+      case "value_chain": return !!constraints.value_chain;
       default: return false;
     }
   };
 
   const addableTypes = [
     { key: "geography", label: "Geography" },
+    { key: "sourcing_intent", label: "Sourcing intent" },
+    { key: "resilience", label: "Resilience posture" },
+    { key: "value_chain", label: "Value chain" },
     { key: "company_size", label: "Company Size" },
     { key: "security_classification", label: "Security Classification" },
     { key: "readiness", label: "Readiness" },
@@ -73,6 +104,12 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
   ].filter(t => !hasConstraint(t.key));
 
   const addConstraint = (type: string) => {
+    if (type === "sourcing_intent") {
+      // Sourcing intent lives inside geography; ensure geography exists too.
+      onUpdate("geography", { ...(constraints.geography || { countries: [], regions: [], cities: [] }), sourcing_intent: "unrestricted" });
+      setShowAddMenu(false);
+      return;
+    }
     const defaults: Record<string, any> = {
       geography: { countries: [], regions: [], cities: [] },
       company_size: "any",
@@ -82,10 +119,13 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
       standards: { required: [], preferred: [] },
       contract_duration: { duration: "" },
       search_context: "partner_search",
+      resilience: { posture: "steady_state", scenarios: [] },
+      value_chain: { sensitive: true, chokepoint_concerns: [], notes: "" },
     };
     onUpdate(type, defaults[type]);
     setShowAddMenu(false);
   };
+
 
   return (
     <div className="space-y-3">
@@ -277,7 +317,101 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
             />
           </ConstraintRow>
         )}
+
+        {/* SX-02 — Sourcing Intent */}
+        {constraints.geography?.sourcing_intent && (
+          <ConstraintRow label="Sourcing intent">
+            <div className="space-y-1">
+              <select
+                value={constraints.geography.sourcing_intent}
+                onChange={(e) => onUpdate("geography", { ...constraints.geography, sourcing_intent: e.target.value as SourcingIntent })}
+                className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none w-full max-w-md"
+              >
+                {SOURCING_INTENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {constraints.geography.sourcing_intent_rationale && (
+                <p className="text-caption text-foreground-muted italic">
+                  {constraints.geography.sourcing_intent_rationale}
+                </p>
+              )}
+            </div>
+          </ConstraintRow>
+        )}
+
+        {/* SX-02 — Resilience Posture */}
+        {constraints.resilience && (
+          <ConstraintRow label="Resilience posture">
+            <div className="space-y-2">
+              <select
+                value={constraints.resilience.posture || "steady_state"}
+                onChange={(e) => onUpdate("resilience", { ...constraints.resilience, posture: e.target.value as ResiliencePosture })}
+                className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none w-full max-w-md"
+              >
+                {RESILIENCE_POSTURE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div>
+                <span className="text-caption text-foreground-muted">Scenarios</span>
+                <TagInput
+                  tags={constraints.resilience.scenarios || []}
+                  onChange={(scenarios) => onUpdate("resilience", { ...constraints.resilience, scenarios })}
+                  placeholder="Add scenario…"
+                />
+              </div>
+            </div>
+          </ConstraintRow>
+        )}
+
+        {/* SX-02 — Value Chain */}
+        {constraints.value_chain && (
+          <ConstraintRow label="Value chain">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-body-sm text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={!!constraints.value_chain.sensitive}
+                  onChange={(e) => onUpdate("value_chain", { ...constraints.value_chain, sensitive: e.target.checked })}
+                />
+                Sensitive value chain
+              </label>
+              <div>
+                <span className="text-caption text-foreground-muted">Chokepoint concerns</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {CHOKEPOINT_OPTIONS.map(opt => {
+                    const active = (constraints.value_chain?.chokepoint_concerns || []).includes(opt.value);
+                    return (
+                      <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => {
+                          const current = constraints.value_chain?.chokepoint_concerns || [];
+                          const next = active ? current.filter(c => c !== opt.value) : [...current, opt.value];
+                          onUpdate("value_chain", { ...constraints.value_chain, chokepoint_concerns: next });
+                        }}
+                        className={
+                          "text-[11px] font-mono px-2 py-0.5 rounded-sharp border transition-colors " +
+                          (active
+                            ? "bg-accent-teal/15 text-accent-teal border-accent-teal/40"
+                            : "bg-surface text-foreground-muted border-border-subtle hover:text-foreground-secondary")
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={constraints.value_chain.notes || ""}
+                onChange={(e) => onUpdate("value_chain", { ...constraints.value_chain, notes: e.target.value })}
+                placeholder="Notes…"
+                className="h-8 px-2 w-full rounded border border-border bg-surface text-body-sm text-foreground outline-none"
+              />
+            </div>
+          </ConstraintRow>
+        )}
       </div>
+
 
       {/* Add constraint */}
       {addableTypes.length > 0 && (

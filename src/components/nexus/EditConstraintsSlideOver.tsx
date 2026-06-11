@@ -177,6 +177,98 @@ const EditConstraintsSlideOver = ({ open, onOpenChange, constraints, originalCon
               />
             </div>
           </section>
+
+          {/* SX-02 — Sourcing intent */}
+          <section className="space-y-2">
+            <Label>Sourcing intent</Label>
+            <select
+              className="w-full bg-surface border border-border-subtle rounded-sharp px-2 py-1.5 text-body-sm"
+              value={draft?.geography?.sourcing_intent ?? ""}
+              onChange={(e) => set(["geography", "sourcing_intent"], e.target.value || null)}
+            >
+              <option value="">— Unspecified —</option>
+              <option value="unrestricted">Unrestricted</option>
+              <option value="local">Local</option>
+              <option value="national">National (sovereignty)</option>
+              <option value="regional">Regional (e.g. Nordic)</option>
+              <option value="allied">Allied (NATO / EU / Five Eyes)</option>
+            </select>
+            {draft?.geography?.sourcing_intent_rationale && (
+              <p className="text-caption text-foreground-muted italic">{draft.geography.sourcing_intent_rationale}</p>
+            )}
+          </section>
+
+          {/* SX-02 — Resilience posture */}
+          <section className="space-y-2">
+            <Label>Resilience posture</Label>
+            <select
+              className="w-full bg-surface border border-border-subtle rounded-sharp px-2 py-1.5 text-body-sm"
+              value={draft?.resilience?.posture ?? ""}
+              onChange={(e) => set(["resilience", "posture"], e.target.value || null)}
+            >
+              <option value="">— Unspecified —</option>
+              <option value="steady_state">Steady-state</option>
+              <option value="crisis_response">Crisis response</option>
+              <option value="wartime_continuity">Wartime continuity</option>
+            </select>
+            <Label className="text-caption">Scenarios</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {(draft?.resilience?.scenarios ?? []).map((s: string) => (
+                <span key={s} className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-sharp bg-elevated border border-border-subtle">
+                  {s}
+                  <button onClick={() => set(["resilience", "scenarios"], (draft?.resilience?.scenarios ?? []).filter((x: string) => x !== s))} className="text-foreground-muted hover:text-destructive">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* SX-02 — Value chain */}
+          <section className="space-y-2">
+            <Label>Value chain</Label>
+            <label className="flex items-center gap-2 text-body-sm">
+              <input
+                type="checkbox"
+                checked={!!draft?.value_chain?.sensitive}
+                onChange={(e) => set(["value_chain", "sensitive"], e.target.checked)}
+              />
+              Sensitive
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["single_source", "foreign_dependency", "transport_chokepoint", "energy", "telecom", "raw_materials"] as const).map((c) => {
+                const active = (draft?.value_chain?.chokepoint_concerns ?? []).includes(c);
+                const human: Record<string, string> = {
+                  single_source: "Single source",
+                  foreign_dependency: "Foreign dependency",
+                  transport_chokepoint: "Transport chokepoint",
+                  energy: "Energy",
+                  telecom: "Telecom",
+                  raw_materials: "Raw materials",
+                };
+                return (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => {
+                      const cur: string[] = draft?.value_chain?.chokepoint_concerns ?? [];
+                      const next = active ? cur.filter((x) => x !== c) : [...cur, c];
+                      set(["value_chain", "chokepoint_concerns"], next);
+                    }}
+                    className={"text-[11px] font-mono px-2 py-0.5 rounded-sharp border " + (active ? "bg-accent-teal/15 text-accent-teal border-accent-teal/40" : "bg-surface text-foreground-muted border-border-subtle")}
+                  >
+                    {human[c]}
+                  </button>
+                );
+              })}
+            </div>
+            <Input
+              value={draft?.value_chain?.notes ?? ""}
+              onChange={(e) => set(["value_chain", "notes"], e.target.value)}
+              placeholder="Notes…"
+            />
+          </section>
+
         </div>
 
         <SheetFooter className="gap-2">

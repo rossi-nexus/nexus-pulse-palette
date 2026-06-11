@@ -73,7 +73,7 @@ If security is mentioned but the specific level is unclear, set required_level t
 When the user's need mentions a contract period, framework agreement duration, project timeline, or operational period, you MUST populate contract_duration with the typed fields:
 - value (number) + unit ("month" | "year")
 - type: "minimum" (e.g. "≥5 years", "at least 3 years"), "maximum" (e.g. "up to 12 months"), "fixed" (e.g. "exactly 24 months", "5-year fixed-term"), or "expected" (default when the user gives a target without explicit bound).
-Examples: "5-year framework agreement" → {value: 5, unit: "year", type: "minimum"}; "12-month pilot" → {value: 12, unit: "month", type: "fixed"}. Also fill the legacy `duration` string with the original phrase. Do NOT only mention this in summary points — the typed fields must be filled.
+Examples: "5-year framework agreement" → {value: 5, unit: "year", type: "minimum"}; "12-month pilot" → {value: 12, unit: "month", type: "fixed"}. Also fill the legacy \`duration\` string with the original phrase. Do NOT only mention this in summary points — the typed fields must be filled.
 
 **Readiness/Mobilization:**
 When the user's need mentions operational deadlines, mobilization timelines, or delivery requirements (e.g., "operational within 12 months"), populate the readiness.max_response_time and readiness.description fields. Do NOT only mention this in summary points.
@@ -92,8 +92,23 @@ When the user mentions specific standards or certifications ("ISO 9001 required"
 - Populate urgency.level (low/medium/high/critical) and rationale based on time pressure cues in the text.
 - Populate budget.max_eur (convert from currency_original to EUR rough estimate if not EUR) when a budget cap is mentioned.
 
+**Sourcing Intent (SX-02):**
+The user's geographic *intent* is distinct from the physical country list. Populate geography.sourcing_intent with one of: "local" (sub-national / same region), "national" (domestic sourcing required for sovereignty), "regional" (e.g. Nordic, Baltic, EU), "allied" (NATO / EU / Five Eyes / political alignment), or "unrestricted" (default — global, lowest-cost or best-fit wins).
+Trigger phrases include: "sovereign", "domestic", "Norwegian-only", "norske leverandører", "nasjonal", "suverenitet", "allied partners", "NATO suppliers", "Nordic preferred", "wherever best". Default to "unrestricted" when the user does not constrain the scope. Always populate geography.sourcing_intent_rationale with a short citation of the source phrase. Do NOT auto-set sourcing_intent based on resilience posture — extract it independently from the user's own words.
+
+**Resilience Posture (SX-02):**
+Populate constraints.resilience.posture with one of: "steady_state" (default — peacetime procurement), "crisis_response" (pandemic, natural disaster, civil emergency), or "wartime_continuity" (armed conflict, sustained disruption, "must remain operational in wartime").
+Trigger phrases include: "crisis", "war", "wartime", "preparedness", "totalforsvar", "beredskap", "Total Defence", "must survive disruption", "in conflict", "during armed conflict". Default to "steady_state" when unspecified. When the user names specific disruption scenarios (e.g. "GNSS jamming", "Suez closure", "pandemic"), populate constraints.resilience.scenarios with each as a string. Set constraints.resilience.confidence based on how directly stated.
+
+**Value-Chain Sensitivity (SX-02):**
+Populate constraints.value_chain when the user expresses concern about supply-chain robustness, chokepoints, or dependencies. Set value_chain.sensitive=true and add structured tags to value_chain.chokepoint_concerns from this enum: "single_source", "foreign_dependency", "transport_chokepoint", "energy", "telecom", "raw_materials".
+Trigger phrases include: "supply chain", "single-source risk", "chokepoint", "foreign dependency", "rare earths", "GNSS resilience", "critical minerals". Also: when search_context = "supply_chain_analysis", default value_chain.sensitive=true. Free-form context goes in value_chain.notes. Set value_chain.confidence based on directness.
+
+**Effect Chain (SX-02 — conditional):**
+ONLY when the need is structurally sequential (e.g. sense → communicate → fuse → decide → act), propose at most ONE effect chain via the top-level effect_chains array. Each node has { role_index (0-based positional index into the roles array), stage (short label like "sense"/"decide"/"act"), stage_index (0-based order in the chain) }. Set the chain's confidence ("high"/"medium"/"low") based on how clearly the user's words imply an ordered effect. For flat market-mapping queries (e.g. "find me radar vendors in Norway"), emit no chain — leave effect_chains empty or omitted.
+
 **Inference paths:**
-For every constraint axis you populate (especially capacity, certifications, urgency, budget, language, geography, security_classification), add an entry to inference_paths keyed by the axis name, with a short rationale citing the source phrase. Example: { "capacity": "User said 'at least 20 engineers' → min_team_size=20" }. This drives the user-facing 'Why constrained?' explanations downstream.
+For every constraint axis you populate (especially capacity, certifications, urgency, budget, language, geography, security_classification, sourcing_intent, resilience, value_chain), add an entry to inference_paths keyed by the axis name, with a short rationale citing the source phrase. Example: { "sourcing_intent": "User said 'norske leverandører' → national" }. This drives the user-facing 'Why constrained?' explanations downstream.
 
 ### SUMMARY-TO-ROLE MAPPING
 For each summary point, include a "covered_by_role_indices" array containing the 0-based positional indices of roles (from the roles array you generate) that address or contribute to that summary point. A summary point may be covered by multiple roles. Every summary point should ideally be covered by at least one role. If a summary point genuinely has no covering role, that indicates a potential gap — still include the field with an empty array.
@@ -179,6 +194,15 @@ const TOOL_SCHEMA = {
                 countries: { type: "array", items: { type: "string" } },
                 regions: { type: "array", items: { type: "string" } },
                 cities: { type: "array", items: { type: "string" } },
+                sourcing_intent: {
+                  type: "string",
+                  enum: ["local", "national", "regional", "allied", "unrestricted"],
+                  description: "SX-02: Sourcing scope intent. Default 'unrestricted' if unspecified. Extract independently of resilience posture.",
+                },
+                sourcing_intent_rationale: {
+                  type: "string",
+                  description: "Short citation of source phrase that drove sourcing_intent.",
+                },
               },
             },
             company_size: { type: "string" },
@@ -268,11 +292,68 @@ const TOOL_SCHEMA = {
               },
             },
             search_context: { type: "string" },
+            resilience: {
+              type: "object",
+              description: "SX-02 — operational posture the interpretation should be evaluated against.",
+              properties: {
+                posture: {
+                  type: "string",
+                  enum: ["steady_state", "crisis_response", "wartime_continuity"],
+                  description: "Default 'steady_state' if unspecified.",
+                },
+                scenarios: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Named disruption scenarios the user mentioned (e.g. 'GNSS jamming', 'pandemic').",
+                },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            value_chain: {
+              type: "object",
+              description: "SX-02 — value-chain sensitivity. Set sensitive=true when user expresses supply-chain / chokepoint concern. When search_context='supply_chain_analysis' default sensitive=true.",
+              properties: {
+                sensitive: { type: "boolean" },
+                chokepoint_concerns: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: ["single_source", "foreign_dependency", "transport_chokepoint", "energy", "telecom", "raw_materials"],
+                  },
+                },
+                notes: { type: "string" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
             inference_paths: {
               type: "object",
-              description: "Per-axis explanation of why a constraint was inferred. Keys are axis names (e.g. 'capacity', 'certifications', 'urgency'); values are short rationale strings citing the source phrase.",
+              description: "Per-axis explanation of why a constraint was inferred. Keys include axis names (capacity, certifications, urgency, sourcing_intent, resilience, value_chain, etc.); values are short rationale strings citing the source phrase.",
               additionalProperties: { type: "string" },
             },
+          },
+        },
+        effect_chains: {
+          type: "array",
+          description: "SX-02 — OPTIONAL. Emit at most ONE chain ONLY when the need is structurally sequential (sense → decide → act). For flat market-mapping needs, omit or emit empty array.",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Optional human label for the chain." },
+              confidence: { type: "string", enum: ["high", "medium", "low"] },
+              nodes: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    role_index: { type: "integer", description: "0-based positional index into the roles array." },
+                    stage: { type: "string", description: "Short stage label, e.g. 'sense', 'fuse', 'decide', 'act'." },
+                    stage_index: { type: "integer", description: "0-based order in the chain." },
+                  },
+                  required: ["role_index", "stage", "stage_index"],
+                },
+              },
+            },
+            required: ["nodes"],
           },
         },
         clarification_points: {
@@ -705,12 +786,44 @@ When you fill any role's proposed_new[] array, you MUST also include:
       });
     }
 
-    const interpretation = {
+    // SX-02 — build effect chains (map role_index → role_id, same pattern as summary covered_by_role_indices)
+    const effectChains = Array.isArray(parsed.effect_chains)
+      ? parsed.effect_chains
+          .map((c: any) => {
+            const nodes = Array.isArray(c?.nodes)
+              ? c.nodes
+                  .map((n: any) => {
+                    const rid = typeof n?.role_index === "number" ? roleIds[n.role_index] : undefined;
+                    if (!rid) return null;
+                    return {
+                      role_id: rid,
+                      stage: typeof n.stage === "string" ? n.stage : "",
+                      stage_index: typeof n.stage_index === "number" ? n.stage_index : 0,
+                    };
+                  })
+                  .filter((n: any) => n !== null)
+              : [];
+            if (nodes.length === 0) return null;
+            nodes.sort((a: any, b: any) => a.stage_index - b.stage_index);
+            return {
+              id: crypto.randomUUID(),
+              name: typeof c?.name === "string" ? c.name : undefined,
+              nodes,
+              confidence: ["high", "medium", "low"].includes(c?.confidence) ? c.confidence : undefined,
+              source: "axis" as const,
+              status: "pending" as const,
+            };
+          })
+          .filter((c: any) => c !== null)
+      : [];
+
+    const interpretation: any = {
       id: interpretationId,
       summary,
       roles,
       constraints,
     };
+    if (effectChains.length > 0) interpretation.effect_chains = effectChains;
 
     return new Response(
       JSON.stringify({ interpretation, clarification_points: clarificationPoints }),

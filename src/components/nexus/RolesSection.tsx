@@ -148,12 +148,14 @@ const RoleCard = ({
 
   return (
     <div
+      id={`role-${role.id}`}
       className={cn(
-        "border rounded-card transition-all bg-surface",
+        "border rounded-card transition-all bg-surface scroll-mt-20",
         isEdited && !isRejected ? "border-l-[3px] border-l-accent-teal border-border" : "border-border",
         isRejected && "opacity-50",
       )}
     >
+
       {/* Header — clickable to expand */}
       <div
         onClick={() => !editing && !isRejected && setExpanded(!expanded)}

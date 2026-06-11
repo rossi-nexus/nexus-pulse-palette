@@ -197,12 +197,16 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
       const v = key.split(":")[1];
       next.certifications = next.certifications ?? {};
       next.certifications.preferred = (next.certifications.preferred ?? []).filter((c: string) => c !== v);
+    } else if (key === "resilience" || key === "value_chain") {
+      // SX-02 — remove whole axis when its pill is removed.
+      delete next[key];
     } else {
       const [a, b] = key.split(".");
       if (a && b && next[a]) delete next[a][b];
     }
     rerunWith(next);
   };
+
 
   const compareInclude = (a: ActorCardData) => {
     // Find the role this actor belongs to so includeActor knows where to apply.

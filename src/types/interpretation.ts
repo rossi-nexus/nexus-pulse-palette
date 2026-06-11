@@ -45,12 +45,51 @@ export interface RoleTargets {
   serviceTypes: OntologySelection[];
 }
 
+/** SX-02 — sourcing scope intent. Independent of physical country list. */
+export type SourcingIntent =
+  | "local"
+  | "national"
+  | "regional"
+  | "allied"
+  | "unrestricted";
+
 export interface GeographicConstraint {
   countries?: string[];
   regions?: string[];
   cities?: string[];
   maxDistanceKm?: number;
   referencePoint?: string;
+  /** SX-02 — default "unrestricted" when absent. */
+  sourcing_intent?: SourcingIntent;
+  sourcing_intent_rationale?: string;
+}
+
+/** SX-02 — operational posture the interpretation should be evaluated against. */
+export type ResiliencePosture =
+  | "steady_state"
+  | "crisis_response"
+  | "wartime_continuity";
+
+export interface ResilienceConstraint {
+  posture?: ResiliencePosture;
+  scenarios?: string[];
+  confidence?: "high" | "medium" | "low";
+}
+
+/** SX-02 — value-chain sensitivity seam. Consumed by SX-04 reasoning engine. */
+export type ChokepointConcern =
+  | "single_source"
+  | "foreign_dependency"
+  | "transport_chokepoint"
+  | "energy"
+  | "telecom"
+  | "raw_materials";
+
+export interface ValueChainConstraint {
+  sensitive?: boolean;
+  chokepoint_concerns?: ChokepointConcern[];
+  notes?: string;
+  confidence?: "high" | "medium" | "low";
 }
 
 export interface ClassificationConstraint {
@@ -96,6 +135,10 @@ export interface Constraints {
   standards?: StandardsConstraint;
   contract_duration?: ContractDurationConstraint;
   search_context?: string;
+  /** SX-02 — operational posture (steady_state | crisis_response | wartime_continuity). */
+  resilience?: ResilienceConstraint;
+  /** SX-02 — value-chain sensitivity flag + chokepoint concerns. */
+  value_chain?: ValueChainConstraint;
 }
 
 export interface RoleDependency {
@@ -128,6 +171,25 @@ export interface Interpretation {
   constraints: Constraints;
   /** Any notes from the AI about ambiguity or assumptions */
   notes?: string;
+  /** SX-02 — optional ordered effect chains (sense → decide → act). Only present when need is structurally sequential. */
+  effect_chains?: EffectChain[];
+}
+
+/** SX-02 — single node in an effect chain. */
+export interface EffectChainNode {
+  role_id: string;
+  stage: string;
+  stage_index: number;
+}
+
+/** SX-02 — ordered chain of roles representing a sequential effect (e.g. sense → fuse → decide → act). */
+export interface EffectChain {
+  id: string;
+  name?: string;
+  nodes: EffectChainNode[];
+  confidence?: "high" | "medium" | "low";
+  source: ItemSource;
+  status: ItemStatus;
 }
 
 export interface ClarificationPoint {
