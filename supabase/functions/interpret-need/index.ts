@@ -786,12 +786,44 @@ When you fill any role's proposed_new[] array, you MUST also include:
       });
     }
 
-    const interpretation = {
+    // SX-02 — build effect chains (map role_index → role_id, same pattern as summary covered_by_role_indices)
+    const effectChains = Array.isArray(parsed.effect_chains)
+      ? parsed.effect_chains
+          .map((c: any) => {
+            const nodes = Array.isArray(c?.nodes)
+              ? c.nodes
+                  .map((n: any) => {
+                    const rid = typeof n?.role_index === "number" ? roleIds[n.role_index] : undefined;
+                    if (!rid) return null;
+                    return {
+                      role_id: rid,
+                      stage: typeof n.stage === "string" ? n.stage : "",
+                      stage_index: typeof n.stage_index === "number" ? n.stage_index : 0,
+                    };
+                  })
+                  .filter((n: any) => n !== null)
+              : [];
+            if (nodes.length === 0) return null;
+            nodes.sort((a: any, b: any) => a.stage_index - b.stage_index);
+            return {
+              id: crypto.randomUUID(),
+              name: typeof c?.name === "string" ? c.name : undefined,
+              nodes,
+              confidence: ["high", "medium", "low"].includes(c?.confidence) ? c.confidence : undefined,
+              source: "axis" as const,
+              status: "pending" as const,
+            };
+          })
+          .filter((c: any) => c !== null)
+      : [];
+
+    const interpretation: any = {
       id: interpretationId,
       summary,
       roles,
       constraints,
     };
+    if (effectChains.length > 0) interpretation.effect_chains = effectChains;
 
     return new Response(
       JSON.stringify({ interpretation, clarification_points: clarificationPoints }),
