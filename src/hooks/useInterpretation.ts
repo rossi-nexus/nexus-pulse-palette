@@ -352,6 +352,53 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     });
   }, []);
 
+  // SX-03 — apply an Axis tracked change against the interpretation.
+  // Supports dotted constraint paths ("constraints.geography.sourcing_intent")
+  // and role field paths ("roles.<role_id>.<field>"). Returns true on success.
+  const applyAxisChange = useCallback((action: { kind: string; target?: string; value?: any }): boolean => {
+    if (!action.target) return false;
+    const path = action.target.split(".");
+    if (path[0] === "constraints") {
+      setInterpretation(prev => {
+        if (!prev) return prev;
+        const next: any = { ...prev, constraints: { ...prev.constraints } };
+        let cur: any = next;
+        for (let i = 0; i < path.length - 1; i++) {
+          const key = path[i];
+          cur[key] = { ...(cur[key] ?? {}) };
+          cur = cur[key];
+        }
+        cur[path[path.length - 1]] = action.value;
+        return next;
+      });
+      return true;
+    }
+    if (path[0] === "roles" && path.length >= 3) {
+      const roleId = path[1];
+      const segments = path.slice(2);
+      setInterpretation(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          roles: prev.roles.map(r => {
+            if (r.id !== roleId) return r;
+            const nr: any = { ...r };
+            let cur: any = nr;
+            for (let i = 0; i < segments.length - 1; i++) {
+              const key = segments[i];
+              cur[key] = { ...(cur[key] ?? {}) };
+              cur = cur[key];
+            }
+            cur[segments[segments.length - 1]] = action.value;
+            return nr;
+          }),
+        };
+      });
+      return true;
+    }
+    return false;
+  }, []);
+
   // SX-02 — effect chain accept/reject (tracked-change semantics)
   const acceptEffectChain = useCallback((chainId: string) => {
     setInterpretation(prev => {
@@ -500,6 +547,7 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     reorderRoles,
     toggleSelection,
     updateConstraint,
+    applyAxisChange,
     acceptEffectChain,
     rejectEffectChain,
     acceptAllPending,

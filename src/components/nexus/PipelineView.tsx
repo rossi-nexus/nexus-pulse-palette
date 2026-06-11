@@ -22,6 +22,8 @@ import type { Interpretation, ClarificationPoint } from "@/types/interpretation"
 import type { LockedA3Output, LockedA4Output } from "@/types/pipeline";
 import type { RoleSearchResult } from "@/hooks/useSearch";
 import type { RoleAnalysisProgress } from "@/hooks/useAnalysis";
+import { useAxis } from "@/hooks/useAxis";
+import type { AxisStep, AxisPendingChange, AxisQuestion } from "@/types/axis";
 
 const STEP_NAMES: Record<number, string> = {
   1: "Define Your Need",
@@ -378,7 +380,16 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
         <ResizableHandle className="w-px bg-transparent hover:bg-border-accent/30 transition-colors data-[resize-handle-active]:bg-border-accent/50" />
 
         <ResizablePanel defaultSize={25} minSize={15} maxSize={50}>
-          <AxisSidebar clarificationPoints={stepA2.clarificationPoints} />
+          <AxisSidebarConnected
+            sessionId={sessionId}
+            stepA1Status={stepA1.status}
+            stepA1ContextText={stepA1.contextText}
+            stepA1Attachments={stepA1.attachments}
+            stepA2Status={stepA2.status}
+            interpretation={stepA2.interpretation}
+            clarificationPoints={stepA2.clarificationPoints}
+            applyAxisChange={stepA2.applyAxisChange}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
@@ -386,3 +397,111 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
 };
 
 export default PipelineView;
+
+// SX-03 — Connected Axis sidebar. Owns the useAxis hook, derives current step,
+// passes step context, and wires accept/reject of pending tracked changes back
+// into useInterpretation via applyAxisChange.
+interface AxisSidebarConnectedProps {
+  sessionId: string | null;
+  stepA1Status: string;
+  stepA1ContextText: string;
+  stepA1Attachments: Array<{ reference: string }>;
+  stepA2Status: string;
+  interpretation: Interpretation | null;
+  clarificationPoints: ClarificationPoint[];
+  applyAxisChange: (action: { kind: string; target?: string; value?: any }) => boolean;
+}
+
+const AxisSidebarConnected = ({
+  sessionId,
+  stepA1Status,
+  stepA1ContextText,
+  stepA1Attachments,
+  stepA2Status,
+  interpretation,
+  clarificationPoints,
+  applyAxisChange,
+}: AxisSidebarConnectedProps) => {
+  const axis = useAxis({ sessionId });
+
+  // Derive the active step: prefer the editable step closest to the user.
+  const currentStep: AxisStep | null = useMemo(() => {
+    if (stepA2Status === "editing") return "A2";
+    if (stepA1Status === "editing") return "A1";
+    if (stepA2Status === "locked") return "A2";
+    if (stepA1Status === "locked") return "A1";
+    return "A1";
+  }, [stepA1Status, stepA2Status]);
+
+  const stepContext = useMemo(() => {
+    if (currentStep === "A1") {
+      return {
+        context_text: stepA1ContextText,
+        attachment_names: stepA1Attachments.map((a) => a.reference),
+      };
+    }
+    if (currentStep === "A2") {
+      return {
+        interpretation,
+        clarification_points: clarificationPoints,
+      };
+    }
+    return null;
+  }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints]);
+
+  const stepState = currentStep
+    ? axis.state[currentStep] ?? { questions: [], pending_changes: [], stale_role_ids: [] }
+    : { questions: [], pending_changes: [], stale_role_ids: [] };
+
+  const handleRequestQuestions = useCallback(() => {
+    if (!currentStep || !stepContext) return;
+    axis.requestQuestions(currentStep, stepContext);
+  }, [axis, currentStep, stepContext]);
+
+  const handleAnswer = useCallback(async (question: AxisQuestion, answer: string | string[] | boolean) => {
+    if (!currentStep) return [];
+    return axis.resolveAnswer(currentStep, question, answer, stepContext);
+  }, [axis, currentStep, stepContext]);
+
+  const handleAcceptChange = useCallback((change: AxisPendingChange) => {
+    const ok = applyAxisChange(change.action);
+    if (!ok && change.action.kind !== "noop") {
+      // Application failed (e.g. role no longer exists). Still mark rejected to clear state.
+      axis.setChangeStatus(change.step, change.id, "rejected");
+      return;
+    }
+    axis.setChangeStatus(change.step, change.id, "accepted");
+  }, [applyAxisChange, axis]);
+
+  const handleRejectChange = useCallback((change: AxisPendingChange) => {
+    axis.setChangeStatus(change.step, change.id, "rejected");
+  }, [axis]);
+
+  const handleFreeChat = useCallback(async (text: string) => {
+    if (!currentStep) return [];
+    const synthetic: AxisQuestion = {
+      id: crypto.randomUUID(),
+      step: currentStep,
+      question: text,
+      context: "Free-text answer from Ask Axis.",
+      answer_kind: "free_text",
+      proposed_action: { kind: "noop" },
+      origin: "axis",
+    };
+    return axis.resolveAnswer(currentStep, synthetic, text, stepContext);
+  }, [axis, currentStep, stepContext]);
+
+  return (
+    <AxisSidebar
+      currentStep={currentStep}
+      stepContext={stepContext}
+      stepState={stepState}
+      loading={axis.loadingStep === currentStep}
+      onRequestQuestions={handleRequestQuestions}
+      onAnswer={handleAnswer}
+      onAcceptChange={handleAcceptChange}
+      onRejectChange={handleRejectChange}
+      onFreeChat={handleFreeChat}
+    />
+  );
+};
