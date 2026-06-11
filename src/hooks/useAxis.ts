@@ -1,6 +1,8 @@
-// SX-03 — useAxis: per-session, per-step Axis state (questions + pending changes + stale role ids).
-// Persists into session_step_states.locked_output under the `axis` JSON key on the matching step row.
-// Robust against concurrent writes from useInterpretation.lock by always merging existing locked_output.
+// SX-03 / SX-03b — useAxis: per-session, per-step Axis state.
+// Persists into session_step_states.locked_output.axis.<step> (nested by step) on the
+// matching step row, merge-safe so sibling keys (e.g. interpretation, needDescription)
+// are never dropped. Writes are awaited via a chained per-step queue so rapid updates
+// preserve order and flush before useful unmount events.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -23,39 +25,74 @@ export function useAxis({ sessionId }: UseAxisProps) {
   const [state, setState] = useState<AxisStateByStep>({});
   const [loadingStep, setLoadingStep] = useState<AxisStep | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const stateRef = useRef<AxisStateByStep>({});
+  // Per-step write chain — guarantees ordering and merge-safety against concurrent writes.
+  const writeChains = useRef<Record<string, Promise<unknown>>>({});
+
   useEffect(() => { stateRef.current = state; }, [state]);
 
-  // Initial load — for each step row, pull axis sub-tree.
+  // Initial load (and re-load on session switch). Reads axis.<step> from every row
+  // for this session and rehydrates state.
   useEffect(() => {
+    setInitialized(false);
     if (!sessionId) {
       setState({});
+      setInitialized(true);
       return;
     }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("session_step_states")
         .select("step, locked_output")
         .eq("session_id", sessionId);
-      if (cancelled || !data) return;
+      if (cancelled) return;
+      if (error) {
+        console.error("axis load failed:", error);
+        setInitialized(true);
+        return;
+      }
       const next: AxisStateByStep = {};
-      for (const row of data) {
-        const axis = (row.locked_output as any)?.axis;
-        if (axis && (row.step === "A1" || row.step === "A2" || row.step === "A3" || row.step === "A4" || row.step === "A5")) {
+      for (const row of data || []) {
+        const axisRaw = (row.locked_output as any)?.axis;
+        if (!axisRaw) continue;
+        // Two supported shapes:
+        //  (a) NEW — { axis: { A1: state, A2: state, ... } }
+        //  (b) LEGACY — { axis: state }  (pre-SX-03b)
+        const isNested =
+          typeof axisRaw === "object" &&
+          !Array.isArray(axisRaw) &&
+          !("questions" in axisRaw);
+        if (isNested) {
+          for (const stepKey of ["A1", "A2", "A3", "A4", "A5"] as const) {
+            const s = axisRaw[stepKey];
+            if (s) {
+              next[stepKey] = {
+                questions: Array.isArray(s.questions) ? s.questions : [],
+                pending_changes: Array.isArray(s.pending_changes) ? s.pending_changes : [],
+                stale_role_ids: Array.isArray(s.stale_role_ids) ? s.stale_role_ids : [],
+              };
+            }
+          }
+        } else if (row.step === "A1" || row.step === "A2" || row.step === "A3" || row.step === "A4" || row.step === "A5") {
+          // legacy flat
           next[row.step as AxisStep] = {
-            questions: Array.isArray(axis.questions) ? axis.questions : [],
-            pending_changes: Array.isArray(axis.pending_changes) ? axis.pending_changes : [],
-            stale_role_ids: Array.isArray(axis.stale_role_ids) ? axis.stale_role_ids : [],
+            questions: Array.isArray(axisRaw.questions) ? axisRaw.questions : [],
+            pending_changes: Array.isArray(axisRaw.pending_changes) ? axisRaw.pending_changes : [],
+            stale_role_ids: Array.isArray(axisRaw.stale_role_ids) ? axisRaw.stale_role_ids : [],
           };
         }
       }
       setState(next);
+      setInitialized(true);
     })();
     return () => { cancelled = true; };
   }, [sessionId]);
 
-  const persistStep = useCallback(async (step: AxisStep, next: AxisStepState) => {
+  // Write `state` into the matching step row at locked_output.axis.<step>.
+  // Reads the latest row, merges with sibling keys, then writes.
+  const writeStep = useCallback(async (step: AxisStep, next: AxisStepState) => {
     if (!sessionId) return;
     const { data: existing } = await supabase
       .from("session_step_states")
@@ -63,7 +100,17 @@ export function useAxis({ sessionId }: UseAxisProps) {
       .eq("session_id", sessionId)
       .eq("step", step)
       .maybeSingle();
-    const mergedOutput = { ...((existing?.locked_output as any) || {}), axis: next };
+
+    const existingOutput = (existing?.locked_output as any) || {};
+    const existingAxis = (existingOutput.axis && typeof existingOutput.axis === "object" && !Array.isArray(existingOutput.axis))
+      ? existingOutput.axis
+      : {};
+    // Migrate legacy flat shape into nested while we're here.
+    const isLegacyFlat = "questions" in existingAxis;
+    const normalizedAxis = isLegacyFlat ? { [step]: existingAxis } : existingAxis;
+    const mergedAxis = { ...normalizedAxis, [step]: next };
+    const mergedOutput = { ...existingOutput, axis: mergedAxis };
+
     if (existing) {
       await supabase
         .from("session_step_states")
@@ -79,13 +126,23 @@ export function useAxis({ sessionId }: UseAxisProps) {
     }
   }, [sessionId]);
 
+  const persistStep = useCallback((step: AxisStep, next: AxisStepState) => {
+    const key = `${sessionId}:${step}`;
+    const prev = writeChains.current[key] ?? Promise.resolve();
+    const chained = prev
+      .catch(() => undefined)
+      .then(() => writeStep(step, next))
+      .catch((e) => console.error("axis persist failed:", e));
+    writeChains.current[key] = chained;
+    return chained;
+  }, [sessionId, writeStep]);
+
   const setStep = useCallback((step: AxisStep, updater: (prev: AxisStepState) => AxisStepState) => {
     setState((prev) => {
       const cur = prev[step] ?? EMPTY_STEP;
       const next = updater(cur);
       const out = { ...prev, [step]: next };
-      // Fire-and-forget persistence.
-      persistStep(step, next).catch((e) => console.error("axis persist failed:", e));
+      persistStep(step, next);
       return out;
     });
   }, [persistStep]);
@@ -237,6 +294,7 @@ export function useAxis({ sessionId }: UseAxisProps) {
     state,
     loadingStep,
     errorMessage,
+    initialized,
     requestQuestions,
     resolveAnswer,
     setChangeStatus,

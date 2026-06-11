@@ -209,7 +209,7 @@ serve(async (req) => {
         const q = String(cp?.question || "").trim();
         if (!q) continue;
         if (existing.some((e: string) => e.includes(q.toLowerCase()) || q.toLowerCase().includes(e))) continue;
-        if (built.length >= 4) break;
+        if (built.length >= 3) break;
         built.push({
           id: crypto.randomUUID(),
           step,
@@ -222,7 +222,11 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ questions: built.slice(0, 4) }), {
+    // SX-03b — HARD CAP at 3. Hardening question (if injected) is at index 0 and
+    // is preserved; everything beyond 3 is truncated.
+    const capped = built.slice(0, 3);
+
+    return new Response(JSON.stringify({ questions: capped }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
