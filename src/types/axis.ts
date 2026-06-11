@@ -10,6 +10,7 @@ export type AxisActionKind =
   | "rescope_role"
   | "rerun_role"
   | "set_effect_chain"
+  | "context"
   | "noop";
 
 /** A concrete change Axis proposes. `target` is a dotted path into the interpretation/role tree. */
