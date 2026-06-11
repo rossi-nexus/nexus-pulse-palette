@@ -66,9 +66,12 @@ const InterpretationStep = ({
     toggleSelection,
     reorderRoles,
     updateConstraint,
+    acceptEffectChain,
+    rejectEffectChain,
     acceptAllPending,
     lock,
   } = hook;
+
 
   const showDev =
     typeof window !== "undefined" &&
