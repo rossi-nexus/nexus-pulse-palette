@@ -319,6 +319,21 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                     sessionId={sessionId}
                     onUnlock={() => handleUnlockWithCascade(2)}
                     downstreamStepNames={downstreamNamesForStep[2]}
+                    axisAcceptedChanges={(axis.state.A2?.pending_changes ?? [])
+                      .filter((c) => c.status === "accepted" && c.action.target && c.action.target.startsWith("constraints."))
+                      .map((c) => ({
+                        target: c.action.target as string,
+                        previous_value: (c as any).previous_value,
+                        label: c.label,
+                      }))}
+                    onRevertAxisChange={(change) => {
+                      // Restore previous value, then mark the original change rejected.
+                      stepA2.applyAxisChange({ kind: "update_constraint", target: change.target, value: change.previous_value });
+                      const orig = (axis.state.A2?.pending_changes ?? []).find(
+                        (c) => c.status === "accepted" && c.action.target === change.target,
+                      );
+                      if (orig) axis.setChangeStatus("A2", orig.id, "rejected");
+                    }}
                   />
                 )}
 
