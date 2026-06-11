@@ -5,6 +5,7 @@ import type { Interpretation, Constraints } from "@/types/interpretation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserPreferences, resolveAxisWeights, type AxisWeights } from "@/hooks/useUserPreferences";
 import { useTrackInteraction } from "@/hooks/useTrackInteraction";
+import { resolveIntentCountries, type SourcingIntent } from "@/config/regionSets";
 
 export type SearchStatus = "not_started" | "searching" | "reviewing" | "locked";
 type RoleStatus = "waiting" | "searching" | "complete" | "error";
