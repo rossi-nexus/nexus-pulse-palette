@@ -11,6 +11,7 @@ import UnlockConfirmDialog from "./UnlockConfirmDialog";
 
 import type { NeedDescription, NeedAttachment } from "@/types/need-description";
 import type { useInterpretation } from "@/hooks/useInterpretation";
+import type { AxisAcceptedChange } from "./ConstraintsSection";
 
 const MOCK_NEED: NeedDescription = {
   id: "mock-need-001",
