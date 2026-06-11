@@ -453,6 +453,36 @@ const AxisSidebarConnected = ({
     ? axis.state[currentStep] ?? { questions: [], pending_changes: [], stale_role_ids: [] }
     : { questions: [], pending_changes: [], stale_role_ids: [] };
 
+  // SX-03b — auto-trigger: once initial load is done and the step is "ready",
+  // fire requestQuestions exactly once per (session, step) entry if no persisted
+  // questions exist. Restoration takes precedence — never regenerate over existing.
+  const autoFiredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    autoFiredRef.current = new Set();
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!axis.initialized) return;
+    if (!currentStep || !stepContext) return;
+    if (currentStep === "A1") {
+      // A1 is ready as soon as it's locked (interpretation exists downstream).
+      if (stepA1Status !== "locked") return;
+    } else if (currentStep === "A2") {
+      // A2 ready as soon as we have an interpretation.
+      if (!interpretation) return;
+    } else {
+      return;
+    }
+    const cur = axis.state[currentStep];
+    if (cur && cur.questions.length > 0) return; // restored — do not regenerate
+    if (axis.loadingStep === currentStep) return;
+    const key = `${sessionId}:${currentStep}`;
+    if (autoFiredRef.current.has(key)) return;
+    autoFiredRef.current.add(key);
+    axis.requestQuestions(currentStep, stepContext);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [axis.initialized, currentStep, stepA1Status, interpretation, sessionId, stepContext]);
+
   const handleRequestQuestions = useCallback(() => {
     if (!currentStep || !stepContext) return;
     axis.requestQuestions(currentStep, stepContext);
