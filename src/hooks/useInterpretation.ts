@@ -547,6 +547,7 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     reorderRoles,
     toggleSelection,
     updateConstraint,
+    applyAxisChange,
     acceptEffectChain,
     rejectEffectChain,
     acceptAllPending,
