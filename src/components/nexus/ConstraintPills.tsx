@@ -39,8 +39,26 @@ export function buildConstraintPills(constraints: any): ConstraintPill[] {
   const sec = constraints.security_classification?.required_level;
   if (sec && sec !== "any") out.push({ key: "security_classification.required_level", label: `Clearance: ${sec}` });
 
+  // SX-02 — sourcing intent, resilience posture, value chain
+  const si = constraints.geography?.sourcing_intent;
+  if (si && si !== "unrestricted") {
+    const label = si.charAt(0).toUpperCase() + si.slice(1);
+    out.push({ key: "geography.sourcing_intent", label: `Sourcing: ${label}` });
+  }
+  const posture = constraints.resilience?.posture;
+  if (posture && posture !== "steady_state") {
+    const human = posture === "crisis_response" ? "Crisis response" : "Wartime continuity";
+    out.push({ key: "resilience", label: `Posture: ${human}` });
+  }
+  const vc = constraints.value_chain;
+  if (vc?.sensitive) {
+    const count = Array.isArray(vc.chokepoint_concerns) ? vc.chokepoint_concerns.length : 0;
+    out.push({ key: "value_chain", label: `Value chain: sensitive${count ? ` (${count} concern${count === 1 ? "" : "s"})` : ""}` });
+  }
+
   return out;
 }
+
 
 const ConstraintPills = ({ constraints, onRemove, className }: Props) => {
   const pills = buildConstraintPills(constraints);
