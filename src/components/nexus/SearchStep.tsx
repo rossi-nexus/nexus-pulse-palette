@@ -173,7 +173,30 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
     lock,
     unlock,
     rescoreActor,
+    rerunRole,
   } = hook;
+
+  // SX-04 — resilience posture badge
+  const posture: string | undefined = (interpretation?.constraints as any)?.resilience?.posture;
+  const postureLabel = posture && posture !== "steady_state"
+    ? (posture === "wartime_continuity" ? "WARTIME CONTINUITY" : posture === "crisis_response" ? "CRISIS RESPONSE" : posture.toUpperCase())
+    : null;
+
+  // SX-04 — handle per-role re-run with confirmation when the user already
+  // included actors from this role.
+  const handleRerunRole = async (roleId: string) => {
+    if (!interpretation) return;
+    const role = orderedRoles.find((r) => r.role_id === roleId);
+    const hasIncluded = role && role.actors.some((a) => a.triage_decision === "included");
+    if (hasIncluded) {
+      if (!window.confirm(
+        "Re-running this role will fetch fresh results based on the updated constraints. Actors you've already included will be kept, but new results may differ. Continue?",
+      )) return;
+    }
+    await rerunRole(roleId, interpretation);
+    onClearStaleRole?.(roleId);
+    toast.success(`Re-ran search for role`);
+  };
 
   const expandedResult = orderedRoles.find(r => r.role_id === expandedRoleId);
 
