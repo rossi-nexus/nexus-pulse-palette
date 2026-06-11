@@ -361,7 +361,11 @@ const ConstraintsSection = ({ constraints, onUpdate, axisAcceptedChanges = [], o
 
         {/* SX-02 — Sourcing Intent */}
         {constraints.geography?.sourcing_intent && (
-          <ConstraintRow label="Sourcing intent">
+          <ConstraintRow
+            label="Sourcing intent"
+            axisSet={!!axisChange("constraints.geography.sourcing_intent")}
+            onRevert={revertHandler("constraints.geography.sourcing_intent")}
+          >
             <div className="space-y-1">
               <select
                 value={constraints.geography.sourcing_intent}
