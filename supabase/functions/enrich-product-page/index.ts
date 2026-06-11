@@ -10,6 +10,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
+import { safeFetch } from "../_shared/urlGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,9 +56,8 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   const ctrl = new AbortController();
   const tm = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, {
+    return await safeFetch(url, {
       headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml,*/*" },
-      redirect: "follow",
       signal: ctrl.signal,
     });
   } finally {

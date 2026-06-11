@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ActorsMap } from "@/components/map/ActorsMap";
+// Lazy: keeps leaflet out of the main bundle — only loads when the map dialog opens.
+const ActorsMap = lazy(() =>
+  import("@/components/map/ActorsMap").then((m) => ({ default: m.ActorsMap }))
+);
 import { useSessionActorsMap } from "@/hooks/useSessionActorsMap";
 
 import { useSessionContext } from "@/contexts/SessionContext";
@@ -45,12 +48,20 @@ export function SessionMapButton({ variant }: SessionMapButtonProps) {
               Loading…
             </div>
           ) : (
-            <ActorsMap
-              actors={data}
-              viewStorageKey={`sessionMapView:${variant}:${sessionId}`}
-              showFilters={false}
-              hideProfileLink
-            />
+            <Suspense
+              fallback={
+                <div className="flex-1 flex items-center justify-center text-foreground-muted text-body-sm">
+                  Loading…
+                </div>
+              }
+            >
+              <ActorsMap
+                actors={data}
+                viewStorageKey={`sessionMapView:${variant}:${sessionId}`}
+                showFilters={false}
+                hideProfileLink
+              />
+            </Suspense>
           )}
         </DialogContent>
       </Dialog>

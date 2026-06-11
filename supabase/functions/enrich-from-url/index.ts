@@ -121,13 +121,12 @@ function stripHtml(html: string): string {
 }
 
 async function fetchUrlText(url: string): Promise<string> {
-  const resp = await fetch(url, {
+  const resp = await safeFetch(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (compatible; NEXUS/1.0; +https://nexus.app)",
       Accept: "text/html,application/xhtml+xml,text/plain,*/*",
     },
-    redirect: "follow",
   });
   if (!resp.ok) {
     throw new Error(`Failed to fetch URL: HTTP ${resp.status}`);
@@ -144,6 +143,7 @@ async function fetchUrlText(url: string): Promise<string> {
 }
 
 import {
+import { safeFetch } from "../_shared/urlGuard.ts";
   buildOntologyBlock,
   type OntoCategory,
   type OntoEntry,

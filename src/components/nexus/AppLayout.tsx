@@ -3,10 +3,13 @@ import TopBar from "./TopBar";
 import SidebarNav from "./SidebarNav";
 import PipelineView from "./PipelineView";
 import ActorsView from "./ActorsView";
-import ActorProfile from "@/pages/ActorProfile";
-import ProductDetailPage from "@/pages/ProductDetailPage";
-import AddActorPage from "@/pages/AddActorPage";
-import ActorsMapPage from "@/pages/ActorsMapPage";
+import { lazy, Suspense } from "react";
+
+// Heavy pages split into their own chunks (leaflet, large profile page).
+const ActorProfile = lazy(() => import("@/pages/ActorProfile"));
+const ProductDetailPage = lazy(() => import("@/pages/ProductDetailPage"));
+const AddActorPage = lazy(() => import("@/pages/AddActorPage"));
+const ActorsMapPage = lazy(() => import("@/pages/ActorsMapPage"));
 import SavedSearchesPage from "@/pages/SavedSearchesPage";
 import UserPreferencesPage from "@/pages/UserPreferencesPage";
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -29,6 +32,7 @@ const AppLayout = () => {
         <div className="flex flex-1 overflow-hidden min-h-0">
           <SidebarNav />
           <div className="flex-1 overflow-hidden min-w-0">
+            <Suspense fallback={<div className="p-8 text-body-sm text-foreground-muted">Loading...</div>}>
             <Routes>
               <Route path="/" element={<Navigate to="/pipeline" replace />} />
               <Route path="/pipeline" element={<PipelineView />} />
@@ -43,6 +47,7 @@ const AppLayout = () => {
               <Route path="/programmes/:id" element={<LegacyProgrammeRedirect />} />
               {/* A4 Area 1: /admin is gated by AdminLayout (mounted in Index). */}
             </Routes>
+            </Suspense>
           </div>
         </div>
       </div>

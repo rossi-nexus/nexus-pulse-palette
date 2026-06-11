@@ -15,6 +15,7 @@
  * Last reviewed: 2026-05-21 (Access architecture audit, A4 close).
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { safeFetch } from "../_shared/urlGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,11 +78,11 @@ serve(async (req) => {
       "Accept-Language": "en-US,en;q=0.9",
     };
 
-    let response = await fetch(url, { headers: fetchHeaders, redirect: "follow" });
+    let response = await safeFetch(url, { headers: fetchHeaders });
     if (response.status === 429 || response.status === 503) {
       try { await response.body?.cancel(); } catch { /* ignore */ }
       await new Promise((r) => setTimeout(r, 1500));
-      response = await fetch(url, { headers: fetchHeaders, redirect: "follow" });
+      response = await safeFetch(url, { headers: fetchHeaders });
     }
 
     if (!response.ok) {

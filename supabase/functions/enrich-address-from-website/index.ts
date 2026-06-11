@@ -7,6 +7,7 @@
 // Each candidate carries a `matched_path` diagnostic so the build report can
 // describe where the address came from.
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
+import { safeFetch } from "../_shared/urlGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,9 +31,8 @@ const UA =
 
 async function fetchText(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       headers: { "User-Agent": UA, Accept: "text/html,*/*" },
-      redirect: "follow",
     });
     if (!res.ok) return null;
     return await res.text();
