@@ -166,6 +166,9 @@ const InterpretationStep = ({
                 onDelete={noop}
                 onAdd={noop}
               />
+              {interpretation.effect_chains && interpretation.effect_chains.length > 0 && (
+                <EffectChainStrip chains={interpretation.effect_chains} roles={interpretation.roles} />
+              )}
               <RolesSection
                 roles={interpretation.roles}
                 onEdit={noop}
@@ -178,6 +181,7 @@ const InterpretationStep = ({
                 constraints={interpretation.constraints}
                 onUpdate={noop}
               />
+
             </div>
           )}
 
