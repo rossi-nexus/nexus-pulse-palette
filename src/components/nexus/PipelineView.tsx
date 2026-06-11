@@ -22,6 +22,8 @@ import type { Interpretation, ClarificationPoint } from "@/types/interpretation"
 import type { LockedA3Output, LockedA4Output } from "@/types/pipeline";
 import type { RoleSearchResult } from "@/hooks/useSearch";
 import type { RoleAnalysisProgress } from "@/hooks/useAnalysis";
+import { useAxis } from "@/hooks/useAxis";
+import type { AxisStep, AxisPendingChange, AxisQuestion } from "@/types/axis";
 
 const STEP_NAMES: Record<number, string> = {
   1: "Define Your Need",
