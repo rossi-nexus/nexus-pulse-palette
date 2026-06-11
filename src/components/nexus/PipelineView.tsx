@@ -404,6 +404,7 @@ export default PipelineView;
 // into useInterpretation via applyAxisChange.
 interface AxisSidebarConnectedProps {
   sessionId: string | null;
+  axis: ReturnType<typeof useAxis>;
   stepA1Status: string;
   stepA1ContextText: string;
   stepA1Attachments: Array<{ reference: string }>;
@@ -415,6 +416,7 @@ interface AxisSidebarConnectedProps {
 
 const AxisSidebarConnected = ({
   sessionId,
+  axis,
   stepA1Status,
   stepA1ContextText,
   stepA1Attachments,
@@ -423,7 +425,6 @@ const AxisSidebarConnected = ({
   clarificationPoints,
   applyAxisChange,
 }: AxisSidebarConnectedProps) => {
-  const axis = useAxis({ sessionId });
 
   // Derive the active step: prefer the editable step closest to the user.
   const currentStep: AxisStep | null = useMemo(() => {
