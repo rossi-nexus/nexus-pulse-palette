@@ -397,3 +397,111 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
 };
 
 export default PipelineView;
+
+// SX-03 — Connected Axis sidebar. Owns the useAxis hook, derives current step,
+// passes step context, and wires accept/reject of pending tracked changes back
+// into useInterpretation via applyAxisChange.
+interface AxisSidebarConnectedProps {
+  sessionId: string | null;
+  stepA1Status: string;
+  stepA1ContextText: string;
+  stepA1Attachments: Array<{ reference: string }>;
+  stepA2Status: string;
+  interpretation: Interpretation | null;
+  clarificationPoints: ClarificationPoint[];
+  applyAxisChange: (action: { kind: string; target?: string; value?: any }) => boolean;
+}
+
+const AxisSidebarConnected = ({
+  sessionId,
+  stepA1Status,
+  stepA1ContextText,
+  stepA1Attachments,
+  stepA2Status,
+  interpretation,
+  clarificationPoints,
+  applyAxisChange,
+}: AxisSidebarConnectedProps) => {
+  const axis = useAxis({ sessionId });
+
+  // Derive the active step: prefer the editable step closest to the user.
+  const currentStep: AxisStep | null = useMemo(() => {
+    if (stepA2Status === "editing") return "A2";
+    if (stepA1Status === "editing") return "A1";
+    if (stepA2Status === "locked") return "A2";
+    if (stepA1Status === "locked") return "A1";
+    return "A1";
+  }, [stepA1Status, stepA2Status]);
+
+  const stepContext = useMemo(() => {
+    if (currentStep === "A1") {
+      return {
+        context_text: stepA1ContextText,
+        attachment_names: stepA1Attachments.map((a) => a.reference),
+      };
+    }
+    if (currentStep === "A2") {
+      return {
+        interpretation,
+        clarification_points: clarificationPoints,
+      };
+    }
+    return null;
+  }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints]);
+
+  const stepState = currentStep
+    ? axis.state[currentStep] ?? { questions: [], pending_changes: [], stale_role_ids: [] }
+    : { questions: [], pending_changes: [], stale_role_ids: [] };
+
+  const handleRequestQuestions = useCallback(() => {
+    if (!currentStep || !stepContext) return;
+    axis.requestQuestions(currentStep, stepContext);
+  }, [axis, currentStep, stepContext]);
+
+  const handleAnswer = useCallback(async (question: AxisQuestion, answer: string | string[] | boolean) => {
+    if (!currentStep) return [];
+    return axis.resolveAnswer(currentStep, question, answer, stepContext);
+  }, [axis, currentStep, stepContext]);
+
+  const handleAcceptChange = useCallback((change: AxisPendingChange) => {
+    const ok = applyAxisChange(change.action);
+    if (!ok && change.action.kind !== "noop") {
+      // Application failed (e.g. role no longer exists). Still mark rejected to clear state.
+      axis.setChangeStatus(change.step, change.id, "rejected");
+      return;
+    }
+    axis.setChangeStatus(change.step, change.id, "accepted");
+  }, [applyAxisChange, axis]);
+
+  const handleRejectChange = useCallback((change: AxisPendingChange) => {
+    axis.setChangeStatus(change.step, change.id, "rejected");
+  }, [axis]);
+
+  const handleFreeChat = useCallback(async (text: string) => {
+    if (!currentStep) return [];
+    const synthetic: AxisQuestion = {
+      id: crypto.randomUUID(),
+      step: currentStep,
+      question: text,
+      context: "Free-text answer from Ask Axis.",
+      answer_kind: "free_text",
+      proposed_action: { kind: "noop" },
+      origin: "axis",
+    };
+    return axis.resolveAnswer(currentStep, synthetic, text, stepContext);
+  }, [axis, currentStep, stepContext]);
+
+  return (
+    <AxisSidebar
+      currentStep={currentStep}
+      stepContext={stepContext}
+      stepState={stepState}
+      loading={axis.loadingStep === currentStep}
+      onRequestQuestions={handleRequestQuestions}
+      onAnswer={handleAnswer}
+      onAcceptChange={handleAcceptChange}
+      onRejectChange={handleRejectChange}
+      onFreeChat={handleFreeChat}
+    />
+  );
+};
