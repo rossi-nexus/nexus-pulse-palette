@@ -5,8 +5,10 @@ import StepContainer from "./StepContainer";
 import SummarySection from "./SummarySection";
 import RolesSection from "./RolesSection";
 import ConstraintsSection from "./ConstraintsSection";
+import EffectChainStrip from "./EffectChainStrip";
 import ReviewToggle from "./ReviewToggle";
 import UnlockConfirmDialog from "./UnlockConfirmDialog";
+
 import type { NeedDescription, NeedAttachment } from "@/types/need-description";
 import type { useInterpretation } from "@/hooks/useInterpretation";
 
