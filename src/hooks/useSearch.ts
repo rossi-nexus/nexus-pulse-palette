@@ -295,6 +295,19 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
             source: "web" as const,
             db_actor_id: null,
           }));
+
+          // SX-04 — Post-filter web results by sourcing intent. Out-of-scope actors
+          // are excluded but counted so the UI can surface "N excluded by sourcing
+          // constraint" rather than silently dropping them.
+          if (intentCountries && intentCountries.length > 0) {
+            const allowed = new Set(intentCountries.map((c) => c.toUpperCase()));
+            const before = webActors.length;
+            webActors = webActors.filter((a) => {
+              const c = (a.country || "").toUpperCase().trim();
+              return c && allowed.has(c);
+            });
+            excludedBySourcing += before - webActors.length;
+          }
         } catch (err: any) {
           errMsg = err?.message ?? String(err);
         }
@@ -303,12 +316,15 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       // --- DB branch ------------------------------------------------------
       if ((mode === "db" || mode === "both") && targetEntryIds.length > 0) {
         try {
-          const constraintCountries: string[] | undefined =
-            (interpretation.constraints as any)?.geography?.countries;
-          const pCountries =
-            Array.isArray(constraintCountries) && constraintCountries.length > 0
-              ? constraintCountries.map((c: string) => c.toUpperCase())
-              : null;
+          // SX-04 — DB pre-filter uses intent-expanded countries when intent is set,
+          // otherwise falls back to user-declared countries (legacy behaviour).
+          const declared = (interpretation.constraints as any)?.geography?.countries;
+          const pCountries: string[] | null =
+            intentCountries && intentCountries.length > 0
+              ? intentCountries
+              : (Array.isArray(declared) && declared.length > 0
+                  ? declared.map((c: string) => c.toUpperCase())
+                  : null);
 
           const { data, error: rpcErr } = await (supabase.rpc as any)(
             "fn_rank_actors_by_ontology_overlap",
@@ -323,7 +339,9 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
             ontology_entry_ids: targetEntryIds,
             geography: {
               ...(pCountries ? { countries: pCountries } : {}),
+              ...(sourcingIntent ? { sourcing_intent: sourcingIntent } : {}),
             },
+            resilience: (interpretation.constraints as any)?.resilience ?? {},
             capacity: (interpretation.constraints as any)?.capacity ?? {},
             certifications: (interpretation.constraints as any)?.certifications ??
               (interpretation.constraints as any)?.standards ?? {},
