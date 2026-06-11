@@ -135,6 +135,10 @@ export interface Constraints {
   standards?: StandardsConstraint;
   contract_duration?: ContractDurationConstraint;
   search_context?: string;
+  /** SX-02 — operational posture (steady_state | crisis_response | wartime_continuity). */
+  resilience?: ResilienceConstraint;
+  /** SX-02 — value-chain sensitivity flag + chokepoint concerns. */
+  value_chain?: ValueChainConstraint;
 }
 
 export interface RoleDependency {
