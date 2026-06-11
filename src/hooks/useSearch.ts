@@ -836,6 +836,7 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
     unlock,
     reset,
     rescoreActor,
+    rerunRole,
     resolvedWeights,
     track,
 
