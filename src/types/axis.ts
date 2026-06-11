@@ -65,6 +65,8 @@ export interface AxisPendingChange {
   message?: string;
   question_id?: string;
   created_at: string;
+  /** SX-04 — snapshot of the constraint value before the change was accepted. Enables revert. */
+  previous_value?: unknown;
 }
 
 /** Axis state persisted into session_step_states.locked_output (additive JSONB key). */
