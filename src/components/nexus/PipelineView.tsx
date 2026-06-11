@@ -60,6 +60,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
   const stepA3 = useSearch({ sessionId });
   const stepA4 = useAnalysis({ sessionId });
   const stepA5 = useDatabaseCheck({ sessionId });
+  const axis = useAxis({ sessionId });
   const [showExamples, setShowExamples] = useState(false);
 
   const [lockedA2Output, setLockedA2Output] = useState<{
