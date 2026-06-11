@@ -204,11 +204,20 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
         .map((s: any) => s.entryId)
         .filter((id: any): id is string => typeof id === "string" && id.length > 0);
 
+      // SX-04 — Sourcing intent → expanded country set for both DB pre-filter
+      // and web post-filter. Null means "no hard filter" (unrestricted/absent).
+      const sourcingIntent: SourcingIntent | undefined =
+        (interpretation.constraints as any)?.geography?.sourcing_intent;
+      const declaredCountries: string[] | undefined =
+        (interpretation.constraints as any)?.geography?.countries;
+      const intentCountries = resolveIntentCountries(sourcingIntent ?? null, declaredCountries);
+
       let webActors: ActorCardData[] = [];
       let dbActors: ActorCardData[] = [];
       let queriesUsed: string[] = [];
       let processingTimeMs: number | undefined;
       let errMsg: string | undefined;
+      let excludedBySourcing = 0;
 
       // --- Web branch -----------------------------------------------------
       if (mode === "web" || mode === "both") {
