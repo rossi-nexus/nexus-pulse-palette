@@ -332,10 +332,9 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                     onUnlock={() => handleUnlockWithCascade(3)}
                     downstreamStepNames={downstreamNamesForStep[3]}
                     sessionId={sessionId}
+                    staleRoleIds={axis.state.A3?.stale_role_ids ?? []}
+                    onClearStaleRole={(roleId) => axis.clearStaleRole("A3", roleId)}
                     onAddRoleFromCoverage={async (name, summaryText) => {
-                      // P13 — adopting a coverage suggestion cascades: unlock Step 2,
-                      // add the manual role (auto-populates via populate-role), then
-                      // the consultant re-locks Step 2 and re-runs Step 3.
                       await handleUnlockWithCascade(2);
                       stepA2.addRole(name, summaryText);
                     }}
@@ -383,6 +382,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
         <ResizablePanel defaultSize={25} minSize={15} maxSize={50}>
           <AxisSidebarConnected
             sessionId={sessionId}
+            axis={axis}
             stepA1Status={stepA1.status}
             stepA1ContextText={stepA1.contextText}
             stepA1Attachments={stepA1.attachments}
