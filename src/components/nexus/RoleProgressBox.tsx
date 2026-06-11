@@ -1,4 +1,4 @@
-import { Circle, Loader2, Check, X } from "lucide-react";
+import { Circle, Loader2, Check, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RoleSearchResult } from "@/hooks/useSearch";
 
@@ -7,9 +7,11 @@ interface RoleProgressBoxProps {
   isActive: boolean;
   isExpanded: boolean;
   onClick: () => void;
+  /** SX-04 — flagged stale by Axis after constraints rescoped this role. */
+  stale?: boolean;
 }
 
-const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgressBoxProps) => {
+const RoleProgressBox = ({ result, isActive, isExpanded, onClick, stale = false }: RoleProgressBoxProps) => {
   const isClickable = result.status === "complete" || result.status === "error";
   const includedCount = result.actors.filter(a => a.triage_decision === "included").length;
 
@@ -18,16 +20,20 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgress
       onClick={isClickable ? onClick : undefined}
       title={result.role_name}
       className={cn(
-        "flex flex-col items-center gap-1.5 px-3 py-3 rounded-card border transition-all flex-1 min-w-0 basis-0",
+        "relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-card border transition-all flex-1 min-w-0 basis-0",
         isExpanded && "border-border-accent shadow-glow",
         isActive && !isExpanded && "border-border-accent",
         result.status === "waiting" && "border-border bg-surface",
         result.status === "searching" && !isExpanded && "border-accent-teal/50 bg-surface",
         result.status === "complete" && !isExpanded && "border-accent-teal/30 bg-surface cursor-pointer hover:bg-elevated/50",
         result.status === "error" && "border-destructive/40 bg-surface",
+        stale && "border-warning/60 bg-warning/5",
       )}
       disabled={!isClickable}
     >
+      {stale && (
+        <AlertTriangle className="absolute top-1.5 right-1.5 w-3 h-3 text-warning" />
+      )}
       {/* Status icon */}
       {result.status === "waiting" && <Circle className="w-4 h-4 text-foreground-muted" />}
       {result.status === "searching" && <Loader2 className="w-4 h-4 text-accent-teal animate-spin" />}
@@ -43,7 +49,7 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgress
         {result.role_name}
       </span>
 
-      {/* Counts: found + included */}
+      {/* Counts: found + included + excluded */}
       {(result.status === "searching" || result.status === "complete") && (
         <div className="flex items-center gap-1.5 text-mono-xs font-mono">
           <span className="text-foreground-muted">{result.actors.length} found</span>
@@ -55,8 +61,17 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick }: RoleProgress
           )}
         </div>
       )}
+      {result.excluded_by_sourcing && result.excluded_by_sourcing > 0 ? (
+        <div
+          className="text-mono-xs font-mono text-warning"
+          title={`Excluded by sourcing constraint (${result.sourcing_intent ?? "intent"})`}
+        >
+          {result.excluded_by_sourcing} excluded
+        </div>
+      ) : null}
     </button>
   );
 };
 
 export default RoleProgressBox;
+
