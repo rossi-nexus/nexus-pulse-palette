@@ -74,15 +74,44 @@ const CLASSIFICATION_OPTIONS: { value: string; label: string }[] = [
 // TagInput moved to @/components/nexus/TagInput for reuse across the app.
 
 
-const ConstraintRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="flex items-start gap-4 py-2">
+const ConstraintRow = ({ label, axisSet, onRevert, children }: { label: string; axisSet?: boolean; onRevert?: () => void; children: React.ReactNode }) => (
+  <div className={"flex items-start gap-4 py-2 " + (axisSet ? "border-l-2 border-accent-teal/60 pl-2 -ml-2" : "")}>
     <span className="text-body-sm text-foreground-secondary w-[140px] shrink-0 pt-1">{label}</span>
-    <div className="flex-1">{children}</div>
+    <div className="flex-1">
+      {children}
+      {axisSet && (
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-accent-teal">
+            <Sparkles className="w-3 h-3" /> set by Axis
+          </span>
+          {onRevert && (
+            <button
+              type="button"
+              onClick={onRevert}
+              className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-foreground-muted hover:text-foreground"
+            >
+              <Undo2 className="w-3 h-3" /> revert
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   </div>
 );
 
-const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) => {
+const ConstraintsSection = ({ constraints, onUpdate, axisAcceptedChanges = [], onRevertAxisChange }: ConstraintsSectionProps) => {
   const [showAddMenu, setShowAddMenu] = useState(false);
+
+  // SX-04 — lookup map: path → latest accepted change (last wins).
+  const axisByPath = new Map<string, AxisAcceptedChange>();
+  for (const c of axisAcceptedChanges) axisByPath.set(c.target, c);
+
+  const axisChange = (path: string) => axisByPath.get(path);
+  const revertHandler = (path: string) => {
+    const c = axisByPath.get(path);
+    if (c && onRevertAxisChange) return () => onRevertAxisChange(c);
+    return undefined;
+  };
 
   const hasConstraint = (type: string) => {
     switch (type) {
