@@ -317,7 +317,101 @@ const ConstraintsSection = ({ constraints, onUpdate }: ConstraintsSectionProps) 
             />
           </ConstraintRow>
         )}
+
+        {/* SX-02 — Sourcing Intent */}
+        {constraints.geography?.sourcing_intent && (
+          <ConstraintRow label="Sourcing intent">
+            <div className="space-y-1">
+              <select
+                value={constraints.geography.sourcing_intent}
+                onChange={(e) => onUpdate("geography", { ...constraints.geography, sourcing_intent: e.target.value as SourcingIntent })}
+                className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none w-full max-w-md"
+              >
+                {SOURCING_INTENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {constraints.geography.sourcing_intent_rationale && (
+                <p className="text-caption text-foreground-muted italic">
+                  {constraints.geography.sourcing_intent_rationale}
+                </p>
+              )}
+            </div>
+          </ConstraintRow>
+        )}
+
+        {/* SX-02 — Resilience Posture */}
+        {constraints.resilience && (
+          <ConstraintRow label="Resilience posture">
+            <div className="space-y-2">
+              <select
+                value={constraints.resilience.posture || "steady_state"}
+                onChange={(e) => onUpdate("resilience", { ...constraints.resilience, posture: e.target.value as ResiliencePosture })}
+                className="h-8 px-2 rounded border border-border bg-surface text-body-sm text-foreground outline-none w-full max-w-md"
+              >
+                {RESILIENCE_POSTURE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div>
+                <span className="text-caption text-foreground-muted">Scenarios</span>
+                <TagInput
+                  tags={constraints.resilience.scenarios || []}
+                  onChange={(scenarios) => onUpdate("resilience", { ...constraints.resilience, scenarios })}
+                  placeholder="Add scenario…"
+                />
+              </div>
+            </div>
+          </ConstraintRow>
+        )}
+
+        {/* SX-02 — Value Chain */}
+        {constraints.value_chain && (
+          <ConstraintRow label="Value chain">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-body-sm text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={!!constraints.value_chain.sensitive}
+                  onChange={(e) => onUpdate("value_chain", { ...constraints.value_chain, sensitive: e.target.checked })}
+                />
+                Sensitive value chain
+              </label>
+              <div>
+                <span className="text-caption text-foreground-muted">Chokepoint concerns</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {CHOKEPOINT_OPTIONS.map(opt => {
+                    const active = (constraints.value_chain?.chokepoint_concerns || []).includes(opt.value);
+                    return (
+                      <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => {
+                          const current = constraints.value_chain?.chokepoint_concerns || [];
+                          const next = active ? current.filter(c => c !== opt.value) : [...current, opt.value];
+                          onUpdate("value_chain", { ...constraints.value_chain, chokepoint_concerns: next });
+                        }}
+                        className={
+                          "text-[11px] font-mono px-2 py-0.5 rounded-sharp border transition-colors " +
+                          (active
+                            ? "bg-accent-teal/15 text-accent-teal border-accent-teal/40"
+                            : "bg-surface text-foreground-muted border-border-subtle hover:text-foreground-secondary")
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={constraints.value_chain.notes || ""}
+                onChange={(e) => onUpdate("value_chain", { ...constraints.value_chain, notes: e.target.value })}
+                placeholder="Notes…"
+                className="h-8 px-2 w-full rounded border border-border bg-surface text-body-sm text-foreground outline-none"
+              />
+            </div>
+          </ConstraintRow>
+        )}
       </div>
+
 
       {/* Add constraint */}
       {addableTypes.length > 0 && (
