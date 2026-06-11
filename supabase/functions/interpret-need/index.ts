@@ -292,11 +292,68 @@ const TOOL_SCHEMA = {
               },
             },
             search_context: { type: "string" },
+            resilience: {
+              type: "object",
+              description: "SX-02 — operational posture the interpretation should be evaluated against.",
+              properties: {
+                posture: {
+                  type: "string",
+                  enum: ["steady_state", "crisis_response", "wartime_continuity"],
+                  description: "Default 'steady_state' if unspecified.",
+                },
+                scenarios: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Named disruption scenarios the user mentioned (e.g. 'GNSS jamming', 'pandemic').",
+                },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
+            value_chain: {
+              type: "object",
+              description: "SX-02 — value-chain sensitivity. Set sensitive=true when user expresses supply-chain / chokepoint concern. When search_context='supply_chain_analysis' default sensitive=true.",
+              properties: {
+                sensitive: { type: "boolean" },
+                chokepoint_concerns: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: ["single_source", "foreign_dependency", "transport_chokepoint", "energy", "telecom", "raw_materials"],
+                  },
+                },
+                notes: { type: "string" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+            },
             inference_paths: {
               type: "object",
-              description: "Per-axis explanation of why a constraint was inferred. Keys are axis names (e.g. 'capacity', 'certifications', 'urgency'); values are short rationale strings citing the source phrase.",
+              description: "Per-axis explanation of why a constraint was inferred. Keys include axis names (capacity, certifications, urgency, sourcing_intent, resilience, value_chain, etc.); values are short rationale strings citing the source phrase.",
               additionalProperties: { type: "string" },
             },
+          },
+        },
+        effect_chains: {
+          type: "array",
+          description: "SX-02 — OPTIONAL. Emit at most ONE chain ONLY when the need is structurally sequential (sense → decide → act). For flat market-mapping needs, omit or emit empty array.",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Optional human label for the chain." },
+              confidence: { type: "string", enum: ["high", "medium", "low"] },
+              nodes: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    role_index: { type: "integer", description: "0-based positional index into the roles array." },
+                    stage: { type: "string", description: "Short stage label, e.g. 'sense', 'fuse', 'decide', 'act'." },
+                    stage_index: { type: "integer", description: "0-based order in the chain." },
+                  },
+                  required: ["role_index", "stage", "stage_index"],
+                },
+              },
+            },
+            required: ["nodes"],
           },
         },
         clarification_points: {
