@@ -524,6 +524,41 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
     setStatus("reviewing");
   }, [sessionId, roleSearchModes, resolvedWeights, user?.id]);
 
+  /**
+   * SX-04 — Re-run search for a single role while preserving every other role's
+   * existing results and triage decisions. Used when an Axis change rescopes a
+   * role after Step 3 has already produced results.
+   */
+  const rerunRole = useCallback(async (roleId: string, interpretation: Interpretation) => {
+    const role = interpretation.roles.find((r) => r.id === roleId && r.status === "accepted");
+    if (!role) return;
+    const singleRoleInterp: Interpretation = {
+      ...interpretation,
+      roles: [role],
+    } as Interpretation;
+    // Snapshot the existing roleResults for OTHER roles so they survive the run.
+    const preserved = new Map<string, RoleSearchResult>();
+    setRoleResults((prev) => {
+      for (const [rid, r] of prev) {
+        if (rid !== roleId) preserved.set(rid, r);
+      }
+      return prev;
+    });
+    // Run the single-role search through the same pipeline, then restore others.
+    setStatus("searching");
+    await startSearch(singleRoleInterp);
+    setRoleResults((prev) => {
+      const next = new Map<string, RoleSearchResult>();
+      // Other roles first (preserving original ordering & state).
+      for (const [rid, r] of preserved) next.set(rid, r);
+      // Then the newly-searched role (whatever startSearch produced).
+      const fresh = prev.get(roleId);
+      if (fresh) next.set(roleId, fresh);
+      return next;
+    });
+    setStatus("reviewing");
+  }, [startSearch]);
+
   // Triage actions
   const includeActor = useCallback((roleId: string, actorId: string) => {
     let dbActorIncluded: { db_actor_id: string; role_name: string; meta: Record<string, unknown> } | null = null;
