@@ -270,6 +270,8 @@ const InterpretationStep = ({
           <ConstraintsSection
             constraints={interpretation.constraints}
             onUpdate={updateConstraint}
+            axisAcceptedChanges={axisAcceptedChanges}
+            onRevertAxisChange={onRevertAxisChange}
           />
 
           {/* Action row — Lock is always enabled once interpretation has loaded.
