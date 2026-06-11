@@ -59,7 +59,10 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     return () => { cancelled = true; };
   }, [sessionId]);
 
-  const runInterpretation = useCallback(async (needDescription: NeedDescription) => {
+  const runInterpretation = useCallback(async (
+    needDescription: NeedDescription,
+    axisClarifications: Array<{ question: string; answer: string }> = [],
+  ) => {
     setStatus("processing");
     setError(null);
 
@@ -89,7 +92,10 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
             Authorization: `Bearer ${token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ need_description: needDescription }),
+          body: JSON.stringify({
+            need_description: needDescription,
+            axis_clarifications: axisClarifications,
+          }),
         }
       );
 
