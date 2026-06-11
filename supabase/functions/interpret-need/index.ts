@@ -194,6 +194,15 @@ const TOOL_SCHEMA = {
                 countries: { type: "array", items: { type: "string" } },
                 regions: { type: "array", items: { type: "string" } },
                 cities: { type: "array", items: { type: "string" } },
+                sourcing_intent: {
+                  type: "string",
+                  enum: ["local", "national", "regional", "allied", "unrestricted"],
+                  description: "SX-02: Sourcing scope intent. Default 'unrestricted' if unspecified. Extract independently of resilience posture.",
+                },
+                sourcing_intent_rationale: {
+                  type: "string",
+                  description: "Short citation of source phrase that drove sourcing_intent.",
+                },
               },
             },
             company_size: { type: "string" },
