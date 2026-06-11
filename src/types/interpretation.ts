@@ -171,6 +171,25 @@ export interface Interpretation {
   constraints: Constraints;
   /** Any notes from the AI about ambiguity or assumptions */
   notes?: string;
+  /** SX-02 — optional ordered effect chains (sense → decide → act). Only present when need is structurally sequential. */
+  effect_chains?: EffectChain[];
+}
+
+/** SX-02 — single node in an effect chain. */
+export interface EffectChainNode {
+  role_id: string;
+  stage: string;
+  stage_index: number;
+}
+
+/** SX-02 — ordered chain of roles representing a sequential effect (e.g. sense → fuse → decide → act). */
+export interface EffectChain {
+  id: string;
+  name?: string;
+  nodes: EffectChainNode[];
+  confidence?: "high" | "medium" | "low";
+  source: ItemSource;
+  status: ItemStatus;
 }
 
 export interface ClarificationPoint {
