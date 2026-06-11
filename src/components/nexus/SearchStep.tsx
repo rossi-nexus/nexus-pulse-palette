@@ -462,7 +462,18 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
 
           {/* AX3b — header toolbar: save / edit constraints / map */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <ConstraintPills constraints={effectiveConstraints} onRemove={removePill} />
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* SX-04 — Resilience posture badge */}
+              {postureLabel && (
+                <span
+                  className="px-2 py-0.5 rounded-sharp border border-warning/50 bg-warning/10 text-warning text-[10px] font-mono uppercase tracking-wider"
+                  title="Search is running under a non-steady-state resilience posture"
+                >
+                  {postureLabel}
+                </span>
+              )}
+              <ConstraintPills constraints={effectiveConstraints} onRemove={removePill} />
+            </div>
             <div className="flex items-center gap-1 ml-auto">
               <Button variant="ghost" size="sm" onClick={() => setEditConstraintsOpen(true)} className="gap-1.5 text-foreground-muted hover:text-foreground h-7">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -476,6 +487,32 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
             </div>
           </div>
 
+          {/* SX-04 — Stale role banner: rescoped after search ran */}
+          {staleRoleIds.length > 0 && orderedRoles.some((r) => staleRoleIds.includes(r.role_id)) && (
+            <div className="space-y-1.5">
+              {orderedRoles
+                .filter((r) => staleRoleIds.includes(r.role_id))
+                .map((r) => (
+                  <div
+                    key={r.role_id}
+                    className="flex items-center justify-between gap-3 px-3 py-2 rounded border border-warning/50 bg-warning/10"
+                  >
+                    <span className="text-caption text-warning">
+                      <strong>{r.role_name}</strong> — Constraints changed; results may be outdated.
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1.5"
+                      onClick={() => handleRerunRole(r.role_id)}
+                    >
+                      Re-run this role
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          )}
+
           {/* Role progress boxes */}
           <div className="flex gap-2 pb-2 w-full">
             {orderedRoles.map(result => (
@@ -487,6 +524,7 @@ const SearchStep = ({ hook, interpretation, step2Locked, onUnlock, downstreamSte
                 onClick={() => setExpandedRoleId(
                   expandedRoleId === result.role_id ? null : result.role_id
                 )}
+                stale={staleRoleIds.includes(result.role_id)}
               />
             ))}
           </div>
