@@ -352,6 +352,31 @@ export function useInterpretation({ sessionId }: UseInterpretationProps = { sess
     });
   }, []);
 
+  // SX-02 — effect chain accept/reject (tracked-change semantics)
+  const acceptEffectChain = useCallback((chainId: string) => {
+    setInterpretation(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        effect_chains: (prev.effect_chains ?? []).map(c =>
+          c.id === chainId ? { ...c, status: "accepted" as ItemStatus } : c,
+        ),
+      };
+    });
+  }, []);
+  const rejectEffectChain = useCallback((chainId: string) => {
+    setInterpretation(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        effect_chains: (prev.effect_chains ?? []).map(c =>
+          c.id === chainId ? { ...c, status: "rejected" as ItemStatus } : c,
+        ),
+      };
+    });
+  }, []);
+
+
   // Bulk accept
   const acceptAllPending = useCallback(() => {
     setInterpretation(prev => {
