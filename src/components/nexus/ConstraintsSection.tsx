@@ -1,11 +1,23 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles, Undo2 } from "lucide-react";
 import type { Constraints, SourcingIntent, ResiliencePosture, ChokepointConcern } from "@/types/interpretation";
 import { TagInput } from "@/components/nexus/TagInput";
+
+/** SX-04 — accepted Axis change summary used to mark constraint rows. */
+export interface AxisAcceptedChange {
+  /** Dotted constraint path, e.g. "constraints.geography.sourcing_intent". */
+  target: string;
+  previous_value?: unknown;
+  label?: string;
+}
 
 interface ConstraintsSectionProps {
   constraints: Constraints;
   onUpdate: (type: string, value: any) => void;
+  /** SX-04 — accepted axis changes touching constraints; used to render the "set by Axis" indicator + revert affordance. */
+  axisAcceptedChanges?: AxisAcceptedChange[];
+  /** SX-04 — invoked when the user reverts an axis-set value. */
+  onRevertAxisChange?: (change: AxisAcceptedChange) => void;
 }
 
 // SX-02 — option labels for new dimensions.
