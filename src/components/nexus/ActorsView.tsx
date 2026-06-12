@@ -31,6 +31,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCollectionMap } from "@/hooks/useCollectionMap";
 import { ActorsMap } from "@/components/map/ActorsMap";
+import { AtmosphereBackground } from "./AtmosphereBackground";
+import bgEmpty from "@/assets/bg-empty.jpg";
 
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
