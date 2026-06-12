@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserPreferences, resolveAxisWeights, type AxisWeights } from "@/hooks/useUserPreferences";
 import { useTrackInteraction } from "@/hooks/useTrackInteraction";
 import { resolveIntentCountries, type SourcingIntent } from "@/config/regionSets";
+import { normalizeCountry, expandCountryAliases } from "@/lib/normalizeCountry";
 
 export type SearchStatus = "not_started" | "searching" | "reviewing" | "locked";
 type RoleStatus = "waiting" | "searching" | "complete" | "error";
