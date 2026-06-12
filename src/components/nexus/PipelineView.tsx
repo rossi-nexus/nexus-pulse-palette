@@ -241,12 +241,24 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
   const isStep5Compact =
     stepA5.status === "not_started" && !isStep4Locked && !stepA5.error && devStep !== "step5";
 
+  // VR-02: Step 1 active and pristine -> empty-state atmosphere; otherwise low-intensity working layer.
+  const isStep1Pristine =
+    isStep1Active &&
+    stepA1.status !== "locked" &&
+    !stepA1.contextText.trim() &&
+    stepA1.attachments.length === 0;
+  const atmosphereVariant: "empty" | "pipeline" = isStep1Pristine ? "empty" : "pipeline";
+  const hasAttachments = stepA1.attachments.length > 0;
+  const step1Instruction = hasAttachments
+    ? "Optional: tell me what you want to do with this — procure it, source the components, find who could build it…"
+    : "Describe the effect you need to achieve — in your own words, with a document, or a link. Any combination works.";
+
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
         <ResizablePanel defaultSize={75} minSize={50}>
           <main className="h-full flex flex-col min-w-0">
-            <div className="flex-1 overflow-y-auto">
+            <AtmosphereLayer variant={atmosphereVariant} className="flex-1 overflow-y-auto">
               <div className="max-w-4xl mx-auto px-8 py-8 space-y-4">
                 <ProgrammeContextBanner sessionId={sessionId} programmeId={programmeId} />
                 <StepContainer
@@ -256,14 +268,9 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                   isActive={isStep1Active}
                 >
                   {isStep1Active && (
-                    <div className="space-y-2 mb-6">
-                      <h1 className="text-[2.125rem] font-light tracking-[0.03em] leading-[1.2] text-foreground">
-                        Define Your Need
-                      </h1>
-                      <p className="text-body text-foreground-secondary">
-                        Describe what you're looking for, or add context to your attachments below...
-                      </p>
-                    </div>
+                    <p className="text-body text-foreground-secondary mb-5">
+                      {step1Instruction}
+                    </p>
                   )}
 
                   <NeedInput
