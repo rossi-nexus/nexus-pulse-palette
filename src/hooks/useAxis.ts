@@ -263,7 +263,7 @@ export function useAxis({ sessionId }: UseAxisProps) {
   }, [sessionId, setStep]);
 
   /** Mark a pending change as accepted/rejected. Application to interpretation handled by caller. */
-  const setChangeStatus = useCallback((step: AxisStep, changeId: string, status: "accepted" | "rejected") => {
+  const setChangeStatus = useCallback((step: AxisStep, changeId: string, status: "accepted" | "rejected" | "reverted") => {
     setStep(step, (prev) => ({
       ...prev,
       pending_changes: prev.pending_changes.map((c) =>
