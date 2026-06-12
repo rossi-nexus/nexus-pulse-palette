@@ -35,25 +35,23 @@ export function CollectionConflictBanner({ conflicts, personalId, onSuggest }: P
 
   return (
     <>
-      <div className="mb-4 bg-warning/10 border border-warning/30 rounded-md p-3 flex items-start gap-3">
-        <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground">
-            You noted {conflicts.length === 1 ? `a different ${conflicts[0].label}` : `${conflicts.length} differences`} in your collection
-          </div>
-          <div className="text-xs text-foreground-secondary mt-0.5">
-            {conflicts.map((c) => c.label).join(", ")}
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Button size="sm" variant="outline" onClick={() => setCompareOpen(true)}>
-              Compare
-            </Button>
-            <Button size="sm" variant="outline" onClick={onSuggest}>
-              Suggest correction to canonical
-            </Button>
-          </div>
-        </div>
+      <div className="mb-4">
+        <CalloutRow
+          variant="warning"
+          title={
+            <>You noted {conflicts.length === 1 ? `a different ${conflicts[0].label}` : `${conflicts.length} differences`} in your collection</>
+          }
+          action={
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setCompareOpen(true)}>Compare</Button>
+              <Button size="sm" variant="outline" onClick={onSuggest}>Suggest correction</Button>
+            </div>
+          }
+        >
+          {conflicts.map((c) => c.label).join(", ")}
+        </CalloutRow>
       </div>
+
 
       <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
         <DialogContent>
