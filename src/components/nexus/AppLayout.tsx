@@ -42,6 +42,7 @@ const AppLayout = () => {
               <Route path="/actors/map" element={<ActorsMapPage />} />
               <Route path="/actors/:actorId/products/:productSlug" element={<ProductDetailPage />} />
               <Route path="/actors/:id" element={<ActorProfile />} />
+              <Route path="/intelligence" element={<IntelligencePage />} />
               <Route path="/saved-searches" element={<SavedSearchesPage />} />
               <Route path="/settings/preferences" element={<UserPreferencesPage />} />
               {/* A4 Area 2: redirect legacy any-auth programme URLs to canonical consultant path. */}
