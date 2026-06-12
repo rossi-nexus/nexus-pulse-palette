@@ -110,7 +110,7 @@ const ACTOR_TOOL_SCHEMA = {
             properties: {
               name: { type: "string" },
               location: { type: "string" },
-              country: { type: "string" },
+              country: { type: "string", description: "ISO 3166-1 alpha-2 country code (uppercase, e.g. 'NO', 'SE', 'DE'). Omit if unknown." },
               website: { type: "string" },
               description: { type: "string" },
               actor_type: { type: "string", enum: ["commercial", "government", "academic", "industry_body"] },
