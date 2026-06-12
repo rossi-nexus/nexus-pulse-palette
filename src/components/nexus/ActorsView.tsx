@@ -587,10 +587,10 @@ const TabButton = ({
   <button
     onClick={onClick}
     className={cn(
-      "px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
+      "px-4 h-8 rounded-full text-xs font-medium transition-all border",
       active
-        ? "border-accent-teal text-foreground"
-        : "border-transparent text-foreground-secondary hover:text-foreground",
+        ? "bg-accent-teal text-primary-foreground border-accent-teal shadow-sm"
+        : "bg-transparent text-foreground-secondary border-border hover:border-border-accent hover:text-foreground",
     )}
   >
     {children}
