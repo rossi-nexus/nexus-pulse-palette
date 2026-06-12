@@ -28,6 +28,8 @@ export interface ActorCardData {
   name: string;
   location?: string;
   country?: string;
+  /** SX-04b — true when the actor's country could not be normalised to ISO; rendered in a "Country unverified" group. */
+  country_unverified?: boolean;
   latitude?: number;
   longitude?: number;
   website?: string;
