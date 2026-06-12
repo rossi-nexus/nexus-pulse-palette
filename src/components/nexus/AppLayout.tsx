@@ -12,6 +12,7 @@ const AddActorPage = lazy(() => import("@/pages/AddActorPage"));
 const ActorsMapPage = lazy(() => import("@/pages/ActorsMapPage"));
 import SavedSearchesPage from "@/pages/SavedSearchesPage";
 import UserPreferencesPage from "@/pages/UserPreferencesPage";
+import IntelligencePage from "@/pages/IntelligencePage";
 import { SessionProvider } from "@/contexts/SessionContext";
 
 /**
