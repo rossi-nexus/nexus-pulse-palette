@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Zap, Database, Settings, ChevronLeft, ChevronRight, Plus,
-  FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon, Bookmark,
+  FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon, Bookmark, Radar,
 } from "lucide-react";
 import { useSessionContext, type SessionListItem } from "@/contexts/SessionContext";
 import { useProgrammeList } from "@/hooks/useProgramme";
