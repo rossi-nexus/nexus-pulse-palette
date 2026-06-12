@@ -61,12 +61,16 @@ const RoleProgressBox = ({ result, isActive, isExpanded, onClick, stale = false 
           )}
         </div>
       )}
-      {result.excluded_by_sourcing && result.excluded_by_sourcing > 0 ? (
+      {(result.excluded_by_sourcing && result.excluded_by_sourcing > 0) ||
+       (result.country_unverified_count && result.country_unverified_count > 0) ? (
         <div
-          className="text-mono-xs font-mono text-warning"
-          title={`Excluded by sourcing constraint (${result.sourcing_intent ?? "intent"})`}
+          className="text-mono-xs font-mono text-warning text-center leading-tight"
+          title={`Sourcing intent (${result.sourcing_intent ?? "intent"}): ${result.excluded_by_sourcing ?? 0} excluded · ${result.country_unverified_count ?? 0} country unverified`}
         >
-          {result.excluded_by_sourcing} excluded
+          {result.excluded_by_sourcing ?? 0} excluded
+          {result.country_unverified_count && result.country_unverified_count > 0 ? (
+            <> · {result.country_unverified_count} unverified</>
+          ) : null}
         </div>
       ) : null}
     </button>
