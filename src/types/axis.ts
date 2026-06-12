@@ -53,12 +53,22 @@ export interface AxisQuestion {
   origin?: "axis" | "clarification";
 }
 
-/** A pending tracked change emitted by axis-resolve and awaiting accept/reject. */
+/** A tracked Axis decision. Lives in the audit trail; not every status implies a real change. */
 export interface AxisPendingChange {
   id: string;
   step: AxisStep;
   source: "axis";
-  status: "pending" | "accepted" | "rejected" | "reverted";
+  /**
+   * SX-04c — decision states:
+   *   - pending    : free-text awaiting one-click Apply (the only remaining
+   *                  pending state — choice/boolean auto-apply now).
+   *   - accepted   : applied to interpretation.
+   *   - rejected   : explicitly rejected by user.
+   *   - reverted   : was accepted, then undone (audit trail entry).
+   *   - recorded   : no concrete change; preserved as context for interpretation.
+   *   - dismissed  : the question itself was marked "not relevant"; no change emitted.
+   */
+  status: "pending" | "accepted" | "rejected" | "reverted" | "recorded" | "dismissed";
   action: AxisAction;
   /** Human-readable label, e.g. "Sourcing intent → National". */
   label: string;
