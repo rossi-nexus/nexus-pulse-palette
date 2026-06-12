@@ -32,12 +32,13 @@ function pickAddress(entity: BrregEntity): BrregAddress | null {
   return entity.forretningsadresse ?? entity.postadresse ?? null;
 }
 
-function mapCountry(land?: string | null): string | null {
-  if (!land) return null;
-  const trimmed = land.trim();
-  if (!trimmed) return null;
-  if (trimmed.toLowerCase() === "norge") return "Norway";
-  return trimmed;
+// DH-01 — BRREG only returns Norwegian entities; store ISO 3166-1 alpha-2.
+function mapCountry(_land?: string | null): string | null {
+  // Even when BRREG returns "Norge", we always store "NO" for downstream
+  // ranking / filtering. The DB trigger fn_normalize_country would do this
+  // anyway, but normalizing here makes intent explicit and keeps the API
+  // contract aligned with the rest of the system.
+  return "NO";
 }
 
 function formatOrgNumberDisplay(org: string): string {

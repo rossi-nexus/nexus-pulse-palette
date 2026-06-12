@@ -93,7 +93,7 @@ function buildProposalFromResult(result: PrhResult) {
     street_address: street,
     city,
     region: null as string | null,
-    country: "Finland",
+    country: "FI", // DH-01 — ISO 3166-1 alpha-2
     actor_website: null as string | null,
     postal_code,
     trade_names: auxNames.length > 0 ? auxNames : undefined,
