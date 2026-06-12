@@ -467,6 +467,7 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
           processing_time_ms: processingTimeMs,
           error: errMsg,
           excluded_by_sourcing: excludedBySourcing,
+          country_unverified_count: countryUnverifiedCount,
           sourcing_intent: sourcingIntent ?? null,
         });
         return next;
