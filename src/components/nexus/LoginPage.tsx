@@ -3,6 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
 import logo from "@/assets/logo_aexs.png";
+import bgLogin from "@/assets/bg-login.jpg";
+import { AtmosphereBackground } from "./AtmosphereBackground";
 
 const LoginPage = () => {
   const { signIn } = useAuth();
@@ -21,7 +23,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="h-screen bg-background flex items-center justify-center">
+    <AtmosphereBackground image={bgLogin} variant="hero" className="h-screen bg-background flex items-center justify-center">
       <div className="w-full max-w-sm px-8">
         <div className="flex flex-col items-center gap-6 mb-8">
           <img src={logo} alt="æXs" className="h-10" />
