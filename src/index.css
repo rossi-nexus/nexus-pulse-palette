@@ -248,3 +248,66 @@
   z-index: 0;
 }
 
+
+/* === VR-01 — Visual Refresh ============================================= */
+
+/* Atmosphere background wrapper.
+   Set --atmo-image to a url(...) on a child to opt-in. The gradient overlay
+   keeps content readable: edges near-opaque, centre still very dark. */
+.atmo-layer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.atmo-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--atmo-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--atmo-opacity, 0.30);
+  z-index: 0;
+  pointer-events: none;
+}
+.atmo-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, hsl(var(--background) / 0.55) 0%, hsl(var(--background) / 0.92) 70%, hsl(var(--background)) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+.atmo-layer > * { position: relative; z-index: 1; }
+
+/* Subtler variant for empty states */
+.atmo-layer.atmo-empty::before {
+  opacity: var(--atmo-opacity, 0.15);
+  background-position: center bottom;
+}
+.atmo-layer.atmo-empty::after {
+  background:
+    linear-gradient(to top, hsl(var(--background) / 0.55) 0%, hsl(var(--background) / 0.95) 60%, hsl(var(--background)) 100%);
+}
+
+/* Liveness — pulse on active step indicator */
+@keyframes nx-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--accent-teal) / 0.55); }
+  50% { box-shadow: 0 0 0 6px hsl(var(--accent-teal) / 0); }
+}
+.nx-pulse {
+  animation: nx-pulse 2.4s ease-out infinite;
+}
+
+/* Count-up: short fade-in for changed numeric values */
+@keyframes nx-count-flash {
+  0% { transform: translateY(-2px); opacity: 0.4; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.nx-count-flash { animation: nx-count-flash 0.4s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-pulse, .nx-count-flash { animation: none !important; }
+}
