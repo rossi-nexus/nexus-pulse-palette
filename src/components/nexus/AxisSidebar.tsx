@@ -1,17 +1,16 @@
-// SX-03 / SX-04b — Axis sidebar with step tabs + auditable answer record.
+// SX-04c — Axis sidebar: one-click apply, question dismiss, clean decided cards.
 //
-// SX-04b changes:
-//  - Step tabs 1..5: viewedStep follows currentStep (pipeline step) but the user
-//    can click any tab to review another step. Tabs with open questions show a
-//    count badge.
-//  - Answered cards now show the trio: question → user's answer → effect line
-//    with state (accepted / rejected / reverted / recorded for interpretation).
-//  - Decisions are never deleted; reverted changes still surface with state
-//    "reverted" as the audit trail.
-//  - Free chat applies to the user's current pipeline step (not the viewed tab).
+// Behaviour:
+//  - Choice/boolean questions auto-apply on click (handled in PipelineView).
+//  - Free-text questions show an "Axis understood: …" preview inside the same
+//    card with Apply / Edit answer. There is no separate Pending Changes pile.
+//  - Every open question card has a quiet "Not relevant" dismiss affordance.
+//  - Decided cards (answered, dismissed, recorded) render the question text ONCE
+//    plus a single effect line. They include a Reopen affordance; accepted
+//    changes also expose Revert.
 
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Send, Sparkles, Check, X, Loader2 } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -26,14 +25,14 @@ import type {
 interface AxisSidebarProps {
   currentStep: AxisStep | null;
   stepContext: any;
-  /** Full per-step state so the user can review any tab. */
   stateByStep: AxisStateByStep;
-  /** Step currently being loaded by axis-question, if any. */
   loadingStep: AxisStep | null;
   onRequestQuestions: (step: AxisStep) => void;
   onAnswer: (step: AxisStep, question: AxisQuestion, answer: string | string[] | boolean) => Promise<AxisPendingChange[]>;
-  onAcceptChange: (change: AxisPendingChange) => void;
-  onRejectChange: (change: AxisPendingChange) => void;
+  onDismiss: (step: AxisStep, questionId: string) => void;
+  onReopen: (step: AxisStep, question: AxisQuestion) => void;
+  onApplyPending: (change: AxisPendingChange) => void;
+  onRevertChange: (change: AxisPendingChange) => void;
   onFreeChat: (text: string) => Promise<AxisPendingChange[]>;
 }
 
@@ -54,8 +53,10 @@ const AxisSidebar = ({
   loadingStep,
   onRequestQuestions,
   onAnswer,
-  onAcceptChange,
-  onRejectChange,
+  onDismiss,
+  onReopen,
+  onApplyPending,
+  onRevertChange,
   onFreeChat,
 }: AxisSidebarProps) => {
   const [chatText, setChatText] = useState("");
@@ -63,7 +64,6 @@ const AxisSidebar = ({
   const [viewedStep, setViewedStep] = useState<AxisStep>(currentStep ?? "A1");
   const [userPinned, setUserPinned] = useState(false);
 
-  // Auto-follow current pipeline step unless the user has clicked a tab manually.
   useEffect(() => {
     if (!userPinned && currentStep) setViewedStep(currentStep);
   }, [currentStep, userPinned]);
@@ -77,10 +77,6 @@ const AxisSidebar = ({
   const answered = useMemo(
     () => stepState.questions.filter((q) => q.answered_at),
     [stepState.questions],
-  );
-  const pending = useMemo(
-    () => stepState.pending_changes.filter((c) => c.status === "pending"),
-    [stepState.pending_changes],
   );
 
   const openCounts = useMemo(() => {
@@ -164,7 +160,6 @@ const AxisSidebar = ({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-        {/* Sharpen-this button — only on A1/A2 viewed tab */}
         {canAskQuestions && (
           <Button
             variant="outline"
@@ -187,38 +182,18 @@ const AxisSidebar = ({
           </Button>
         )}
 
-        {/* Pending tracked changes */}
-        {pending.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-label uppercase tracking-[0.15em] text-foreground-secondary">
-              Pending changes
-            </div>
-            {pending.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-card border border-dashed border-accent-teal/60 bg-surface/40 px-3 py-2.5 space-y-2"
-              >
-                <p className="text-body-sm text-foreground">{c.label}</p>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="default" className="h-7 px-2 text-xs" onClick={() => onAcceptChange(c)}>
-                    <Check className="w-3 h-3 mr-1" /> Accept
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => onRejectChange(c)}>
-                    <X className="w-3 h-3 mr-1" /> Reject
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Open questions */}
         {unanswered.map((q) => (
-          <QuestionCard key={q.id} question={q} onAnswer={(qq, a) => onAnswer(viewedStep, qq, a)} />
+          <QuestionCard
+            key={q.id}
+            question={q}
+            onAnswer={(qq, a) => onAnswer(viewedStep, qq, a)}
+            onDismiss={() => onDismiss(viewedStep, q.id)}
+          />
         ))}
 
         {/* Empty state */}
-        {unanswered.length === 0 && pending.length === 0 && answered.length === 0 && !viewedLoading && (
+        {unanswered.length === 0 && answered.length === 0 && !viewedLoading && (
           <div className="bg-surface border border-border rounded-card px-4 py-3">
             <p className="text-body-sm text-foreground-secondary">
               {viewedStep === "A1"
@@ -241,6 +216,9 @@ const AxisSidebar = ({
                 key={q.id}
                 question={q}
                 changes={stepState.pending_changes.filter((c) => c.question_id === q.id)}
+                onReopen={() => onReopen(viewedStep, q)}
+                onApplyPending={onApplyPending}
+                onRevertChange={onRevertChange}
               />
             ))}
           </div>
@@ -277,9 +255,10 @@ const AxisSidebar = ({
 interface QuestionCardProps {
   question: AxisQuestion;
   onAnswer: (q: AxisQuestion, a: string | string[] | boolean) => Promise<AxisPendingChange[]>;
+  onDismiss: () => void;
 }
 
-const QuestionCard = ({ question, onAnswer }: QuestionCardProps) => {
+const QuestionCard = ({ question, onAnswer, onDismiss }: QuestionCardProps) => {
   const [singleValue, setSingleValue] = useState<string>("");
   const [multiValue, setMultiValue] = useState<string[]>([]);
   const [textValue, setTextValue] = useState<string>("");
@@ -296,11 +275,21 @@ const QuestionCard = ({ question, onAnswer }: QuestionCardProps) => {
 
   return (
     <div className="rounded-card border border-border bg-surface px-3 py-3 space-y-2.5">
-      <div>
-        <p className="text-body-sm text-foreground">{question.question}</p>
-        {question.context && (
-          <p className="text-caption text-foreground-muted mt-1">{question.context}</p>
-        )}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <p className="text-body-sm text-foreground">{question.question}</p>
+          {question.context && (
+            <p className="text-caption text-foreground-muted mt-1">{question.context}</p>
+          )}
+        </div>
+        <button
+          onClick={onDismiss}
+          disabled={busy}
+          title="Not relevant — dismiss"
+          className="shrink-0 text-foreground-muted/60 hover:text-foreground-muted text-caption px-1.5 py-0.5 rounded hover:bg-background/50 transition-colors"
+        >
+          Not relevant
+        </button>
       </div>
 
       {question.answer_kind === "single_choice" && question.options && (
@@ -360,57 +349,121 @@ const QuestionCard = ({ question, onAnswer }: QuestionCardProps) => {
 interface AnsweredCardProps {
   question: AxisQuestion;
   changes: AxisPendingChange[];
+  onReopen: () => void;
+  onApplyPending: (change: AxisPendingChange) => void;
+  onRevertChange: (change: AxisPendingChange) => void;
 }
 
-/** Render a compact, auditable record of an answered question. */
-const AnsweredCard = ({ question, changes }: AnsweredCardProps) => {
-  // Display the user's answer using the option label when available.
+const STATE_LABEL: Record<AxisPendingChange["status"], string> = {
+  pending: "pending",
+  accepted: "accepted",
+  rejected: "rejected",
+  reverted: "reverted",
+  recorded: "recorded for interpretation",
+  dismissed: "dismissed",
+};
+const STATE_CLASS: Record<AxisPendingChange["status"], string> = {
+  pending: "text-foreground-secondary",
+  accepted: "text-accent-teal",
+  rejected: "text-foreground-muted/70 line-through",
+  reverted: "text-warning",
+  recorded: "text-foreground-muted italic",
+  dismissed: "text-foreground-muted italic",
+};
+
+const isDismissedOnly = (changes: AxisPendingChange[]) =>
+  changes.length === 1 && changes[0].status === "dismissed";
+
+const AnsweredCard = ({ question, changes, onReopen, onApplyPending, onRevertChange }: AnsweredCardProps) => {
+  const dismissed = isDismissedOnly(changes);
+  const pending = changes.find((c) => c.status === "pending");
+
+  // User answer rendering (skipped when dismissed — answer is meaningless).
   const answerDisplay = (() => {
+    if (dismissed) return "Dismissed";
     const a = question.answer;
     if (typeof a === "boolean") return a ? "Yes" : "No";
     const labelOf = (val: string) =>
       question.options?.find((o) => o.value === val)?.label ?? val;
     if (Array.isArray(a)) return a.map(labelOf).join(", ") || "—";
     if (typeof a === "string") {
-      // For choice questions, map value → label; for free_text, show as-is.
       if (question.answer_kind === "single_choice") return labelOf(a);
       return a || "—";
     }
     return "—";
   })();
 
-  const STATE_LABEL: Record<AxisPendingChange["status"], string> = {
-    pending: "pending",
-    accepted: "accepted",
-    rejected: "rejected",
-    reverted: "reverted",
-  };
-  const STATE_CLASS: Record<AxisPendingChange["status"], string> = {
-    pending: "text-foreground-muted",
-    accepted: "text-accent-teal",
-    rejected: "text-foreground-muted/70 line-through",
-    reverted: "text-warning",
-  };
+  // Effect lines: never restate the question. Just label + state.
+  // Filter out the dismissed sentinel when we're already showing "Dismissed" as the answer.
+  const effectLines = dismissed
+    ? []
+    : changes.filter((c) => c.status !== "dismissed");
 
   return (
     <div className="rounded-card border border-border bg-surface/60 px-3 py-2.5 space-y-1.5">
-      <p className="text-caption text-foreground-secondary leading-snug">{question.question}</p>
-      <p className="text-body-sm text-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-body-sm text-foreground leading-snug flex-1">{question.question}</p>
+        <button
+          onClick={onReopen}
+          title="Reopen this decision"
+          className="shrink-0 inline-flex items-center gap-1 text-caption text-foreground-muted hover:text-accent-teal px-1.5 py-0.5 rounded hover:bg-background/50 transition-colors"
+        >
+          <RotateCcw className="w-3 h-3" />
+          Reopen
+        </button>
+      </div>
+
+      <p className={cn("text-body-sm", dismissed ? "text-foreground-muted italic" : "text-foreground-secondary")}>
         <span className="text-foreground-muted">→ </span>
         {answerDisplay}
       </p>
-      {changes.length > 0 ? (
+
+      {/* Pending free-text preview — "Axis understood: …" with Apply / Edit. */}
+      {pending && (
+        <div className="rounded border border-dashed border-accent-teal/60 bg-background/40 px-2.5 py-2 mt-1 space-y-1.5">
+          <p className="text-caption text-foreground-secondary">
+            Axis understood:
+          </p>
+          <p className="text-body-sm text-foreground font-mono">→ {pending.label}</p>
+          <div className="flex items-center gap-2 pt-0.5">
+            <Button size="sm" className="h-6 px-2 text-xs" onClick={() => onApplyPending(pending)}>
+              Apply
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={onReopen}
+            >
+              Edit answer
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Effect lines (post-apply / recorded). */}
+      {effectLines.length > 0 && !pending && (
         <div className="space-y-0.5 pt-0.5">
-          {changes.map((c) => (
-            <p key={c.id} className={cn("text-caption font-mono", STATE_CLASS[c.status])}>
-              ↳ {c.label} · {STATE_LABEL[c.status]}
-            </p>
+          {effectLines.map((c) => (
+            <div key={c.id} className="flex items-center justify-between gap-2">
+              <p className={cn("text-caption font-mono flex-1", STATE_CLASS[c.status])}>
+                {c.status === "recorded"
+                  ? `→ ${STATE_LABEL[c.status]}`
+                  : `→ ${c.label} · ${STATE_LABEL[c.status]}`}
+              </p>
+              {c.status === "accepted" && (
+                <button
+                  onClick={() => onRevertChange(c)}
+                  title="Revert this change"
+                  className="shrink-0 inline-flex items-center gap-1 text-caption text-foreground-muted hover:text-warning px-1.5 py-0.5 rounded hover:bg-background/50 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Revert
+                </button>
+              )}
+            </div>
           ))}
         </div>
-      ) : (
-        <p className="text-caption text-foreground-muted/80 italic">
-          ↳ recorded for interpretation
-        </p>
       )}
     </div>
   );

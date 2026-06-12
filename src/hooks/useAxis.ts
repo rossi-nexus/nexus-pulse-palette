@@ -230,7 +230,8 @@ export function useAxis({ sessionId }: UseAxisProps) {
         throw new Error(errBody.error || `axis-resolve HTTP ${resp.status}`);
       }
       const data = await resp.json();
-      const changes: AxisPendingChange[] = (data.changes || []).map((c: any) => ({
+      const rawChanges: any[] = Array.isArray(data.changes) ? data.changes : [];
+      let changes: AxisPendingChange[] = rawChanges.map((c: any) => ({
         id: crypto.randomUUID(),
         step,
         source: "axis" as const,
@@ -242,6 +243,24 @@ export function useAxis({ sessionId }: UseAxisProps) {
         created_at: new Date().toISOString(),
       }));
 
+      // SX-04c — if there's nothing concrete to apply, still keep an audit-trail
+      // entry so the decision card has an effect line ("recorded for interpretation").
+      const isConcrete = (c: AxisPendingChange) =>
+        c.action.kind !== "noop" && c.action.kind !== "context";
+      if (changes.length === 0 || !changes.some(isConcrete)) {
+        changes = [{
+          id: crypto.randomUUID(),
+          step,
+          source: "axis" as const,
+          status: "recorded" as const,
+          action: { kind: "noop" },
+          label: data.message || "Recorded for interpretation",
+          message: data.message,
+          question_id: question.id,
+          created_at: new Date().toISOString(),
+        }];
+      }
+
       setStep(step, (prev) => ({
         ...prev,
         questions: prev.questions.map((q) =>
@@ -252,7 +271,6 @@ export function useAxis({ sessionId }: UseAxisProps) {
         pending_changes: [...prev.pending_changes, ...changes],
       }));
 
-      if (changes.length === 0 && data.message) toast(data.message);
       return changes;
     } catch (e: any) {
       console.error("axis resolveAnswer failed:", e);
@@ -262,12 +280,56 @@ export function useAxis({ sessionId }: UseAxisProps) {
     }
   }, [sessionId, setStep]);
 
-  /** Mark a pending change as accepted/rejected. Application to interpretation handled by caller. */
-  const setChangeStatus = useCallback((step: AxisStep, changeId: string, status: "accepted" | "rejected" | "reverted") => {
+  /** Mark a tracked change's status. Application to interpretation handled by caller. */
+  const setChangeStatus = useCallback((step: AxisStep, changeId: string, status: AxisPendingChange["status"]) => {
     setStep(step, (prev) => ({
       ...prev,
       pending_changes: prev.pending_changes.map((c) =>
         c.id === changeId ? { ...c, status } : c
+      ),
+    }));
+  }, [setStep]);
+
+  /** SX-04c — dismiss an open question without answering it. */
+  const dismissQuestion = useCallback((step: AxisStep, questionId: string) => {
+    setStep(step, (prev) => {
+      const q = prev.questions.find((qq) => qq.id === questionId);
+      if (!q || q.answered_at) return prev;
+      const dismissedChange: AxisPendingChange = {
+        id: crypto.randomUUID(),
+        step,
+        source: "axis",
+        status: "dismissed",
+        action: { kind: "noop" },
+        label: "Dismissed",
+        question_id: questionId,
+        created_at: new Date().toISOString(),
+      };
+      return {
+        ...prev,
+        questions: prev.questions.map((qq) =>
+          qq.id === questionId
+            ? { ...qq, answered_at: new Date().toISOString(), applied_change_ids: [dismissedChange.id] }
+            : qq,
+        ),
+        pending_changes: [...prev.pending_changes, dismissedChange],
+      };
+    });
+  }, [setStep]);
+
+  /** SX-04c — reopen a decided question. Existing applied changes stay accepted
+   *  until a new answer overrides them (caller handles cascade if needed). */
+  const reopenQuestion = useCallback((step: AxisStep, questionId: string) => {
+    setStep(step, (prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === questionId
+          ? { ...q, answered_at: undefined, answer: undefined, applied_change_ids: [] }
+          : q,
+      ),
+      // Drop "dismissed" / "recorded" stub entries — they exist only to represent the prior state.
+      pending_changes: prev.pending_changes.filter(
+        (c) => !(c.question_id === questionId && (c.status === "dismissed" || c.status === "recorded" || c.status === "pending")),
       ),
     }));
   }, [setStep]);
@@ -298,6 +360,8 @@ export function useAxis({ sessionId }: UseAxisProps) {
     requestQuestions,
     resolveAnswer,
     setChangeStatus,
+    dismissQuestion,
+    reopenQuestion,
     markRoleStale,
     clearStaleRole,
     resetStep,
