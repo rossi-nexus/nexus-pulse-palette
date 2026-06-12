@@ -514,9 +514,9 @@ const AxisSidebarConnected = ({
     axis.requestQuestions(currentStep, stepContext);
   }, [axis, currentStep, stepContext]);
 
-  const handleAnswer = useCallback(async (question: AxisQuestion, answer: string | string[] | boolean) => {
-    if (!currentStep) return [];
-    return axis.resolveAnswer(currentStep, question, answer, stepContext);
+  const handleAnswer = useCallback(async (step: AxisStep, question: AxisQuestion, answer: string | string[] | boolean) => {
+    // SX-04b — answer the question on its own step (viewed tab may differ from current pipeline step).
+    return axis.resolveAnswer(step, question, answer, step === currentStep ? stepContext : null);
   }, [axis, currentStep, stepContext]);
 
   const handleAcceptChange = useCallback((change: AxisPendingChange) => {
