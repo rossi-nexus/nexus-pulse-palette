@@ -31,8 +31,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCollectionMap } from "@/hooks/useCollectionMap";
 import { ActorsMap } from "@/components/map/ActorsMap";
-import { AtmosphereBackground } from "./AtmosphereBackground";
-import bgEmpty from "@/assets/bg-empty.jpg";
 
 /** Subset of DbActor verification fields needed to render the badge. */
 type DbVerification = Pick<DbActor, "verified_at" | "decays_at">;
@@ -352,7 +350,7 @@ const ActorsView = () => {
 
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6 pb-3 border-b border-border">
+        <div className="flex items-center gap-2 mb-6 border-b border-border">
           <TabButton active={tab === "collection"} onClick={() => setTab("collection")}>
             My Collection
           </TabButton>
@@ -589,10 +587,10 @@ const TabButton = ({
   <button
     onClick={onClick}
     className={cn(
-      "px-4 py-1.5 text-sm font-medium rounded-full border transition-colors",
+      "px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
       active
-        ? "bg-accent-teal/15 border-accent-teal/60 text-foreground"
-        : "border-border text-foreground-secondary hover:text-foreground hover:border-border-accent/40",
+        ? "border-accent-teal text-foreground"
+        : "border-transparent text-foreground-secondary hover:text-foreground",
     )}
   >
     {children}
@@ -840,14 +838,14 @@ const EmptyState = ({
   description: React.ReactNode;
   action?: React.ReactNode;
 }) => (
-  <AtmosphereBackground image={bgEmpty} variant="empty" className="bg-surface border border-border rounded-lg p-12 text-center">
+  <div className="bg-surface border border-border rounded-lg p-12 text-center">
     <div className="flex justify-center mb-4 text-foreground-muted">{icon}</div>
     <h3 className="text-base font-medium text-foreground mb-2">{title}</h3>
     <p className="text-sm text-foreground-secondary leading-relaxed mb-4 max-w-md mx-auto">
       {description}
     </p>
     {action}
-  </AtmosphereBackground>
+  </div>
 );
 
 const EmptyCollection = ({ onGo }: { onGo: () => void }) => (

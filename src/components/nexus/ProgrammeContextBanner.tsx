@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FolderOpen, ExternalLink } from "lucide-react";
-import { CalloutRow } from "./CalloutRow";
 
 interface Props {
   sessionId: string | null;
@@ -32,20 +31,14 @@ const ProgrammeContextBanner = ({ sessionId, programmeId }: Props) => {
   if (!programmeId || !name) return null;
 
   return (
-    <CalloutRow
-      variant="info"
-      icon={<FolderOpen className="w-4 h-4" />}
-      action={
-        <Link
-          to={`/consultant/programmes/${programmeId}`}
-          className="inline-flex items-center gap-1 text-xs text-accent-teal hover:underline"
-        >
-          Open <ExternalLink className="w-3 h-3" />
-        </Link>
-      }
+    <Link
+      to={`/consultant/programmes/${programmeId}`}
+      className="inline-flex items-center gap-2 px-3 py-1.5 bg-elevated border border-border rounded-md text-body-sm text-foreground-secondary hover:text-foreground hover:border-border-accent/60 transition-colors w-fit"
     >
-      Part of <span className="text-foreground font-medium">{name}</span>
-    </CalloutRow>
+      <FolderOpen className="w-3.5 h-3.5 text-accent-teal" />
+      <span>Part of <span className="text-foreground font-medium">{name}</span></span>
+      <ExternalLink className="w-3 h-3" />
+    </Link>
   );
 };
 

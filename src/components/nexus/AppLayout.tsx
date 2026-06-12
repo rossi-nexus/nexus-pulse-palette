@@ -12,7 +12,6 @@ const AddActorPage = lazy(() => import("@/pages/AddActorPage"));
 const ActorsMapPage = lazy(() => import("@/pages/ActorsMapPage"));
 import SavedSearchesPage from "@/pages/SavedSearchesPage";
 import UserPreferencesPage from "@/pages/UserPreferencesPage";
-import IntelligencePage from "@/pages/IntelligencePage";
 import { SessionProvider } from "@/contexts/SessionContext";
 
 /**
@@ -43,7 +42,6 @@ const AppLayout = () => {
               <Route path="/actors/:actorId/products/:productSlug" element={<ProductDetailPage />} />
               <Route path="/actors/:id" element={<ActorProfile />} />
               <Route path="/saved-searches" element={<SavedSearchesPage />} />
-              <Route path="/intelligence" element={<IntelligencePage />} />
               <Route path="/settings/preferences" element={<UserPreferencesPage />} />
               {/* A4 Area 2: redirect legacy any-auth programme URLs to canonical consultant path. */}
               <Route path="/programmes/:id" element={<LegacyProgrammeRedirect />} />
