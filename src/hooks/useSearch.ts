@@ -221,6 +221,7 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       let processingTimeMs: number | undefined;
       let errMsg: string | undefined;
       let excludedBySourcing = 0;
+      let countryUnverifiedCount = 0;
 
       // --- Web branch -----------------------------------------------------
       if (mode === "web" || mode === "both") {
