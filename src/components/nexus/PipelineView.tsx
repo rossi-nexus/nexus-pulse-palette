@@ -414,9 +414,15 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
 
 export default PipelineView;
 
-// SX-03 — Connected Axis sidebar. Owns the useAxis hook, derives current step,
-// passes step context, and wires accept/reject of pending tracked changes back
-// into useInterpretation via applyAxisChange.
+// SX-03 / SX-04c — Connected Axis sidebar. Owns the useAxis hook, derives current step,
+// passes step context, and wires one-click apply / dismiss / reopen / revert.
+// Locked-step changes route through a confirmation dialog that soft-unlocks the
+// affected step (re-running of unaffected roles is skipped — only changed roles
+// get the SX-04 stale badge).
+
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button as UIButton } from "@/components/ui/button";
+
 interface AxisSidebarConnectedProps {
   sessionId: string | null;
   axis: ReturnType<typeof useAxis>;
@@ -427,7 +433,13 @@ interface AxisSidebarConnectedProps {
   interpretation: Interpretation | null;
   clarificationPoints: ClarificationPoint[];
   applyAxisChange: (action: { kind: string; target?: string; value?: any }) => { applied: boolean; previousValue?: any };
+  unlockStepA2: () => Promise<void>;
 }
+
+type LockGate =
+  | { kind: "apply"; change: AxisPendingChange }
+  | { kind: "revert"; change: AxisPendingChange }
+  | { kind: "reopen"; question: AxisQuestion };
 
 const AxisSidebarConnected = ({
   sessionId,
@@ -439,9 +451,10 @@ const AxisSidebarConnected = ({
   interpretation,
   clarificationPoints,
   applyAxisChange,
+  unlockStepA2,
 }: AxisSidebarConnectedProps) => {
+  const [gate, setGate] = useState<LockGate | null>(null);
 
-  // Derive the active step: prefer the editable step closest to the user.
   const currentStep: AxisStep | null = useMemo(() => {
     if (stepA2Status === "editing") return "A2";
     if (stepA1Status === "editing") return "A1";
@@ -450,8 +463,6 @@ const AxisSidebarConnected = ({
     return "A1";
   }, [stepA1Status, stepA2Status]);
 
-  // SX-04 — extract A1 answered Q&A pairs to feed both A2 axis-question and (via
-  // PipelineView) the interpret-need run.
   const a1Answered = useMemo(() => {
     const qs = axis.state.A1?.questions ?? [];
     return qs
@@ -473,20 +484,15 @@ const AxisSidebarConnected = ({
       return {
         interpretation,
         clarification_points: clarificationPoints,
-        a1_answered: a1Answered, // SX-04
+        a1_answered: a1Answered,
       };
     }
     return null;
   }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints, a1Answered]);
 
-  // (Per-step state read inside the sidebar; no longer hoisted here.)
-
   // SX-03b — auto-trigger.
   const autoFiredRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    autoFiredRef.current = new Set();
-  }, [sessionId]);
-
+  useEffect(() => { autoFiredRef.current = new Set(); }, [sessionId]);
   useEffect(() => {
     if (!axis.initialized) return;
     if (!currentStep || !stepContext) return;
@@ -508,18 +514,13 @@ const AxisSidebarConnected = ({
   }, [axis.initialized, currentStep, stepA1Status, interpretation, sessionId, stepContext]);
 
   const handleRequestQuestions = useCallback((step: AxisStep) => {
-    // SX-04b — only the current pipeline step has live stepContext; for other
-    // tabs the user is reviewing, the existing questions render from state.
     const ctx = step === currentStep ? stepContext : null;
     if (!ctx) return;
     axis.requestQuestions(step, ctx);
   }, [axis, currentStep, stepContext]);
 
-  const handleAnswer = useCallback(async (step: AxisStep, question: AxisQuestion, answer: string | string[] | boolean) => {
-    return axis.resolveAnswer(step, question, answer, step === currentStep ? stepContext : null);
-  }, [axis, currentStep, stepContext]);
-
-  const handleAcceptChange = useCallback((change: AxisPendingChange) => {
+  /** Apply a single change and mark stale roles. Does not touch lock state. */
+  const applyChange = useCallback((change: AxisPendingChange) => {
     const result = applyAxisChange(change.action);
     if (!result.applied && change.action.kind !== "noop" && change.action.kind !== "context") {
       axis.setChangeStatus(change.step, change.id, "rejected");
@@ -536,9 +537,114 @@ const AxisSidebarConnected = ({
     }
   }, [applyAxisChange, axis]);
 
-  const handleRejectChange = useCallback((change: AxisPendingChange) => {
-    axis.setChangeStatus(change.step, change.id, "rejected");
+  /** Step → pipeline-step lock check. Axis changes today only target A2 (interpretation). */
+  const isAxisStepLocked = (step: AxisStep) => {
+    if (step === "A2") return stepA2Status === "locked";
+    return false;
+  };
+
+  /** Affected role ids derived from an action (for the dialog and stale-badge logic). */
+  const affectedRoleIds = (change: AxisPendingChange): string[] => {
+    const t = change.action.target;
+    if (!t) return [];
+    if (t.startsWith("roles.")) {
+      const parts = t.split(".");
+      return parts[1] ? [parts[1]] : [];
+    }
+    if (t.startsWith("constraints.")) {
+      // Constraint changes invalidate every active role.
+      const roles = interpretation?.roles ?? [];
+      return roles.map((r) => r.id);
+    }
+    return [];
+  };
+
+  /** One-click apply on resolveAnswer's return, with locked-step gate for free-text Apply. */
+  const handleAnswer = useCallback(async (step: AxisStep, question: AxisQuestion, answer: string | string[] | boolean) => {
+    const changes = await axis.resolveAnswer(step, question, answer, step === currentStep ? stepContext : null);
+    // Free-text: leave concrete changes pending — user confirms via "Apply" in the answered card.
+    if (question.answer_kind === "free_text") return changes;
+    // Choice / boolean: auto-apply every concrete change in this batch (one-click apply).
+    for (const c of changes) {
+      if (c.status !== "pending") continue;
+      if (c.action.kind === "noop" || c.action.kind === "context") continue;
+      if (isAxisStepLocked(step)) {
+        setGate({ kind: "apply", change: c });
+        return changes; // remaining changes batched onto the same gate would be rare; bail.
+      }
+      applyChange(c);
+    }
+    return changes;
+  }, [axis, currentStep, stepContext, applyChange, stepA2Status, interpretation]);
+
+  const handleDismiss = useCallback((step: AxisStep, questionId: string) => {
+    axis.dismissQuestion(step, questionId);
   }, [axis]);
+
+  const handleReopen = useCallback((step: AxisStep, question: AxisQuestion) => {
+    // Reopening only mutates question state. We do NOT auto-revert applied changes —
+    // the spec says they stay until a new answer overrides them.
+    // But if the existing question's applied change touched a locked step, we ask
+    // first so the user is aware the next answer will require an unlock.
+    const cur = axis.state[step];
+    const linkedAccepted = (cur?.pending_changes ?? []).find(
+      (c) => c.question_id === question.id && c.status === "accepted",
+    );
+    if (linkedAccepted && isAxisStepLocked(step)) {
+      setGate({ kind: "reopen", question });
+      return;
+    }
+    axis.reopenQuestion(step, question.id);
+  }, [axis, stepA2Status]);
+
+  const handleApplyPending = useCallback((change: AxisPendingChange) => {
+    if (isAxisStepLocked(change.step)) {
+      setGate({ kind: "apply", change });
+      return;
+    }
+    applyChange(change);
+  }, [applyChange, stepA2Status]);
+
+  const handleRevertChange = useCallback((change: AxisPendingChange) => {
+    if (isAxisStepLocked(change.step)) {
+      setGate({ kind: "revert", change });
+      return;
+    }
+    // Live revert — restore previous value, mark reverted.
+    if (change.action.target) {
+      applyAxisChange({ kind: "update_constraint", target: change.action.target, value: (change as any).previous_value });
+    }
+    axis.setChangeStatus(change.step, change.id, "reverted");
+    for (const rid of affectedRoleIds(change)) {
+      axis.markRoleStale("A3", rid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyAxisChange, axis, stepA2Status, interpretation]);
+
+  /** Confirm path — soft-unlocks the gated step, then runs the action. */
+  const confirmGate = useCallback(async () => {
+    if (!gate) return;
+    // Soft-unlock A2 only. Downstream locked outputs stay; only affected roles get stale badges.
+    await unlockStepA2();
+    if (gate.kind === "apply") {
+      applyChange(gate.change);
+    } else if (gate.kind === "revert") {
+      if (gate.change.action.target) {
+        applyAxisChange({
+          kind: "update_constraint",
+          target: gate.change.action.target,
+          value: (gate.change as any).previous_value,
+        });
+      }
+      axis.setChangeStatus(gate.change.step, gate.change.id, "reverted");
+      for (const rid of affectedRoleIds(gate.change)) {
+        axis.markRoleStale("A3", rid);
+      }
+    } else if (gate.kind === "reopen") {
+      axis.reopenQuestion(gate.question.step, gate.question.id);
+    }
+    setGate(null);
+  }, [gate, unlockStepA2, applyChange, applyAxisChange, axis, interpretation]);
 
   const handleFreeChat = useCallback(async (text: string) => {
     if (!currentStep) return [];
@@ -554,18 +660,63 @@ const AxisSidebarConnected = ({
     return axis.resolveAnswer(currentStep, synthetic, text, stepContext);
   }, [axis, currentStep, stepContext]);
 
+  // Affected role count for the dialog.
+  const dialogAffected: string[] = useMemo(() => {
+    if (!gate) return [];
+    if (gate.kind === "reopen") {
+      const linked = (axis.state[gate.question.step]?.pending_changes ?? []).find(
+        (c) => c.question_id === gate.question.id && c.status === "accepted",
+      );
+      return linked ? affectedRoleIds(linked) : [];
+    }
+    return affectedRoleIds(gate.change);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gate, axis.state, interpretation]);
+  const affectedRoleNames = useMemo(() => {
+    const roles = interpretation?.roles ?? [];
+    return dialogAffected
+      .map((id) => roles.find((r) => r.id === id)?.name)
+      .filter((n): n is string => !!n);
+  }, [dialogAffected, interpretation]);
+
   return (
-    <AxisSidebar
-      currentStep={currentStep}
-      stepContext={stepContext}
-      stateByStep={axis.state}
-      loadingStep={axis.loadingStep}
-      onRequestQuestions={handleRequestQuestions}
-      onAnswer={handleAnswer}
-      onAcceptChange={handleAcceptChange}
-      onRejectChange={handleRejectChange}
-      onFreeChat={handleFreeChat}
-    />
+    <>
+      <AxisSidebar
+        currentStep={currentStep}
+        stepContext={stepContext}
+        stateByStep={axis.state}
+        loadingStep={axis.loadingStep}
+        onRequestQuestions={handleRequestQuestions}
+        onAnswer={handleAnswer}
+        onDismiss={handleDismiss}
+        onReopen={handleReopen}
+        onApplyPending={handleApplyPending}
+        onRevertChange={handleRevertChange}
+        onFreeChat={handleFreeChat}
+      />
+
+      <Dialog open={gate !== null} onOpenChange={(o) => !o && setGate(null)}>
+        <DialogContent className="bg-surface border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Step 2 is locked</DialogTitle>
+            <DialogDescription className="text-foreground-secondary">
+              {gate?.kind === "apply" && "Applying this change requires unlocking Step 2 (Interpretation)."}
+              {gate?.kind === "revert" && "Reverting this change requires unlocking Step 2 (Interpretation)."}
+              {gate?.kind === "reopen" && "Reopening this decision requires unlocking Step 2 (Interpretation)."}
+              {" "}
+              {affectedRoleNames.length === 0
+                ? "No downstream roles will be invalidated."
+                : `${affectedRoleNames.length} role${affectedRoleNames.length === 1 ? "" : "s"} will be marked stale and need re-running: ${affectedRoleNames.slice(0, 3).join(", ")}${affectedRoleNames.length > 3 ? `, +${affectedRoleNames.length - 3} more` : ""}. Unaffected roles keep their results.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <UIButton variant="secondary" onClick={() => setGate(null)}>Cancel</UIButton>
+            <UIButton variant="destructive" onClick={confirmGate}>Unlock & continue</UIButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
+
 
