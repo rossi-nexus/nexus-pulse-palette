@@ -389,7 +389,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                   />
                 )}
               </div>
-            </div>
+            </AtmosphereLayer>
 
             <StatusBar
               found={stepA3.totalFound}
