@@ -349,8 +349,8 @@ const ActorsView = () => {
 
 
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6 border-b border-border">
+        {/* Tabs — pill idiom (VR-02) */}
+        <div className="flex items-center gap-1.5 mb-6">
           <TabButton active={tab === "collection"} onClick={() => setTab("collection")}>
             My Collection
           </TabButton>
