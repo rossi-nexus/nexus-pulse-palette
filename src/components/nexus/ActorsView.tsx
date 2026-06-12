@@ -350,7 +350,7 @@ const ActorsView = () => {
 
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6 border-b border-border">
+        <div className="flex items-center gap-2 mb-6 pb-3 border-b border-border">
           <TabButton active={tab === "collection"} onClick={() => setTab("collection")}>
             My Collection
           </TabButton>
