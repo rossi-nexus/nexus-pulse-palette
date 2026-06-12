@@ -283,10 +283,10 @@ const SidebarNav = () => {
 
                 {/* Programmes + Sessions appear under Pipeline */}
                 {item.to === "/pipeline" && (
-                  <div className="mt-3 ml-2 mr-1 space-y-1">
+                  <div className="mt-5 ml-2 mr-1 space-y-1">
                     {/* Programmes header */}
-                    <div className="flex items-center justify-between px-2 mb-1">
-                      <span className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-secondary">
+                    <div className="flex items-center justify-between px-2 mb-2">
+                      <span className="text-[10px] uppercase tracking-[0.18em] font-semibold text-foreground-muted">
                         Programmes
                       </span>
                       <button
@@ -322,7 +322,7 @@ const SidebarNav = () => {
                     ))}
 
                     {/* Sessions */}
-                    <div className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-secondary px-2 mb-1 mt-3">
+                    <div className="text-[10px] uppercase tracking-[0.18em] font-semibold text-foreground-muted px-2 mb-1.5 mt-5">
                       Sessions
                     </div>
 
