@@ -479,9 +479,7 @@ const AxisSidebarConnected = ({
     return null;
   }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints, a1Answered]);
 
-  const stepState = currentStep
-    ? axis.state[currentStep] ?? { questions: [], pending_changes: [], stale_role_ids: [] }
-    : { questions: [], pending_changes: [], stale_role_ids: [] };
+  // (Per-step state read inside the sidebar; no longer hoisted here.)
 
   // SX-03b — auto-trigger.
   const autoFiredRef = useRef<Set<string>>(new Set());
