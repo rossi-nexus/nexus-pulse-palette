@@ -141,6 +141,18 @@
   .shadow-glow {
     box-shadow: var(--shadow-glow);
   }
+
+  /* VR-02 — liveness micro-signal: 2s soft pulse on active step indicator dot. */
+  @keyframes axs-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsla(168, 38%, 50%, 0.45); }
+    50%      { box-shadow: 0 0 0 6px hsla(168, 38%, 50%, 0); }
+  }
+  .animate-axs-pulse {
+    animation: axs-pulse 2s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-axs-pulse { animation: none; }
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────

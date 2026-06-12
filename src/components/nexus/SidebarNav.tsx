@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Zap, Database, Settings, ChevronLeft, ChevronRight, Plus,
-  FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon, Bookmark,
+  FolderPlus, FolderOpen, ChevronDown, MoreVertical, Briefcase, Map as MapIcon, Bookmark, Radio,
 } from "lucide-react";
 import { useSessionContext, type SessionListItem } from "@/contexts/SessionContext";
 import { useProgrammeList } from "@/hooks/useProgramme";
@@ -91,6 +91,7 @@ const SidebarNav = () => {
   const navItems = [
     { to: "/pipeline", icon: Zap, label: "Pipeline" },
     { to: "/actors", icon: Database, label: "Actors" },
+    { to: "/intelligence", icon: Radio, label: "Intelligence" },
     { to: "/saved-searches", icon: Bookmark, label: "Saved searches" },
     { to: "/settings/preferences", icon: Settings, label: "Preferences" },
     ...(isAdmin ? [{ to: "/admin", icon: Settings, label: "Admin" }] : []),
@@ -247,12 +248,14 @@ const SidebarNav = () => {
               <div key={item.to} className="px-2 mb-1">
                 <NavLink
                   to={item.to}
+                  end={item.to === "/actors"}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
+                      "relative flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all",
+                      "before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r",
                       isActive
-                        ? "bg-surface text-foreground font-semibold"
-                        : "text-foreground hover:bg-surface/60"
+                        ? "bg-surface text-foreground font-semibold before:bg-accent-teal shadow-sm"
+                        : "text-foreground hover:bg-surface/60 before:bg-transparent"
                     )
                   }
                 >
@@ -280,10 +283,10 @@ const SidebarNav = () => {
 
                 {/* Programmes + Sessions appear under Pipeline */}
                 {item.to === "/pipeline" && (
-                  <div className="mt-3 ml-2 mr-1 space-y-1">
+                  <div className="mt-5 ml-2 mr-1 space-y-1">
                     {/* Programmes header */}
-                    <div className="flex items-center justify-between px-2 mb-1">
-                      <span className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-secondary">
+                    <div className="flex items-center justify-between px-2 mb-2">
+                      <span className="text-[10px] uppercase tracking-[0.18em] font-semibold text-foreground-muted">
                         Programmes
                       </span>
                       <button
@@ -319,7 +322,7 @@ const SidebarNav = () => {
                     ))}
 
                     {/* Sessions */}
-                    <div className="text-[10px] uppercase tracking-[0.15em] font-medium text-foreground-secondary px-2 mb-1 mt-3">
+                    <div className="text-[10px] uppercase tracking-[0.18em] font-semibold text-foreground-muted px-2 mb-1.5 mt-5">
                       Sessions
                     </div>
 

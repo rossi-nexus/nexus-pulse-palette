@@ -54,7 +54,8 @@ const StepContainer = ({ stepNumber, title, status, isSpecial, isActive, summary
               "w-8 h-8 rounded-full flex items-center justify-center text-mono-xs font-mono shrink-0 border transition-colors",
               isActive || isLocked
                 ? "bg-gradient-accent-subtle border-border-accent text-accent-teal"
-                : "bg-elevated border-border text-foreground-muted"
+                : "bg-elevated border-border text-foreground-muted",
+              isActive && !isLocked && "animate-axs-pulse"
             )}
           >
             {isSpecial ? "·" : stepNumber}
