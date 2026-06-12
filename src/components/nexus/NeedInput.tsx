@@ -137,7 +137,7 @@ const NeedInput = ({
         placeholder={
           isLocked && !contextText.trim() && attachments.length > 0
             ? "No context text provided — attachments will be analyzed in the next step."
-            : "Describe what you're looking for, or add context to your attachments below..."
+            : "e.g. Persistent surveillance of the Finnmark coastline, integrating radar and EO/IR sensors…"
         }
         className={cn(
           "w-full min-h-[150px] rounded-card border px-4 py-3 text-body text-foreground placeholder:text-foreground-muted outline-none resize-none transition-colors",
