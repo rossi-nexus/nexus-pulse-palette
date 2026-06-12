@@ -838,14 +838,14 @@ const EmptyState = ({
   description: React.ReactNode;
   action?: React.ReactNode;
 }) => (
-  <div className="bg-surface border border-border rounded-lg p-12 text-center">
+  <AtmosphereBackground image={bgEmpty} variant="empty" className="bg-surface border border-border rounded-lg p-12 text-center">
     <div className="flex justify-center mb-4 text-foreground-muted">{icon}</div>
     <h3 className="text-base font-medium text-foreground mb-2">{title}</h3>
     <p className="text-sm text-foreground-secondary leading-relaxed mb-4 max-w-md mx-auto">
       {description}
     </p>
     {action}
-  </div>
+  </AtmosphereBackground>
 );
 
 const EmptyCollection = ({ onGo }: { onGo: () => void }) => (
