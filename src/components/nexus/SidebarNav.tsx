@@ -248,12 +248,14 @@ const SidebarNav = () => {
               <div key={item.to} className="px-2 mb-1">
                 <NavLink
                   to={item.to}
+                  end={item.to === "/actors"}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
+                      "relative flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all",
+                      "before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r",
                       isActive
-                        ? "bg-surface text-foreground font-semibold"
-                        : "text-foreground hover:bg-surface/60"
+                        ? "bg-surface text-foreground font-semibold before:bg-accent-teal shadow-sm"
+                        : "text-foreground hover:bg-surface/60 before:bg-transparent"
                     )
                   }
                 >
