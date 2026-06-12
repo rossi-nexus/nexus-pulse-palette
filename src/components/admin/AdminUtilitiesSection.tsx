@@ -126,6 +126,46 @@ const UTILITIES: Utility[] = [
       return `Reprocessed — inspected: ${r.rows_inspected ?? 0}, orphaned: ${r.rows_orphaned ?? 0}, kept linked: ${r.rows_kept_linked ?? 0}`;
     },
   },
+  {
+    id: "normalize_country_data",
+    label: "Normalize country data",
+    subtext:
+      "Rewrites legacy full-name country values (Norway, Sverige, …) to ISO 3166-1 alpha-2 codes on both verified and personal actors. Unknown values are preserved as-is and listed in the result. Idempotent; safe to re-run.",
+    kind: "rpc",
+    target: "fn_backfill_country_normalization",
+    confirm: "Normalize country values on actors and personal actors to ISO codes?",
+    rawData: true,
+    successFmt: (d: any) => {
+      if (!d) return "Country normalization complete";
+      const a = d.actors ?? {};
+      const p = d.user_personal_actors ?? {};
+      const aUnrec = Array.isArray(a.rows_unrecognized) ? a.rows_unrecognized : [];
+      const pUnrec = Array.isArray(p.rows_unrecognized) ? p.rows_unrecognized : [];
+      const unrec = Array.from(new Set([...aUnrec, ...pUnrec]));
+      const tail = unrec.length > 0 ? ` · unrecognized: ${unrec.join(", ")}` : "";
+      return `Normalized — actors: ${a.rows_updated ?? 0}, personal: ${p.rows_updated ?? 0}${tail}`;
+    },
+  },
+  {
+    id: "resolve_missing_countries",
+    label: "Resolve missing countries",
+    subtext:
+      "For actors missing a country, infers it from the registry origin (9-digit org → NO, 8-digit → DK, dashed 7+ → FI). Lists any rows that still need manual fix on the profile page.",
+    kind: "rpc",
+    target: "fn_resolve_missing_countries",
+    confirm: "Infer missing countries from org numbers where possible?",
+    rawData: true,
+    successFmt: (d: any) => {
+      if (!d) return "Missing-country resolution complete";
+      const a = d.actors ?? {};
+      const p = d.user_personal_actors ?? {};
+      const aRem = Array.isArray(a.rows_remaining) ? a.rows_remaining : [];
+      const pRem = Array.isArray(p.rows_remaining) ? p.rows_remaining : [];
+      const remaining = [...aRem, ...pRem].map((r: any) => r.name).filter(Boolean);
+      const tail = remaining.length > 0 ? ` · still missing: ${remaining.slice(0, 8).join(", ")}${remaining.length > 8 ? ` (+${remaining.length - 8} more)` : ""}` : "";
+      return `Resolved — actors: ${a.rows_resolved ?? 0}, personal: ${p.rows_resolved ?? 0}${tail}`;
+    },
+  },
 ];
 
 export const AdminUtilitiesSection = () => {
