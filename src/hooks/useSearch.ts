@@ -344,13 +344,17 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
         try {
           // SX-04 — DB pre-filter uses intent-expanded countries when intent is set,
           // otherwise falls back to user-declared countries (legacy behaviour).
+          // SX-04b — `actors.country` is stored mixed (names "Norway" and ISO "NO"),
+          // so we expand the ISO set with known name/native aliases before passing
+          // to the RPC, which compares against the raw stored value.
           const declared = (interpretation.constraints as any)?.geography?.countries;
-          const pCountries: string[] | null =
+          const baseISO: string[] | null =
             intentCountries && intentCountries.length > 0
               ? intentCountries
               : (Array.isArray(declared) && declared.length > 0
                   ? declared.map((c: string) => c.toUpperCase())
                   : null);
+          const pCountries: string[] | null = baseISO ? expandCountryAliases(baseISO) : null;
 
           const { data, error: rpcErr } = await (supabase.rpc as any)(
             "fn_rank_actors_by_ontology_overlap",
