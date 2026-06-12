@@ -332,7 +332,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                       const orig = (axis.state.A2?.pending_changes ?? []).find(
                         (c) => c.status === "accepted" && c.action.target === change.target,
                       );
-                      if (orig) axis.setChangeStatus("A2", orig.id, "rejected");
+                      if (orig) axis.setChangeStatus("A2", orig.id, "reverted");
                     }}
                   />
                 )}
