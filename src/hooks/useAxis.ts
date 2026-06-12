@@ -360,6 +360,8 @@ export function useAxis({ sessionId }: UseAxisProps) {
     requestQuestions,
     resolveAnswer,
     setChangeStatus,
+    dismissQuestion,
+    reopenQuestion,
     markRoleStale,
     clearStaleRole,
     resetStep,
