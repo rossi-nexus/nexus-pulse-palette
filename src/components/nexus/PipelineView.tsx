@@ -405,6 +405,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
             interpretation={stepA2.interpretation}
             clarificationPoints={stepA2.clarificationPoints}
             applyAxisChange={stepA2.applyAxisChange}
+            unlockStepA2={stepA2.unlock}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
