@@ -257,10 +257,11 @@
 .atmo-layer {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
 }
 .atmo-layer::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   background-image: var(--atmo-image, none);
   background-size: cover;
@@ -272,7 +273,7 @@
 }
 .atmo-layer::after {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   background:
     radial-gradient(ellipse at center, hsl(var(--background) / 0.55) 0%, hsl(var(--background) / 0.92) 70%, hsl(var(--background)) 100%);
