@@ -10,6 +10,7 @@ const ActorProfile = lazy(() => import("@/pages/ActorProfile"));
 const ProductDetailPage = lazy(() => import("@/pages/ProductDetailPage"));
 const AddActorPage = lazy(() => import("@/pages/AddActorPage"));
 const ActorsMapPage = lazy(() => import("@/pages/ActorsMapPage"));
+const IntelligencePage = lazy(() => import("@/pages/IntelligencePage"));
 import SavedSearchesPage from "@/pages/SavedSearchesPage";
 import UserPreferencesPage from "@/pages/UserPreferencesPage";
 import { SessionProvider } from "@/contexts/SessionContext";
