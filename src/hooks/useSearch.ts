@@ -87,6 +87,8 @@ export interface RoleSearchResult {
   error?: string;
   /** SX-04 — web/DB actors excluded by sourcing intent hard filter (countries not in allowed set). */
   excluded_by_sourcing?: number;
+  /** SX-04b — actors whose country could not be normalised; surfaced separately, not excluded. */
+  country_unverified_count?: number;
   /** SX-04 — the sourcing intent under which this role was searched. */
   sourcing_intent?: SourcingIntent | null;
 }
