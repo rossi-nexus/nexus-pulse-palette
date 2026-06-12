@@ -2,6 +2,7 @@
 // Compares user_personal_actors fields against the canonical DB actor and
 // surfaces a per-card banner with [Compare] and [Suggest correction to canonical].
 import { useState } from "react";
+import { CalloutRow } from "@/components/nexus/CalloutRow";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
