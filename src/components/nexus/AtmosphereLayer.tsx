@@ -1,26 +1,24 @@
 import { cn } from "@/lib/utils";
-import bgLogin from "@/assets/bg-login.jpg.asset.json";
-import bgEmpty from "@/assets/bg-empty.jpg.asset.json";
 
 type Variant = "login" | "empty" | "pipeline";
 
 const VARIANTS: Record<Variant, { url: string; opacity: number; overlay: string; pos: string }> = {
   login: {
-    url: bgLogin?.url ?? "",
+    url: "/atmosphere/bg-login.jpg",
     opacity: 0.35,
     overlay:
       "linear-gradient(180deg, hsl(240 20% 4% / 0.75) 0%, hsl(240 20% 4% / 0.86) 50%, hsl(240 20% 4% / 0.92) 100%)",
     pos: "center center",
   },
   empty: {
-    url: bgEmpty?.url ?? "",
+    url: "/atmosphere/bg-empty.jpg",
     opacity: 0.16,
     overlay:
       "linear-gradient(180deg, hsl(240 20% 4% / 0.98) 0%, hsl(240 20% 4% / 0.92) 35%, hsl(240 20% 4% / 0.55) 100%)",
     pos: "center bottom",
   },
   pipeline: {
-    url: bgEmpty?.url ?? "",
+    url: "/atmosphere/bg-empty.jpg",
     opacity: 0.07,
     overlay:
       "radial-gradient(ellipse at center, hsl(240 20% 4% / 0.72) 0%, hsl(240 20% 4% / 0.92) 60%, hsl(240 20% 4% / 0.98) 100%)",
