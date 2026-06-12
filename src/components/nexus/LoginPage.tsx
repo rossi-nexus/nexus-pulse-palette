@@ -71,7 +71,7 @@ const LoginPage = () => {
           </Button>
         </form>
       </div>
-    </div>
+    </AtmosphereBackground>
   );
 };
 
