@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserPreferences, resolveAxisWeights, type AxisWeights } from "@/hooks/useUserPreferences";
 import { useTrackInteraction } from "@/hooks/useTrackInteraction";
 import { resolveIntentCountries, type SourcingIntent } from "@/config/regionSets";
+import { normalizeCountry, expandCountryAliases } from "@/lib/normalizeCountry";
 
 export type SearchStatus = "not_started" | "searching" | "reviewing" | "locked";
 type RoleStatus = "waiting" | "searching" | "complete" | "error";
@@ -27,6 +28,8 @@ export interface ActorCardData {
   name: string;
   location?: string;
   country?: string;
+  /** SX-04b — true when the actor's country could not be normalised to ISO; rendered in a "Country unverified" group. */
+  country_unverified?: boolean;
   latitude?: number;
   longitude?: number;
   website?: string;
@@ -86,6 +89,8 @@ export interface RoleSearchResult {
   error?: string;
   /** SX-04 — web/DB actors excluded by sourcing intent hard filter (countries not in allowed set). */
   excluded_by_sourcing?: number;
+  /** SX-04b — actors whose country could not be normalised; surfaced separately, not excluded. */
+  country_unverified_count?: number;
   /** SX-04 — the sourcing intent under which this role was searched. */
   sourcing_intent?: SourcingIntent | null;
 }
@@ -218,6 +223,7 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
       let processingTimeMs: number | undefined;
       let errMsg: string | undefined;
       let excludedBySourcing = 0;
+      let countryUnverifiedCount = 0;
 
       // --- Web branch -----------------------------------------------------
       if (mode === "web" || mode === "both") {
@@ -303,17 +309,30 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
             db_actor_id: null,
           }));
 
-          // SX-04 — Post-filter web results by sourcing intent. Out-of-scope actors
-          // are excluded but counted so the UI can surface "N excluded by sourcing
-          // constraint" rather than silently dropping them.
+          // SX-04b — Post-filter web results by sourcing intent. Compare ISO-to-ISO
+          // after normalising the actor's free-text country. Unknown countries are
+          // NOT silently dropped — they are kept in a "Country unverified" group
+          // (sorted to the bottom) and counted separately, so the user can see
+          // recall surface uncertainty rather than disappear silently.
           if (intentCountries && intentCountries.length > 0) {
             const allowed = new Set(intentCountries.map((c) => c.toUpperCase()));
-            const before = webActors.length;
-            webActors = webActors.filter((a) => {
-              const c = (a.country || "").toUpperCase().trim();
-              return c && allowed.has(c);
-            });
-            excludedBySourcing += before - webActors.length;
+            const inScope: ActorCardData[] = [];
+            const unverified: ActorCardData[] = [];
+            let excluded = 0;
+            for (const a of webActors) {
+              const iso = normalizeCountry(a.country);
+              if (!iso) {
+                // Unknown / missing country — surface separately.
+                unverified.push({ ...a, country_unverified: true } as any);
+              } else if (allowed.has(iso)) {
+                inScope.push({ ...a, country: iso });
+              } else {
+                excluded += 1;
+              }
+            }
+            excludedBySourcing += excluded;
+            countryUnverifiedCount += unverified.length;
+            webActors = [...inScope, ...unverified];
           }
         } catch (err: any) {
           errMsg = err?.message ?? String(err);
@@ -325,13 +344,17 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
         try {
           // SX-04 — DB pre-filter uses intent-expanded countries when intent is set,
           // otherwise falls back to user-declared countries (legacy behaviour).
+          // SX-04b — `actors.country` is stored mixed (names "Norway" and ISO "NO"),
+          // so we expand the ISO set with known name/native aliases before passing
+          // to the RPC, which compares against the raw stored value.
           const declared = (interpretation.constraints as any)?.geography?.countries;
-          const pCountries: string[] | null =
+          const baseISO: string[] | null =
             intentCountries && intentCountries.length > 0
               ? intentCountries
               : (Array.isArray(declared) && declared.length > 0
                   ? declared.map((c: string) => c.toUpperCase())
                   : null);
+          const pCountries: string[] | null = baseISO ? expandCountryAliases(baseISO) : null;
 
           const { data, error: rpcErr } = await (supabase.rpc as any)(
             "fn_rank_actors_by_ontology_overlap",
@@ -444,6 +467,7 @@ export function useSearch({ sessionId, axisWeightsOverride = null }: UseSearchPr
           processing_time_ms: processingTimeMs,
           error: errMsg,
           excluded_by_sourcing: excludedBySourcing,
+          country_unverified_count: countryUnverifiedCount,
           sourcing_intent: sourcingIntent ?? null,
         });
         return next;

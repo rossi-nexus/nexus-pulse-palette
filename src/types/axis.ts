@@ -58,7 +58,7 @@ export interface AxisPendingChange {
   id: string;
   step: AxisStep;
   source: "axis";
-  status: "pending" | "accepted" | "rejected";
+  status: "pending" | "accepted" | "rejected" | "reverted";
   action: AxisAction;
   /** Human-readable label, e.g. "Sourcing intent → National". */
   label: string;

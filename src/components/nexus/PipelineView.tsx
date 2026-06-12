@@ -332,7 +332,7 @@ const PipelineInner = ({ sessionId, programmeId, refreshSessions }: PipelineInne
                       const orig = (axis.state.A2?.pending_changes ?? []).find(
                         (c) => c.status === "accepted" && c.action.target === change.target,
                       );
-                      if (orig) axis.setChangeStatus("A2", orig.id, "rejected");
+                      if (orig) axis.setChangeStatus("A2", orig.id, "reverted");
                     }}
                   />
                 )}
@@ -479,9 +479,7 @@ const AxisSidebarConnected = ({
     return null;
   }, [currentStep, stepA1ContextText, stepA1Attachments, interpretation, clarificationPoints, a1Answered]);
 
-  const stepState = currentStep
-    ? axis.state[currentStep] ?? { questions: [], pending_changes: [], stale_role_ids: [] }
-    : { questions: [], pending_changes: [], stale_role_ids: [] };
+  // (Per-step state read inside the sidebar; no longer hoisted here.)
 
   // SX-03b — auto-trigger.
   const autoFiredRef = useRef<Set<string>>(new Set());
@@ -509,14 +507,16 @@ const AxisSidebarConnected = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [axis.initialized, currentStep, stepA1Status, interpretation, sessionId, stepContext]);
 
-  const handleRequestQuestions = useCallback(() => {
-    if (!currentStep || !stepContext) return;
-    axis.requestQuestions(currentStep, stepContext);
+  const handleRequestQuestions = useCallback((step: AxisStep) => {
+    // SX-04b — only the current pipeline step has live stepContext; for other
+    // tabs the user is reviewing, the existing questions render from state.
+    const ctx = step === currentStep ? stepContext : null;
+    if (!ctx) return;
+    axis.requestQuestions(step, ctx);
   }, [axis, currentStep, stepContext]);
 
-  const handleAnswer = useCallback(async (question: AxisQuestion, answer: string | string[] | boolean) => {
-    if (!currentStep) return [];
-    return axis.resolveAnswer(currentStep, question, answer, stepContext);
+  const handleAnswer = useCallback(async (step: AxisStep, question: AxisQuestion, answer: string | string[] | boolean) => {
+    return axis.resolveAnswer(step, question, answer, step === currentStep ? stepContext : null);
   }, [axis, currentStep, stepContext]);
 
   const handleAcceptChange = useCallback((change: AxisPendingChange) => {
@@ -525,22 +525,10 @@ const AxisSidebarConnected = ({
       axis.setChangeStatus(change.step, change.id, "rejected");
       return;
     }
-    // SX-04 — store previousValue on the change record so the constraint row can revert.
     axis.setChangeStatus(change.step, change.id, "accepted");
     if (result.previousValue !== undefined) {
-      // Persist previous_value back to the pending_changes entry via the axis hook.
-      // The simplest path: setChangeStatus already triggered a write; do a follow-up
-      // patch via markRoleStale's setStep helper — but we don't have it exposed.
-      // Instead: mutate via a local effect by re-running setChangeStatus would lose
-      // info. We push the value via the axis hook's internal patch by using a custom
-      // call path — for SX-04 we annotate via a second setChangeStatus equivalent.
-      // Acceptable simplification: previousValue lives on the change in-memory through
-      // the next render because handleAcceptChange runs after axis.resolveAnswer wrote
-      // the change. We mutate the action object in place (safe — same reference flow).
-      // Subsequent persist will pick it up.
       (change as any).previous_value = result.previousValue;
     }
-    // SX-04 — if the accepted change rescopes a role, mark that role's Step 3 results stale.
     if (change.action.target && change.action.target.startsWith("roles.")) {
       const parts = change.action.target.split(".");
       const roleId = parts[1];
@@ -570,8 +558,8 @@ const AxisSidebarConnected = ({
     <AxisSidebar
       currentStep={currentStep}
       stepContext={stepContext}
-      stepState={stepState}
-      loading={axis.loadingStep === currentStep}
+      stateByStep={axis.state}
+      loadingStep={axis.loadingStep}
       onRequestQuestions={handleRequestQuestions}
       onAnswer={handleAnswer}
       onAcceptChange={handleAcceptChange}
@@ -580,3 +568,4 @@ const AxisSidebarConnected = ({
     />
   );
 };
+

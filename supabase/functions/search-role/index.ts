@@ -59,7 +59,7 @@ LANGUAGE: All output text (actor descriptions, evidence) MUST be in English. Tra
 Given a set of web search results and a role description with target categories, identify distinct actors (companies or organizations) that could fulfill this role.
 
 For each actor found:
-1. Extract: name, location (city, country), brief description (1-2 sentences), website URL
+1. Extract: name, location (city, country). The country field MUST be the ISO 3166-1 alpha-2 code (e.g. "NO" for Norway, "SE" for Sweden, "FI" for Finland, "DK" for Denmark, "DE" for Germany, "GB" for United Kingdom, "US" for United States). Never use full country names. If country cannot be determined, omit the field. Also provide brief description (1-2 sentences) and website URL.
 2. Check if any search results mention security classifications or clearances
 3. Check if any search results mention standards/certifications
 4. Assess match strength (use lowercase values: "strong", "moderate", "weak"):
@@ -110,7 +110,7 @@ const ACTOR_TOOL_SCHEMA = {
             properties: {
               name: { type: "string" },
               location: { type: "string" },
-              country: { type: "string" },
+              country: { type: "string", description: "ISO 3166-1 alpha-2 country code (uppercase, e.g. 'NO', 'SE', 'DE'). Omit if unknown." },
               website: { type: "string" },
               description: { type: "string" },
               actor_type: { type: "string", enum: ["commercial", "government", "academic", "industry_body"] },
