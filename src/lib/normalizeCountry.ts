@@ -1,15 +1,15 @@
 /**
- * Normalize free-text country values to ISO 3166-1 alpha-2 codes.
+ * DH-01 — Country normalization, display, and canonical list.
  *
- * SX-04b: extended to cover the full NATO/EU/Nordic/Baltic vocabulary used by
- * `src/config/regionSets.ts`, with native-language synonyms (Norge, Sverige,
- * Suomi, Danmark, Deutschland, …). Case-insensitive; trims whitespace.
+ * The single client-side source of truth for country handling.
+ * Storage and API values are ISO 3166-1 alpha-2, uppercase ("NO").
+ * Display values are localized full names rendered via countryDisplayName().
  *
- * Returns:
- *   - ISO-2 code (uppercase) when the value is a known country name or already
- *     an ISO-2 code.
- *   - `null` for empty / unrecognised values (caller must treat unknowns as
- *     "country unverified", not "excluded"; see useSearch.ts).
+ * KEEP IN SYNC with:
+ *   - supabase/functions/_shared/country.ts (edge runtime)
+ *   - public.fn_normalize_country (SQL — see DH-01 migration)
+ *
+ * When adding a country, add it to all three.
  */
 
 const NAME_TO_ISO: Record<string, string> = {
@@ -59,19 +59,31 @@ const NAME_TO_ISO: Record<string, string> = {
   "new zealand": "NZ",
 };
 
-const VALID_ISO = new Set([
-  "NO","SE","FI","DK","IS","EE","LV","LT","DE","FR","IT","ES","PT","NL","BE","LU","IE","AT","CH",
-  "PL","CZ","SK","HU","SI","HR","GR","BG","RO","CY","MT","AL","ME","MK","TR",
-  "GB","US","CA","AU","NZ",
-]);
+/** Canonical display names per ISO (English). */
+const ISO_TO_NAME_EN: Record<string, string> = {
+  NO: "Norway", SE: "Sweden", FI: "Finland", DK: "Denmark", IS: "Iceland",
+  EE: "Estonia", LV: "Latvia", LT: "Lithuania",
+  DE: "Germany", FR: "France", IT: "Italy", ES: "Spain", PT: "Portugal",
+  NL: "Netherlands", BE: "Belgium", LU: "Luxembourg", IE: "Ireland", AT: "Austria", CH: "Switzerland",
+  PL: "Poland", CZ: "Czech Republic", SK: "Slovakia", HU: "Hungary", SI: "Slovenia",
+  HR: "Croatia", GR: "Greece", BG: "Bulgaria", RO: "Romania", CY: "Cyprus", MT: "Malta",
+  AL: "Albania", ME: "Montenegro", MK: "North Macedonia", TR: "Turkey",
+  GB: "United Kingdom", US: "United States", CA: "Canada", AU: "Australia", NZ: "New Zealand",
+};
+
+/** Native-language display names (subset). */
+const ISO_TO_NAME_NATIVE: Record<string, string> = {
+  NO: "Norge", SE: "Sverige", FI: "Suomi", DK: "Danmark", IS: "Ísland",
+  DE: "Deutschland", FR: "France", ES: "España", NL: "Nederland",
+};
+
+const VALID_ISO = new Set(Object.keys(ISO_TO_NAME_EN));
 
 /**
- * @returns ISO-2 code (uppercase) when recognised; otherwise null.
- *
- * NOTE: unlike the previous implementation, unknown values return `null` so
- * callers can distinguish "known foreign country" from "unverified". Use
- * `normalizeCountryLoose` if you need the old uppercase-fallback behaviour
- * (e.g. for the map filter grouping).
+ * Normalize a free-text country value to ISO 3166-1 alpha-2 (uppercase).
+ * Returns null for empty / unrecognised values so callers can distinguish
+ * "known country" from "unverified". Use normalizeCountryLoose for the
+ * legacy fallback behaviour.
  */
 export function normalizeCountry(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -83,7 +95,7 @@ export function normalizeCountry(value: string | null | undefined): string | nul
   return NAME_TO_ISO[key] ?? null;
 }
 
-/** Legacy behaviour: returns ISO when known, otherwise the uppercased raw value. */
+/** Legacy fallback: ISO when known, otherwise uppercased raw value. */
 export function normalizeCountryLoose(value: string | null | undefined): string | null {
   const iso = normalizeCountry(value);
   if (iso) return iso;
@@ -93,22 +105,70 @@ export function normalizeCountryLoose(value: string | null | undefined): string 
 }
 
 /**
- * Expand a set of ISO-2 codes to include known full-name and native synonyms,
- * for passing to DB queries that compare against `actors.country` values which
- * may be stored either as ISO ("NO") or as names ("Norway"). Returns an
- * uppercased + name-cased deduped array.
+ * Render an ISO-2 (or already-named) value as a human-readable country name.
+ * Pass `locale: "native"` for native-language names where available.
+ * Returns "—" for null/empty/unknown.
+ */
+export function countryDisplayName(
+  value: string | null | undefined,
+  locale: "en" | "native" = "en",
+): string {
+  if (!value) return "—";
+  const iso = normalizeCountry(value);
+  if (!iso) {
+    // Unrecognised — show the raw value as a fallback (matches what the DB
+    // preserves verbatim) rather than dropping useful info.
+    return value.trim() || "—";
+  }
+  if (locale === "native") {
+    return ISO_TO_NAME_NATIVE[iso] ?? ISO_TO_NAME_EN[iso] ?? iso;
+  }
+  return ISO_TO_NAME_EN[iso] ?? iso;
+}
+
+/**
+ * Expand ISO-2 codes to include known full-name and native synonyms, for
+ * passing to DB queries where the `country` column may still contain
+ * non-normalized values during the rollout window. After the trigger is in
+ * place this should only ever be one extra alias per code, but the helper
+ * is retained for belt-and-braces (SX-04b semantics).
  */
 export function expandCountryAliases(isoCodes: string[]): string[] {
   const out = new Set<string>();
   for (const code of isoCodes) {
     const iso = code.toUpperCase();
     out.add(iso);
-  }
-  for (const [name, iso] of Object.entries(NAME_TO_ISO)) {
-    if (out.has(iso)) {
-      // add Title Case variant
-      out.add(name.replace(/\b\w/g, (c) => c.toUpperCase()));
-    }
+    const en = ISO_TO_NAME_EN[iso];
+    if (en) out.add(en);
+    const native = ISO_TO_NAME_NATIVE[iso];
+    if (native) out.add(native);
   }
   return Array.from(out);
 }
+
+/**
+ * Canonical list for country <select> inputs.
+ * Ordered: Nordics, Baltics, EU/NATO neighbours, Anglo, then alphabetical for the rest.
+ */
+export interface CountryOption {
+  iso: string;
+  name: string;
+}
+
+const PRIORITY_ORDER: string[] = [
+  "NO", "SE", "FI", "DK", "IS",
+  "EE", "LV", "LT",
+  "DE", "FR", "NL", "BE", "PL",
+  "GB", "US",
+];
+
+export const COUNTRY_LIST: CountryOption[] = (() => {
+  const all = Object.entries(ISO_TO_NAME_EN).map(([iso, name]) => ({ iso, name }));
+  const priority = PRIORITY_ORDER.map((iso) => all.find((o) => o.iso === iso)).filter(
+    Boolean,
+  ) as CountryOption[];
+  const rest = all
+    .filter((o) => !PRIORITY_ORDER.includes(o.iso))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...priority, ...rest];
+})();

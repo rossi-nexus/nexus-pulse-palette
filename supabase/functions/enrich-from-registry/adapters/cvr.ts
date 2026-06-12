@@ -57,7 +57,7 @@ function buildProposalFromCvr(entity: CvrEntity) {
     street_address: street && street.length > 0 ? street : null,
     city,
     region: null as string | null,
-    country: "Denmark",
+    country: "DK", // DH-01 — ISO 3166-1 alpha-2
     actor_website: website,
     postal_code,
     industry_codes: industryCode ? [industryCode] : undefined,

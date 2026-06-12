@@ -2078,6 +2078,7 @@ export type Database = {
           tags_updated: number
         }[]
       }
+      fn_backfill_country_normalization: { Args: never; Returns: Json }
       fn_backfill_ontology_tag_confidence: {
         Args: never
         Returns: {
@@ -2190,6 +2191,7 @@ export type Database = {
         Args: { p_reason?: string; p_source_id: string; p_survivor_id: string }
         Returns: string
       }
+      fn_normalize_country: { Args: { v: string }; Returns: string }
       fn_notifications_decay_for_me: {
         Args: { _within?: string }
         Returns: {
@@ -2308,6 +2310,7 @@ export type Database = {
         Args: { p_mapped_entry_id: string; p_proposed_category_id: string }
         Returns: string
       }
+      fn_resolve_missing_countries: { Args: never; Returns: Json }
       fn_suggest_actor: {
         Args: { p_personal_actor_id: string }
         Returns: string

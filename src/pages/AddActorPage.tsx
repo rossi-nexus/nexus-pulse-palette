@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { REGISTRIES, type RegistryId } from "@/config/registries";
+import { COUNTRY_LIST } from "@/lib/normalizeCountry";
 
 const registryName = (id: RegistryId | undefined): string =>
   id ? REGISTRIES.find((r) => r.id === id)?.name ?? id : "registry";
@@ -201,15 +202,15 @@ const AddActorPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="NO">Norway (BRREG)</SelectItem>
-                  <SelectItem value="DK">Denmark (CVR)</SelectItem>
-                  <SelectItem value="FI">Finland (PRH)</SelectItem>
-                  <SelectItem value="SE">Sweden</SelectItem>
-                  <SelectItem value="GB">United Kingdom</SelectItem>
-                  <SelectItem value="US">United States</SelectItem>
-                  <SelectItem value="DE">Germany</SelectItem>
-                  <SelectItem value="FR">France</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
+                  {COUNTRY_LIST.map((c) => {
+                    const reg = COUNTRY_TO_REGISTRY[c.iso];
+                    return (
+                      <SelectItem key={c.iso} value={c.iso}>
+                        {c.name}
+                        {reg ? ` (${reg.toUpperCase()})` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -294,10 +295,21 @@ const AddActorPage = () => {
                 />
               </Field>
               <Field label="Country">
-                <Input
-                  value={form.country}
-                  onChange={(e) => setForm({ ...form, country: e.target.value })}
-                />
+                <Select
+                  value={form.country || ""}
+                  onValueChange={(v) => setForm({ ...form, country: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_LIST.map((c) => (
+                      <SelectItem key={c.iso} value={c.iso}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Website">
                 <Input
